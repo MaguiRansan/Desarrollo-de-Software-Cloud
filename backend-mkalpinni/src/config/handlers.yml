@@ -1,0 +1,50 @@
+# Cheatsheet de keys generales
+# active: boolean. Indica si está activado o no el handler
+# version: integer. Indica la versión del handler
+# config: object. Configuración del handler
+
+handlers:
+  create_new_release:
+    version: 2
+    active: true
+    config:
+      labels:
+        - Release
+      defer: false
+      defer_time: 0
+      release_name: 'Release'
+      release_branch_name: 'release'
+  mergeable:
+    version: 3
+    active: true
+    config:
+      allow_merge_to_master: false
+  cleanup_release:
+    active: true
+  is_semantic:
+    active: true
+  notify_and_clean_released:
+    active: true
+    notify: true
+    clean: true
+    transition: true
+  notify_merge_to_release:
+    active: true
+  level_with_master:
+    version: 2
+    active: true
+    config:
+      defer: true
+      defer_time: 0.25
+      automatic_merge: true
+  complete_new_pr:
+    active: true
+    version: 1
+  completition_metrics:
+    active: true
+    version: 1
+    config:
+      sheet_id: 1T_8q9ZpfmGwawoiAbt5BTV9mM6qCtHY1oAVSDb7Rg1w
+  assigner:
+    active: true
+    version: 1

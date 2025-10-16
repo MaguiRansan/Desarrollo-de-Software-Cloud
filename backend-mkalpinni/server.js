@@ -14,6 +14,7 @@ const clientRoutes = require('./src/routes/clients');
 const reservationRoutes = require('./src/routes/reservations');
 const contactRoutes = require('./src/routes/contact');
 const tasacionRoutes = require('./src/routes/tasaciones');
+const configRoutes = require('./src/routes/config');
 
 const { errorHandler } = require('./src/middleware/errorHandler');
 const { notFound } = require('./src/middleware/notFound');
@@ -90,6 +91,7 @@ app.use('/API/Cliente', clientRoutes);
 app.use('/API/Reserva', reservationRoutes);
 app.use('/API/Contacto', contactRoutes);
 app.use('/API/Tasacion', tasacionRoutes);
+app.use('/API/Config', configRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ 
