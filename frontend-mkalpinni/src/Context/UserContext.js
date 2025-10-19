@@ -18,6 +18,7 @@ export const UserProvider = ({ children }) => {
       case 1: return 'Propietario';
       case 2: return 'Inquilino';
       case 3: return 'Administrador';
+      case 4: return 'Comprador';
       default: return 'Usuario';
     }
   };
@@ -69,6 +70,9 @@ export const UserProvider = ({ children }) => {
           break;
         case 3:
           navigate("/admin");
+          break;
+        case 4:
+          navigate("/cliente");
           break;
         default:
           navigate("/iniciarsesion");
