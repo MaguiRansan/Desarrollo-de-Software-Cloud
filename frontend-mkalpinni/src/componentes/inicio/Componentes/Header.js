@@ -20,6 +20,7 @@ const Header = () => {
     switch (user.idrol) {
       case 1:
       case 2:
+      case 4:  
         return 'cliente';
       case 3:
         return 'admin';

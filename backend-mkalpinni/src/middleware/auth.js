@@ -69,7 +69,7 @@ const authorize = (...roles) => {
       });
     }
 
-    const userRole = req.user.rol || (req.user.idrol === 1 ? 'Propietario' : req.user.idrol === 2 ? 'Inquilino' : 'Administrador');
+    const userRole = req.user.rol || (req.user.idrol === 1 ? 'Propietario' : req.user.idrol === 2 ? 'Inquilino' : req.user.idrol === 3 ? 'Administrador' : req.user.idrol === 4 ? 'Comprador' : 'Usuario');
 
     if (!roles.includes(userRole) && !roles.includes(req.user.idrol)) {
       return res.status(403).json({
