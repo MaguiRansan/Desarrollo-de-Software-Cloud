@@ -29,21 +29,21 @@ async function seedDatabase() {
     await adminUser.save();
 
     const propietarioUser = new User({
-      nombre: 'María',
+      nombre: 'María Sofia',
       apellido: 'García',
       correo: 'maria.garcia@email.com',
       contrasenaHash: 'password123',
       idrol: 1,
-      telefono: '+5411234567891'
+      telefono: '+5411234567893'
     });
 
     const inquilinoUser = new User({
-      nombre: 'Juan',
+      nombre: 'Juan Pablo',
       apellido: 'Pérez',
       correo: 'juan.perez@email.com',
       contrasenaHash: 'password123',
       idrol: 2,
-      telefono: '+5411234567892'
+      telefono: '+5411234567893'
     });
 
     const compradorUser = new User({
