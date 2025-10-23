@@ -46,8 +46,18 @@ async function seedDatabase() {
       telefono: '+5411234567893'
     });
 
+    const compradorUser = new User({
+      nombre: 'Carlos',
+      apellido: 'Rodríguez',
+      correo: 'carlos.rodriguez@email.com',
+      contrasenaHash: 'password123',
+      idrol: 4,
+      telefono: '+5411234567895'
+    });
+
     await propietarioUser.save();
     await inquilinoUser.save();
+    await compradorUser.save();
 
     const clienteLocador = new Client({
       nombreCompleto: 'Roberto Carlos Fernández',

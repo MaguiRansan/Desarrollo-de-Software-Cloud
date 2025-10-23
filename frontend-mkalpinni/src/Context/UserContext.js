@@ -8,14 +8,20 @@ const UserContext = createContext();
 export const useUser = () => useContext(UserContext);
 
 export const UserProvider = ({ children }) => {
-
-  const [ user, setUser ] = useState(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-  }, [user]);
+  const getUserRoleName = (idrol) => {
+    switch (idrol) {
+      case 1: return 'Propietario';
+      case 2: return 'Inquilino';
+      case 3: return 'Administrador';
+      case 4: return 'Comprador';
+      default: return 'Usuario';
+    }
+  };
 
   const login = async ({ email, password }) => {
     try {
@@ -38,7 +44,6 @@ export const UserProvider = ({ children }) => {
       sessionStorage.setItem("authToken", data.token);
       sessionStorage.setItem("userData", JSON.stringify(userData));
       setUser(userData);
-      
 
     } catch (error) {
       console.error("Error en login", error.response ? error.response.data : error);
@@ -57,6 +62,7 @@ export const UserProvider = ({ children }) => {
 
   useEffect(() => {
     refreshUser();
+    }
     setLoading(false);
   }, []);
 
@@ -66,30 +72,42 @@ export const UserProvider = ({ children }) => {
         case 1:
           navigate("/cliente");
           break;
-        case 2:  
+        case 2:
           navigate("/cliente");
           break;
         case 3:
           navigate("/admin");
+          break;
+        case 4:
+          navigate("/cliente");
           break;
         default:
           navigate("/iniciarsesion");
       }
       setIsLoggingIn(false);
     }
-  }, [user, isLoggingIn ,navigate]);
-  
+  }, [user, isLoggingIn, navigate]);
+
   const logout = () => {
     setUser(null);
     sessionStorage.removeItem("authToken");
     sessionStorage.removeItem("userData");
     setTimeout(() => {
-      navigate("/iniciarsesion"); 
-  }, 500);
+      navigate("/iniciarsesion");
+    }, 500);
   };
 
+  const userRoleName = user?.idrol ? getUserRoleName(user.idrol) : '';
+
   return (
-    <UserContext.Provider value={{ user, login, logout, loading, refreshUser }}>
+    <UserContext.Provider value={{
+      user,
+      login,
+      logout,
+      loading,
+      userRoleName,
+      getUserRoleName,
+    }}>
       {children}
     </UserContext.Provider>
   );
