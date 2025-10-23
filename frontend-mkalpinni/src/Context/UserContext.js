@@ -46,12 +46,18 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  useEffect(() => {
+  const refreshUser = () => {
     const storedUser = sessionStorage.getItem("userData");
     if (storedUser) {
-      setUser(JSON.parse(storedUser)); 
+      setUser(JSON.parse(storedUser));
+    } else {
+      setUser(null);
     }
-      setLoading(false);
+  };
+
+  useEffect(() => {
+    refreshUser();
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -83,7 +89,7 @@ export const UserProvider = ({ children }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, login, logout, loading }}>
+    <UserContext.Provider value={{ user, login, logout, loading, refreshUser }}>
       {children}
     </UserContext.Provider>
   );

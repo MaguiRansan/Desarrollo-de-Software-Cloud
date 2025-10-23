@@ -47,6 +47,10 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: [20, 'El teléfono no puede exceder 20 caracteres']
   },
+  fotoRuta: {
+    type: String,
+    trim: true
+  },
   activo: {
     type: Boolean,
     default: true
