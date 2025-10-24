@@ -62,7 +62,6 @@ export const UserProvider = ({ children }) => {
 
   useEffect(() => {
     refreshUser();
-    }
     setLoading(false);
   }, []);
 
