@@ -51,10 +51,17 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  useEffect(() => {
+  const refreshUser = () => {
     const storedUser = sessionStorage.getItem("userData");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
+    } else {
+      setUser(null);
+    }
+  };
+
+  useEffect(() => {
+    refreshUser();
     }
     setLoading(false);
   }, []);
