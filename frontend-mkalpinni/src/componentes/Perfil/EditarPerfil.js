@@ -1,108 +1,155 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import logo from "../../logo/logo.png";
 import { useUser } from "../../Context/UserContext";
 import { API_BASE_URL } from '../../config/apiConfig';
 import axios from "axios";
 
-const niveles = {
-    A1: 1,
-    A2: 2,
-    B1: 3,
-    B2: 4,
-    C1: 5,
-    C2: 6,
-};
+//
 
 export const EditarPerfil = ({ onUpdate }) => {
-    const { user } = useUser();
-    const idusuario = user.idusuario;
-
-    const [perfil, setPerfil] = useState([]);
+    const { refreshUser } = useUser();
     const [email, setEmail] = useState("");
     const [nombre, setNombre] = useState("");
     const [apellido, setApellido] = useState("");
-    const [nivel, setNivel] = useState("");
-    const [contraseñaHash, setContraseñaHash] = useState("");
+    const [telefono, setTelefono] = useState("");
     const [mensajeActualizado, setMensajeActualizado] = useState("");
+    const [errors, setErrors] = useState({ nombre: '', apellido: '', telefono: '', email: '' });
     const [loading, setLoading] = useState(true);
 
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const cargarInquilino = async () => {
-            if (!idusuario) return;
-            try {
-                const response = await axios.get(
-                    `${API_BASE_URL}/Usuario/BuscarUsuario?idUsuario=${idusuario}`
-                );
-                
-                if (!response.data || !response.data.value) throw new Error("No se encontraron datos del perfil.");
-                const perfilData = response.data.value;
+    const validateField = (name, value) => {
+        const inputValue = typeof value === 'string' ? value.trim() : value;
+        let error = '';
 
-                const [nombre, ...apellidoPartes] = perfilData.nombrecompleto.split(" ");
-                setNombre(nombre || "");
-                setApellido(apellidoPartes.join(" "));
-                setEmail(perfilData.correo || "");
-                setNivel(Object.keys(niveles).find(key => niveles[key] === perfilData.idnivel) || "");
-                setPerfil(perfilData);
-            } catch (error) {
-               
-                if (error.response) {
-                    alert(`Error ${error.response.status}: ${error.response.data.message || "No se pudieron cargar los datos del perfil."}`);
-                } else {
-                    alert(error.message);
+        switch (name) {
+            case 'nombre':
+            case 'apellido':
+                if (!inputValue) {
+                    error = 'Este campo es requerido.';
+                } else if (!/^[a-zA-ZÀ-ÿ\s'-]{2,50}$/.test(inputValue)) {
+                    error = 'Debe contener solo letras, espacios, tildes, apóstrofes y guiones. Entre 2 y 50 caracteres.';
                 }
-            }finally{
-                setLoading(false);
+                break;
+            case 'telefono':
+                if (inputValue) {
+                    const digitsOnly = inputValue.replace(/[^0-9]/g, '');
+                    if (digitsOnly.length < 7 || digitsOnly.length > 15) {
+                        error = 'El teléfono debe tener entre 7 y 15 dígitos.';
+                    } else if (!/^[+\s\-()0-9]+$/.test(inputValue)) {
+                        error = 'Solo se permiten números, espacios, +, (, ), y -.';
+                    }
+                }
+                break;
+            case 'email':
+                if (!inputValue) {
+                    error = 'El email es requerido.';
+                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputValue)) {
+                    error = 'Formato de email inválido.';
+                }
+                break;
+            default:
+                break;
+        }
+
+        setErrors(prev => ({ ...prev, [name]: error }));
+        return !error;
+    };
+
+    const cargarPerfil = async () => {
+        try {
+            const token = sessionStorage.getItem('authToken');
+            const response = await axios.get(
+                `${API_BASE_URL}/Usuario/Perfil`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (!response.data || !response.data.value) throw new Error("No se encontraron datos del perfil.");
+            const perfilData = response.data.value;
+            setNombre(perfilData.nombre || "");
+            setApellido(perfilData.apellido || "");
+            setEmail(perfilData.correo || "");
+            setTelefono(perfilData.telefono || "");
+            setErrors({ nombre: '', apellido: '', telefono: '', email: '' });
+        } catch (error) {
+            if (error.response) {
+                alert(`Error ${error.response.status}: ${error.response.data.message || "No se pudieron cargar los datos del perfil."}`);
+            } else {
+                alert(error.message);
             }
-        };
-        cargarInquilino();
-    }, [idusuario]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        cargarPerfil();
+    }, []);
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        switch (name) {
+            case 'nombre':
+                setNombre(value);
+                break;
+            case 'apellido':
+                setApellido(value);
+                break;
+            case 'telefono':
+                setTelefono(value);
+                break;
+            case 'email':
+                setEmail(value);
+                break;
+            default:
+                break;
+        }
+        validateField(name, value);
+    };
 
     const handleActualizar = async (e) => {
         e.preventDefault();
-        if (!nombre || !apellido || !email || !nivel) {
-            alert("Todos los campos son obligatorios.");
+        const isNombreValid = validateField('nombre', nombre);
+        const isApellidoValid = validateField('apellido', apellido);
+        const isTelefonoValid = validateField('telefono', telefono);
+        const isEmailValid = validateField('email', email);
+        if (!isNombreValid || !isApellidoValid || !isEmailValid || !isTelefonoValid) {
             return;
         }
         try {
-            const nivelId = niveles[nivel];
-            const datosActualizados = {
-                idusuario: perfil.idusuario,
-                nombrecompleto: `${nombre.trim()} ${apellido.trim()}`,
-                fecharegistro: perfil.fecharegistro,
-                correo: email.trim(),
-                contraseñaHash: perfil.contraseñaHash,
-                idnivel: nivelId,
-                idrol: perfil.idrol,
-                autProf: perfil.autProf,
-                tokenRecuperacion: perfil.tokenRecuperacion,
-                tokenExpiracion: perfil.tokenExpiracion,
-                cvRuta: perfil.cvRuta,
-                fotoRuta: perfil.fotoRuta,
-            };
-
             setLoading(true);
-            
+            const token = sessionStorage.getItem('authToken');
+            const updatePayload = {
+                nombre: nombre.trim(),
+                apellido: apellido.trim(),
+                telefono: telefono?.trim() || undefined
+            };
             const response = await axios.put(
-                `${API_BASE_URL}/Usuario/EditarUsuario?id=${perfil.idusuario}`,
-                datosActualizados
+                `${API_BASE_URL}/Usuario/Actualizar`,
+                updatePayload,
+                { headers: { Authorization: `Bearer ${token}` } }
             );
             if (response.data.status) {
+                const updatedUser = response.data.value;
+                sessionStorage.setItem("userData", JSON.stringify(updatedUser));
+                refreshUser();
+                if (typeof onUpdate === 'function') {
+                    try { onUpdate(updatedUser); } catch {}
+                }
                 setMensajeActualizado("Perfil actualizado con éxito.");
                 setTimeout(() => {
-                    alert("Perfil actualizado con éxito. Debes volver a iniciar sesión.");
-                    navigate("/iniciarsesion"); 
-                }, 1500);
+                    navigate('/perfil', { replace: true });
+                }, 800);
             } else {
                 alert("No se pudo actualizar el perfil.");
             }
         } catch (error) {
             console.error("Error al actualizar el perfil:", error);
+            if (error.response) {
+                alert(`Error ${error.response.status}: ${error.response.data.message || "No se pudo actualizar el perfil."}`);
+            }
         } finally {
-            setLoading(false); 
+            setLoading(false);
         }
     };
 
@@ -113,18 +160,18 @@ export const EditarPerfil = ({ onUpdate }) => {
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
             <div className="w-full max-w-xl bg-white shadow-2xl rounded-3xl overflow-hidden">
-                <div className="bg-[#00A89F] p-8 text-center relative flex flex-col items-center">
-                    <img src={logo} alt="Logo" className="w-40 h-auto object-contain mb-4" />
-                    <h3 className="text-3xl font-bold text-white tracking-wide">Editar Perfil</h3>
+                <div className="bg-white border-b border-slate-200 p-6 text-center relative flex flex-col items-center">
+                    <img src={logo} alt="Logo" className="w-40 h-auto object-contain mb-2" />
+                    <h3 className="text-2xl font-semibold text-slate-800 tracking-wide">Editar Perfil</h3>
                 </div>
 
                 {mensajeActualizado && (
-                    <div className="bg-[#00A89F] text-white text-center p-4 animate-pulse">
+                    <div className="bg-gray-700 text-white text-center p-4 animate-pulse">
                         {mensajeActualizado}
                     </div>
                 )}
 
-                { loading ? (
+                {loading ? (
                     <p>Cargando datos...</p>
                 ) : (
                     
@@ -132,35 +179,31 @@ export const EditarPerfil = ({ onUpdate }) => {
                     <div className="grid grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
-                            <input value={nombre} onChange={(e) => setNombre(e.target.value)}
-                                type="text" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-[#00A89F]" />
+                            <input value={nombre} onChange={handleInputChange} name="nombre"
+                                type="text" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 ${errors.nombre ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-gray-400'}`} />
+                            {errors.nombre && <p className="text-red-500 text-sm mt-1">{errors.nombre}</p>}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
-                            <input value={apellido} onChange={(e) => setApellido(e.target.value)}
-                                type="text" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-[#00A89F]" />
+                            <input value={apellido} onChange={handleInputChange} name="apellido"
+                                type="text" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 ${errors.apellido ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-gray-400'}`} />
+                            {errors.apellido && <p className="text-red-500 text-sm mt-1">{errors.apellido}</p>}
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Correo Electrónico</label>
-                        <input value={email} onChange={(e) => setEmail(e.target.value)}
-                            type="email" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-[#00A89F]" />
+                        <input value={email} onChange={handleInputChange} name="email" disabled
+                            type="email" className={`w-full px-4 py-3 border rounded-lg bg-gray-100 cursor-not-allowed ${errors.email ? 'border-red-500' : 'border-gray-300'}`} />
+                        {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Nivel</label>
-                        <select value={nivel} onChange={(e) => setNivel(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-[#00A89F]">
-                            <option value="" disabled>Seleccione un nivel</option>
-                            <option value="A1">A1: Principiante</option>
-                            <option value="A2">A2: Básico</option>
-                            <option value="B1">B1: Pre-intermedio</option>
-                            <option value="B2">B2: Intermedio</option>
-                            <option value="C1">C1: Intermedio-alto</option>
-                            <option value="C2">C2: Avanzado</option>
-                        </select>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+                        <input value={telefono} onChange={handleInputChange} name="telefono"
+                            type="text" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 ${errors.telefono ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-gray-400'}`} />
+                        {errors.telefono && <p className="text-red-500 text-sm mt-1">{errors.telefono}</p>}
                     </div>
                     <div className="flex space-x-4 pt-4">
-                        <button type="submit" className="w-full py-3 bg-[#00A89F] text-white rounded-lg hover:bg-opacity-90">
+                        <button type="submit" className="w-full py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800">
                             Actualizar Perfil
                         </button>
                         <button type="button" onClick={handleCancelar}
