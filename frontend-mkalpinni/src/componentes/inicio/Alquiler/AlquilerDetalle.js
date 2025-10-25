@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Importamos 'useRef'
 import { useNavigate, useLocation, Link, useParams } from "react-router-dom";
 import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar, FaCar, FaTree, FaSnowflake, FaSwimmingPool, FaLock } from "react-icons/fa";
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import { API_BASE_URL } from '../../../config/apiConfig';
+
+// Importaciones de Leaflet
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
 
 const AlquilerDetalle = () => {
     const { id } = useParams();
@@ -20,6 +25,18 @@ const AlquilerDetalle = () => {
         email: '',
         telefono: '',
         mensaje: ''
+    });
+
+    // 1. Definición de Referencias para el Mapa
+    const mapRef = useRef(null);
+    const mapContainerRef = useRef(null);
+
+    // Definición de icono personalizado
+    const customIcon = L.divIcon({
+        className: 'custom-marker-detail',
+        html: `<div class="bg-blue-600 text-white p-2 rounded-full shadow-lg border-2 border-white"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 36]
     });
 
     useEffect(() => {
@@ -41,7 +58,15 @@ const AlquilerDetalle = () => {
                     setLoading(false);
                     return;
                 }
+                
+                // Asegurar que latitud y longitud sean números si es necesario
+                const rawPropiedad = propiedadData.value;
+                rawPropiedad.latitud = parseFloat(rawPropiedad.latitud) || null;
+                rawPropiedad.longitud = parseFloat(rawPropiedad.longitud) || null;
 
+                // En tu código original había una segunda llamada a /ImagenesPropiedad/ObtenerPropiedad/
+                // Asumo que la propiedadData.value ya incluye o puede incluir las imágenes
+                // Si la lógica de las imágenes es correcta, la dejamos:
                 const imagenesResponse = await fetch(`${API_BASE_URL}/ImagenesPropiedad/ObtenerPropiedad/${id}`);
                 const imagenesData = await imagenesResponse.json();
 
@@ -59,7 +84,7 @@ const AlquilerDetalle = () => {
                     setMainImage(defaultPlaceholderImage);
                 }
 
-                setPropiedad(propiedadData.value);
+                setPropiedad(rawPropiedad);
                 setLoading(false);
 
             } catch (err) {
@@ -121,17 +146,51 @@ const AlquilerDetalle = () => {
         }
     };
 
-    const Mapa = ({ lat, lng }) => {
+    // 2. Componente Mapa con Inicialización de Leaflet
+    const Mapa = ({ lat, lng, titulo, ubicacion }) => {
+        
+        // Efecto para inicializar el mapa al cambiar a la pestaña de ubicación
+        useEffect(() => {
+            // Solo inicializa si la pestaña de ubicación está activa
+            if (activeTab !== "ubicacion") return;
+
+            if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+                console.warn("Coordenadas inválidas para el mapa.");
+                return; 
+            }
+
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+
+            mapRef.current = L.map(mapContainerRef.current).setView([lat, lng], 16);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19,
+            }).addTo(mapRef.current);
+            L.marker([lat, lng], { icon: customIcon })
+                .addTo(mapRef.current)
+                .bindPopup(`<b>${titulo || 'Propiedad'}</b><br>${ubicacion || 'Ubicación'}`).openPopup();
+            return () => {
+                if (mapRef.current) {
+                    mapRef.current.remove();
+                    mapRef.current = null;
+                }
+            };
+        }, [lat, lng, activeTab, titulo, ubicacion]); 
+
+        if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+             return <p className="text-gray-500 p-4 bg-gray-100 rounded-lg">Ubicación geográfica no disponible o inválida.</p>;
+        }
+
         return (
-            <div className="w-full h-64 bg-gray-200 rounded-lg overflow-hidden relative">
-                <div className="absolute inset-0 bg-gray-300 flex items-center justify-center">
-                    <div className="text-center">
-                        <FaMapMarkerAlt className="text-red-600 text-4xl mb-2 mx-auto" />
-                        <p className="text-gray-700 font-medium">Ubicación de la propiedad</p>
-                        <p className="text-gray-600 text-sm">Lat: {lat || 'N/A'}, Lng: {lng || 'N/A'}</p>
-                    </div>
-                </div>
-            </div>
+            // Contenedor del mapa, debe tener un alto definido
+            <div 
+                ref={mapContainerRef} 
+                className="w-full h-96 bg-gray-200 rounded-lg overflow-hidden" 
+                style={{ zIndex: 1 }}
+            />
         );
     };
 
@@ -167,8 +226,9 @@ const AlquilerDetalle = () => {
             : `$${propiedad.precio?.toLocaleString('es-AR')}`,
         direccion: `${propiedad.ubicacion || ''}${propiedad.barrio ? `, ${propiedad.barrio}` : ''}`,
         coordenadas: {
-            lat: propiedad.latitud || null,
-            lng: propiedad.longitud || null
+            // Se asegura que sean números para Leaflet
+            lat: parseFloat(propiedad.latitud) || null,
+            lng: parseFloat(propiedad.longitud) || null
         },
         descripcion: propiedad.descripcion || "No hay descripción disponible para esta propiedad.",
         caracteristicas: [
@@ -289,7 +349,12 @@ const AlquilerDetalle = () => {
                                     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                                         <h3 className="font-medium text-gray-900 mb-2">Ubicación de la propiedad</h3>
                                         <p className="text-gray-700 mb-4">{inmuebleDisplay.direccion}</p>
-                                        <Mapa lat={inmuebleDisplay.coordenadas.lat} lng={inmuebleDisplay.coordenadas.lng} />
+                                        <Mapa 
+                                            lat={inmuebleDisplay.coordenadas.lat} 
+                                            lng={inmuebleDisplay.coordenadas.lng}
+                                            titulo={inmuebleDisplay.titulo}
+                                            ubicacion={inmuebleDisplay.direccion}
+                                        />
                                     </div>
                                 </div>
                             )}
