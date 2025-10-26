@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
 import Header from '../Componentes/Header';
 import { MapPin, Home, Bath, Maximize, Search, Bookmark, DollarSign, BedDouble, Filter, Loader2, RefreshCw } from 'lucide-react';
@@ -112,6 +112,26 @@ const AlquilerTemporario = () => {
     const [mostrarSelectorHuespedes, setMostrarSelectorHuespedes] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [availableLocations, setAvailableLocations] = useState([]);
+    const [searchError, setSearchError] = useState('');
+    const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+    const [filteredLocationSuggestions, setFilteredLocationSuggestions] = useState([]);
+    const searchInputRef = useRef(null);
+
+    const buildUniqueLocations = useCallback((items) => {
+        if (!Array.isArray(items)) return [];
+        const normalized = items
+            .flatMap(entry => [entry?.barrio, entry?.localidad, entry?.provincia])
+            .filter(Boolean)
+            .map(value => value.trim())
+            .filter(Boolean);
+        return [...new Set(normalized)];
+    }, []);
+
+    const fallbackLocations = useMemo(
+        () => buildUniqueLocations(propiedadesRaw),
+        [propiedadesRaw, buildUniqueLocations]
+    );
 
     const fetchPropiedades = useCallback(async (apiParams = {}) => {
         setLoading(true); setError(null);
@@ -165,11 +185,12 @@ const AlquilerTemporario = () => {
     }, [fetchPropiedades, filtros.barrio, filtros.precioMin, filtros.precioMax, filtros.habitacionesFiltro, filtros.tipo]);
 
     useEffect(() => {
-        if (location.state?.barrio) {
-            if (location.state.barrio !== filtros.barrio) setFiltros(prev => ({ ...prev, barrio: location.state.barrio }));
-            if (location.state.barrio !== searchTerm) setSearchTerm(location.state.barrio);
+        const locBarrio = location.state?.barrio;
+        if (locBarrio) {
+            if (locBarrio !== filtros.barrio) setFiltros(prev => ({ ...prev, barrio: locBarrio }));
+            if (locBarrio !== searchTerm) setSearchTerm(locBarrio);
         }
-    }, [location.state]);
+    }, [location.state?.barrio, filtros.barrio, searchTerm]);
 
     const aplicarTodosLosFiltros = useCallback(() => {
         let currentFilteredProperties = [...propiedadesRaw];
@@ -192,9 +213,73 @@ const AlquilerTemporario = () => {
     }, [propiedadesRaw, aplicarTodosLosFiltros]); 
 
     const handleFiltroChange = (e) => { const { name, value } = e.target; setFiltros(prev => ({ ...prev, [name]: value })); };
-    const handleSearchChange = (e) => setSearchTerm(e.target.value);
-    const handleMainSearch = () => { if (filtros.barrio !== searchTerm) setFiltros(prev => ({ ...prev, barrio: searchTerm })); setMostrarFiltros(false); };
-    const handleKeyPress = (e) => { if (e.key === 'Enter') handleMainSearch(); };
+    const handleSearchChange = (e) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        setSearchError('');
+        const pool = availableLocations.length
+            ? availableLocations
+            : fallbackLocations;
+        if (value.trim()) {
+            const normalized = value.trim().toLowerCase();
+            const suggestions = pool.filter(location =>
+                location.toLowerCase().includes(normalized)
+            ).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+            setFilteredLocationSuggestions(suggestions);
+            setShowLocationSuggestions(true);
+        } else {
+            setFilteredLocationSuggestions([]);
+            setShowLocationSuggestions(false);
+        }
+    };
+
+    const handleSelectLocation = (location) => {
+        setSearchTerm(location);
+        setFiltros(prev => ({ ...prev, barrio: location }));
+        setFilteredLocationSuggestions([]);
+        setShowLocationSuggestions(false);
+        setSearchError('');
+        searchInputRef.current?.focus();
+    };
+
+    const handleMainSearch = () => {
+        const trimmedValue = searchTerm.trim();
+        const pool = availableLocations.length
+            ? availableLocations
+            : fallbackLocations;
+        if (trimmedValue) {
+            const normalizedValue = trimmedValue.toLowerCase();
+            const matchedLocation =
+                pool.find(location => location.toLowerCase() === normalizedValue) ||
+                pool.find(location => location.toLowerCase().includes(normalizedValue));
+            if (!matchedLocation) {
+                setSearchError('Selecciona una ubicación válida.');
+                setShowLocationSuggestions(true);
+                setFilteredLocationSuggestions(pool.filter(location =>
+                    location.toLowerCase().includes(normalizedValue)
+                ).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' })));
+                searchInputRef.current?.focus();
+                return;
+            }
+            setSearchTerm(matchedLocation);
+            setFiltros(prev => ({ ...prev, barrio: matchedLocation }));
+        } else {
+            setSearchTerm('');
+            setFiltros(prev => ({ ...prev, barrio: '' }));
+        }
+        setShowLocationSuggestions(false);
+        setFilteredLocationSuggestions([]);
+        setSearchError('');
+        setMostrarFiltros(false);
+    };
+
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleMainSearch();
+        }
+    };
+
     const handleAplicarHuespedes = () => setMostrarSelectorHuespedes(false);
 
     const aplicarFiltrosLaterales = () => {
@@ -208,6 +293,9 @@ const AlquilerTemporario = () => {
         };
         setFiltros(initialFiltros);
         setSearchTerm('');
+        setSearchError('');
+        setShowLocationSuggestions(false);
+        setFilteredLocationSuggestions([]);
     };
 
     const toggleFavorito = async (id, e) => {
@@ -217,10 +305,31 @@ const AlquilerTemporario = () => {
         setPropiedadesFiltradas(updateList); 
     };
 
-    const ubicacionesOptions = [...new Set(propiedadesRaw.map(p => p.barrio))].filter(Boolean).sort();
     const tiposOptions = [...new Set(propiedadesRaw.map(p => p.tipo))].filter(Boolean).sort();
     const banosApiOptions = [...new Set(propiedadesRaw.map(p => p.banos))].filter(Boolean).sort((a, b) => a - b);
     const totalHuespedesDisplay = parseInt(filtros.adultos, 10) + parseInt(filtros.niños, 10);
+
+    useEffect(() => {
+        const fetchLocations = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/Propiedad/Obtener`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (data.status && Array.isArray(data.value)) {
+                    const temporarias = data.value.filter(
+                        (prop) => prop.esAlquilerTemporario || prop.transaccionTipo?.toLowerCase().includes('temporario')
+                    );
+                    const normalizedLocations = buildUniqueLocations(temporarias).sort((a, b) =>
+                        a.localeCompare(b, 'es', { sensitivity: 'base' })
+                    );
+                    setAvailableLocations(normalizedLocations);
+                }
+            } catch (err) {
+                console.error('Error cargando ubicaciones:', err);
+            }
+        };
+        fetchLocations();
+    }, [buildUniqueLocations]);
 
     return (
         <div className="flex flex-col min-h-screen bg-white-50">
@@ -236,8 +345,46 @@ const AlquilerTemporario = () => {
                             {/* Ubicación */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">¿A dónde vas?</label>
-                                <input type="text" placeholder="Ubicación" className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={handleSearchChange} onKeyPress={handleKeyPress} list="ubicaciones-datalist"/>
-                                <datalist id="ubicaciones-datalist">{ubicacionesOptions.map(u => <option key={u} value={u} />)}</datalist>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Ubicación"
+                                        className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 ${searchError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                                        value={searchTerm}
+                                        onChange={handleSearchChange}
+                                        onFocus={() => {
+                                            if (searchTerm.trim()) {
+                                                setShowLocationSuggestions(true);
+                                            }
+                                        }}
+                                        onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 150)}
+                                        onKeyPress={handleKeyPress}
+                                        autoComplete="off"
+                                        ref={searchInputRef}
+                                        aria-invalid={Boolean(searchError)}
+                                    />
+                                    {showLocationSuggestions && (
+                                        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                                            {filteredLocationSuggestions.length > 0 ? (
+                                                filteredLocationSuggestions.map((location) => (
+                                                    <button
+                                                        key={location}
+                                                        type="button"
+                                                        className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                                                        onMouseDown={() => handleSelectLocation(location)}
+                                                    >
+                                                        {location}
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="px-4 py-2 text-sm text-gray-500">
+                                                    No hay coincidencias disponibles.
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                {searchError && <p className="mt-2 text-sm text-red-600">{searchError}</p>}
                             </div>
                             {/* Check-in */}
                             <div>
