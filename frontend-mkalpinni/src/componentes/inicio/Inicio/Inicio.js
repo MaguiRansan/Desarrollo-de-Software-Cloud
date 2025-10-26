@@ -193,6 +193,8 @@ const InmobiliariaLanding = () => {
               banos: prop.banos || 0, 
               superficie: `${prop.superficieM2 || 0}m²` 
             },
+            transaccionTipo: prop.transaccionTipo,
+            esAlquilerTemporario: Boolean(prop.esAlquilerTemporario),
           }));
           setPropiedadesDestacadas(propiedades);
         } else {
@@ -274,6 +276,26 @@ const InmobiliariaLanding = () => {
 
   const goToProperty = (index) => {
     setCurrentProperty(index);
+  };
+
+  const resolvePropertyDetailPath = (propiedad) => {
+    const transaction = propiedad.transaccionTipo?.toLowerCase() || '';
+    if (propiedad.esAlquilerTemporario || transaction.includes('temporario')) {
+      return `/alquilerTemporario/detalle/${propiedad.id}`;
+    }
+    if (transaction === 'alquiler') {
+      return `/alquiler/detalle/${propiedad.id}`;
+    }
+    if (transaction === 'venta') {
+      return `/venta/detalle/${propiedad.id}`;
+    }
+    return `/propiedad/detalle/${propiedad.id}`;
+  };
+
+  const handleViewDetails = (propiedad) => {
+    navigate(resolvePropertyDetailPath(propiedad), {
+      state: { propiedadId: propiedad.id }
+    });
   };
 
   return (
@@ -451,7 +473,9 @@ const InmobiliariaLanding = () => {
                           </div>
                         </div>
 
-                        <button className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-300">
+                        <button className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duración-300"
+                          onClick={() => handleViewDetails(propiedad)}
+                        >
                           Ver Detalles
                         </button>
                       </div>
