@@ -179,13 +179,6 @@ const AlquilerDetalle = () => {
         );
     };
 
-    if (loading) {
-        return (
-            <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-                <p className="text-lg text-gray-700">Cargando detalles de la propiedad...</p>
-            </div>
-        );
-    }
 
     if (error) {
         return (
@@ -285,12 +278,6 @@ const AlquilerDetalle = () => {
                                 onClick={() => setActiveTab("descripcion")}
                             >
                                 Descripción
-                            </button>
-                            <button
-                                className={`py-2 px-4 font-medium ${activeTab === "especificaciones" ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-500 hover:text-gray-900"}`}
-                                onClick={() => setActiveTab("especificaciones")}
-                            >
-                                Detalles
                             </button>
                             <button
                                 className={`py-2 px-4 font-medium ${activeTab === "ubicacion" ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-500 hover:text-gray-900"}`}
@@ -405,8 +392,8 @@ const AlquilerDetalle = () => {
                                         <h3 className="font-bold text-gray-900 text-lg mb-2">{similar.titulo}</h3>
                                         <p className="text-gray-600 text-sm mb-3">{similar.direccion}</p>
                                         <div className="flex space-x-2 text-sm text-gray-700">
-                                            {similar.detalles.map((detalle, idx) => (
-                                                <span key={idx} className="bg-gray-100 px-3 py-1 rounded-full">{detalle}</span>
+                                            {similar.descripcion.map((descripcion, idx) => (
+                                                <span key={idx} className="bg-gray-100 px-3 py-1 rounded-full">{descripcion}</span>
                                             ))}
                                         </div>
                                     </div>
