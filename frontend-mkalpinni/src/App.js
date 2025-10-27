@@ -8,6 +8,7 @@ import "./App.css";
 
 import Login from "./componentes/Login/Login";
 import { Registrar } from "./componentes/Registrar/Registrar";
+import ResetPassword from "./componentes/inicio/Inicio/NuevaContra";
 
 import Inicio from "./componentes/inicio/Inicio/Inicio";
 import Comprar from "./componentes/inicio/Comprar/Comprar";
@@ -46,6 +47,7 @@ function App() {
         <Routes>
           <Route path="/iniciarsesion" element={<Login />} />
           <Route path="/registrarse" element={<Registrar />} />
+          <Route path="/recuperarcontrasena" element={<ResetPassword />} />
           
 
           <Route path="/" element={<Inicio />} />

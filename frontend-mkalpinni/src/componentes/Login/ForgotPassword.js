@@ -26,18 +26,18 @@ const ForgotPassword = ({ onClose }) => {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch(`${API_BASE_URL}/Usuario/SolicitudToken`, {
+      const response = await fetch(`${API_BASE_URL}/Usuario/RecuperarContrasena`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(email),
+        body: JSON.stringify({ correo: email }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Se ha enviado un correo con las instrucciones para recuperar tu contraseña.' });
+        setMessage({ type: 'success', text: 'Se ha enviado un correo con las instrucciones para recuperar tu contraseña. Revisa tu bandeja de entrada y también la carpeta de spam/correo no deseado.' });
       } else {
         setMessage({ type: 'error', text: data.msg || 'No se pudo procesar la solicitud de recuperación.' });
       }
