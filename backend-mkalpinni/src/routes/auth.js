@@ -197,7 +197,7 @@ router.post('/RecuperarContrasena', [
     }
 
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+    const resetTokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
     user.tokenRecuperacion = resetToken;
     user.tokenRecuperacionExpira = resetTokenExpiry;
@@ -206,10 +206,10 @@ router.post('/RecuperarContrasena', [
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER || 'tu-email@gmail.com',
-        pass: process.env.EMAIL_PASS || 'tu-app-password'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS 
       }
-    });
+        });
 
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/recuperarcontrasena?token=${resetToken}`;
 
