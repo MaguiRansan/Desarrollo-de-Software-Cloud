@@ -1,20 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from "react-router-dom";
 import axios from 'axios';
-import { API_BASE_URL } from '../../config/apiConfig';
+import { API_BASE_URL, API_STATIC_URL } from '../../config/apiConfig';
 import { useUser } from '../../Context/UserContext';
 import logo from "../../logo/logo.png";
 import { ArrowLeft } from 'lucide-react';
-
-const getRandomColor = (str) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const h = Math.abs(hash) % 360;
-  return `hsl(${h}, 70%, 50%)`;
-};
 
 const Perfil = () => {
   const { user, logout } = useUser();
@@ -25,19 +15,15 @@ const Perfil = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const navigate = useNavigate();
-  useEffect(() => {
-    if (user?.correo) {
-      cargarFotoExistente();
-    }
-  }, [user?.correo]);
-
-  const cargarFotoExistente = async () => {
+  const formatDate = (d) => {
+    if (!d) return '-';
+    try { return new Date(d).toLocaleString(); } catch { return String(d); }
+  };
+  const cargarFotoExistente = useCallback(async () => {
     try {
       const response = await axios.get(
         `${API_BASE_URL}/Usuario/ObtenerFoto/${user.correo}`,
-        {
-          responseType: 'blob'
-        }
+        { responseType: 'blob', params: { v: Date.now() } }
       );
       const url = URL.createObjectURL(response.data);
       setPhotoUrl(url);
@@ -46,7 +32,13 @@ const Perfil = () => {
         console.error('Error al cargar la foto existente:', error);
       }
     }
-  };
+  }, [user?.correo]);
+
+  useEffect(() => {
+    if (user?.correo) {
+      cargarFotoExistente();
+    }
+  }, [user?.correo, cargarFotoExistente]);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -73,21 +65,19 @@ const Perfil = () => {
       const token = sessionStorage.getItem('authToken');
       const response = await axios.post(
         `${API_BASE_URL}/Usuario/ActualizarFoto`,
-        {
-          correo: user.correo,
-          foto: photo
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
+        { foto: photo },
+        { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
       );
 
       if (response.data.status) {
-        alert('Foto actualizada con éxito');
-        setPhotoUrl(photo);
+        const ruta = response.data.ruta;
+        if (ruta) {
+          setPhotoUrl(`${API_STATIC_URL}${ruta}?v=${Date.now()}`);
+        } else {
+          setPhotoUrl(`${photo}`);
+        }
+        setPhoto(null);
+        try { await cargarFotoExistente(); } catch {}
       } else {
         setError('No se pudo actualizar la foto');
       }
@@ -101,7 +91,7 @@ const Perfil = () => {
 
   const handleLogout = () => {
     logout();
-    setShowLogoutModal(false); 
+    setShowLogoutModal(false);
   };
 
   if (!user) {
@@ -132,14 +122,14 @@ const Perfil = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="bg-white/70 backdrop-blur-lg border-b border-slate-200 sticky top-0 z-50" style={{ backgroundColor: '#00A89F' }}>
-        <div className="max-w-7xl mx-auto px-6" >
-          <div className="flex items-center justify-between h-20">
-            <div className="flex items-center gap-6">
-              <img 
+      <div className="bg-white shadow-md py-6 sticky top-0 z-50">
+        <div className="max-w-full w-full px-20 mx-auto">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <img
                 src={logo}
                 alt="Logo"
-                className="w-48"
+                className="h-14 md:h-24 w-auto"
                 onClick={() => navigate(-1)}
               />
             </div>
@@ -156,15 +146,15 @@ const Perfil = () => {
 
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors font-medium mt-5 ml-10"
+        className="flex items-center gap-2 text-slate-700 hover:text-slate-900 transition-colors font-medium mt-5 ml-10"
       >
         <ArrowLeft className="w-6 h-6" />
         <span>Volver</span>
       </button>
 
-     
+
       {showLogoutModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-grey-800 bg-opacity-50 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-96">
             <h3 className="text-lg font-semibold text-slate-800">¿Seguro que quieres cerrar sesión?</h3>
             <div className="mt-4 flex justify-between gap-4">
@@ -187,10 +177,10 @@ const Perfil = () => {
 
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="flex flex-col lg:flex-row gap-8">
-        
+
           <div className="flex-1">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
-              <div className="relative h-48" style={{ backgroundColor: getRandomColor(user.correo) }}>
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="relative h-48 bg-slate-200">
                 <div className="absolute -bottom-16 left-8 p-1.5 bg-white rounded-2xl shadow-lg">
                   <div className="h-32 w-32 rounded-xl overflow-hidden bg-slate-100">
                     {photoUrl ? (
@@ -198,7 +188,7 @@ const Perfil = () => {
                     ) : (
                       <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
                         <span className="text-4xl font-bold text-slate-400">
-                          {user.nombrecompleto?.charAt(0) || '?'}
+                          {(user.nombre || '')?.charAt(0) || '?'}
                         </span>
                       </div>
                     )}
@@ -207,9 +197,9 @@ const Perfil = () => {
               </div>
 
               <div className="pt-20 p-8">
-                <h2 className="text-3xl font-bold text-slate-800 mb-2">{user.nombrecompleto}</h2>
-                <div className="flex items-center gap-3 mb-6">
-                  <span className={`inline-flex px-4 py-1.5 rounded-lg text-sm font-medium text-white ${getRoleBadgeColor(user.rol)}`}>
+                <h2 className="text-3xl font-bold text-slate-800 mb-2 text-center">{`${user.nombre || ''} ${user.apellido || ''}`.trim()}</h2>
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  <span className={`inline-flex px-4 py-1.5 rounded-lg text-sm font-medium text-white ${getRoleBadgeColor(user.idrol)}`}>
                     {getRoleText(user.idrol)}
                   </span>
                   {user.idnivel && (
@@ -218,22 +208,47 @@ const Perfil = () => {
                     </span>
                   )}
                 </div>
-                <p className="text-lg text-left text-slate-600"> Correo: {user.correo}</p>
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto text-sm">
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
+                    <div className="text-slate-500 mb-1">Correo</div>
+                    <div className="font-medium break-all">{user.correo || '-'}</div>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
+                    <div className="text-slate-500 mb-1">Teléfono</div>
+                    <div className="font-medium">{user.telefono || '-'}</div>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
+                    <div className="text-slate-500 mb-1">Rol</div>
+                    <div className="font-medium">{getRoleText(user.idrol)}{user.rol ? ` (${user.rol})` : ''}</div>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
+                    <div className="text-slate-500 mb-1">Último acceso</div>
+                    <div className="font-medium">{formatDate(user.ultimoAcceso)}</div>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center sm:col-span-1">
+                    <div className="text-slate-500 mb-1">Creado</div>
+                    <div className="font-medium">{formatDate(user.fechaCreacion)}</div>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center sm:col-span-1">
+                    <div className="text-slate-500 mb-1">Actualizado</div>
+                    <div className="font-medium">{formatDate(user.fechaActualizacion)}</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-       
+
           <div className="flex flex-col gap-6 w-80">
-         
-          <div className="rounded-2xl shadow-sm border border-slate-200/60 p-6" style={{ backgroundColor: '#d2d2db' }}>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
 
               <h3 className="text-xl font-semibold text-slate-800 mb-4">Foto de Perfil</h3>
               <div className="space-y-4">
                 <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" id="photo-upload" />
                 <button
                   onClick={() => document.getElementById('photo-upload').click()}
-                  className="w-full px-6 py-3 bg-blue-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors"
+                  className="w-full px-6 py-3 bg-gray-700 hover:bg-gray-800 text-white font-medium rounded-xl transition-colors"
                 >
                   Cambiar foto
                 </button>
@@ -243,7 +258,7 @@ const Perfil = () => {
                     <button
                       onClick={handleUpdatePhoto}
                       disabled={isUpdating}
-                      className="w-full px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+                      className="w-full px-6 py-3 bg-gray-700 hover:bg-gray-800 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
                     >
                       {isUpdating ? 'Actualizando...' : 'Guardar cambios'}
                     </button>
@@ -261,12 +276,12 @@ const Perfil = () => {
               </div>
             </div>
 
-          
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6" style={{ backgroundColor: '#e3dfd6' }}>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-xl font-semibold text-slate-800 mb-4">Información de Perfil</h3>
               <button
                 onClick={() => navigate("/editarperfil")}
-                className="w-full px-6 py-3 bg-blue-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors"
+                className="w-full px-6 py-3 bg-gray-700 hover:bg-gray-800 text-white font-medium rounded-xl transition-colors"
               >
                 Editar Perfil
               </button>

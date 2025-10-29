@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link, useParams } from "react-router-dom";
 import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar, FaCar, FaTree, FaSnowflake, FaSwimmingPool, FaLock, FaWifi, FaTv, FaUtensils } from "react-icons/fa";
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import { API_BASE_URL } from '../../../config/apiConfig';
 import axios from 'axios';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css'; 
+import 'leaflet/dist/images/marker-icon-2x.png';
+import 'leaflet/dist/images/marker-icon.png';
+import 'leaflet/dist/images/marker-shadow.png';
 
 const AlquilerTemporarioDetalle = () => {
   const { id } = useParams();
@@ -26,6 +31,10 @@ const AlquilerTemporarioDetalle = () => {
     mensaje: ''
   });
 
+  const mapRef = useRef(null);
+  const mapContainerRef = useRef(null);
+
+
   useEffect(() => {
     const fetchInmueble = async () => {
       try {
@@ -34,8 +43,15 @@ const AlquilerTemporarioDetalle = () => {
         const response = await axios.get(`${API_BASE_URL}/Propiedad/Obtener/${id}`);
         if (response.data.status) {
           const fetchedInmueble = response.data.value;
+            const lat = parseFloat(fetchedInmueble.latitud);
+            const lng = parseFloat(fetchedInmueble.longitud);
+
           setInmueble({
             ...fetchedInmueble,
+            coordenadas: { 
+                lat: isNaN(lat) ? null : lat,
+                lng: isNaN(lng) ? null : lng,
+            },
             imagenes: fetchedInmueble.imagenes || [],
             caracteristicas: [
               { icon: <FaBuilding />, texto: `${fetchedInmueble.metrosCuadradosConstruidos || 'N/A'} m² construidos` },
@@ -149,24 +165,61 @@ const AlquilerTemporarioDetalle = () => {
     setFormData({ ...formData, [id]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmitForm = (e) => {
     e.preventDefault();
     alert("¡Gracias por tu interés! Te contactaremos pronto para confirmar disponibilidad.");
   };
+  const Mapa = ({ lat, lng, titulo, direccion }) => {
+    useEffect(() => {
+      if (activeTab !== "ubicacion") {
+        if (mapRef.current) {
+            mapRef.current.remove();
+            mapRef.current = null;
+        }
+        return;
+      }
 
-  const Mapa = ({ lat, lng }) => {
+      if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng) || lat === null || lng === null) {
+        if (mapRef.current) {
+            mapRef.current.remove();
+            mapRef.current = null;
+        }
+        return;
+      }
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      mapRef.current = L.map(mapContainerRef.current).setView([lat, lng], 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+      }).addTo(mapRef.current);
+      L.marker([lat, lng])
+        .addTo(mapRef.current)
+        .bindPopup(`<b>${titulo || 'Propiedad'}</b><br>${direccion || 'Ubicación'}`).openPopup();
+
+      return () => {
+        if (mapRef.current) {
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
+      };
+    }, [lat, lng, activeTab, titulo, direccion]);
+
+    if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng) || lat === null || lng === null) {
+        return <p className="text-gray-500 p-4 bg-gray-100 rounded-lg">Ubicación geográfica no disponible para esta propiedad.</p>;
+    }
+
     return (
-      <div className="w-full h-64 bg-gray-200 rounded-lg overflow-hidden relative">
-        <div className="absolute inset-0 bg-gray-300 flex items-center justify-center">
-          <div className="text-center">
-            <FaMapMarkerAlt className="text-red-600 text-4xl mb-2 mx-auto" />
-            <p className="text-gray-700 font-medium">Ubicación de la propiedad</p>
-            <p className="text-gray-600 text-sm">Lat: {lat}, Lng: {lng}</p>
-          </div>
-        </div>
-      </div>
+      <div 
+        ref={mapContainerRef} 
+        className="w-full h-96 bg-gray-200 rounded-lg overflow-hidden" 
+        style={{ zIndex: 1 }} 
+      />
     );
   };
+
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -294,7 +347,12 @@ const AlquilerTemporarioDetalle = () => {
                   <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                     <h3 className="font-medium text-gray-900 mb-2">Ubicación de la propiedad</h3>
                     <p className="text-gray-700 mb-4">{inmueble.direccion}</p>
-                    <Mapa lat={inmueble.coordenadas.lat} lng={inmueble.coordenadas.lng} />
+                    <Mapa 
+                      lat={inmueble.coordenadas.lat} 
+                      lng={inmueble.coordenadas.lng} 
+                      titulo={inmueble.titulo} 
+                      direccion={inmueble.direccion} 
+                    />
                   </div>
                 </div>
               )}
@@ -380,7 +438,7 @@ const AlquilerTemporarioDetalle = () => {
 
             <div className="mt-8 bg-white p-6 rounded-lg shadow-sm">
               <h3 className="text-xl font-bold text-gray-900 mb-4">¿Te interesa este alquiler temporario?</h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmitForm} className="space-y-4">
                 <input
                   type="text"
                   id="nombre"
