@@ -70,6 +70,13 @@ const userSchema = new mongoose.Schema({
     createdAt: 'fechaCreacion',
     updatedAt: 'fechaActualizacion'
   }
+}, {
+  tokenRecuperacion: {
+    type: String
+  },
+  tokenRecuperacionExpira: {
+    type: Date
+  },
 });
 
 userSchema.index({ idrol: 1 });
@@ -114,6 +121,8 @@ userSchema.methods.toPublicJSON = function() {
   delete userObject.contrasenaHash;
   delete userObject.intentosLogin;
   delete userObject.bloqueadoHasta;
+  delete userObject.tokenRecuperacion;
+  delete userObject.tokenRecuperacionExpira;
   delete userObject.__v;
   return userObject;
 };

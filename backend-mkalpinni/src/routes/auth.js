@@ -3,8 +3,10 @@ const User = require('../models/User');
 const { protect, generateToken } = require('../middleware/auth');
 const { validateRegister, validateLogin, handleValidationErrors } = require('../middleware/validation');
 const { body } = require('express-validator');
-const fs = require('fs');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
 const seedPath = path.join(__dirname, '..', '..', 'scripts', 'seedDatabase.js');
@@ -336,17 +338,74 @@ router.post('/RecuperarContrasena', [
   body('correo').isEmail().normalizeEmail().withMessage('Debe ser un correo electrónico válido'),
   handleValidationErrors
 ], async (req, res) => {
-try {
-  const { correo } = req.body;
-  const user = await User.findByEmail(correo);
+  try {
+    const { correo } = req.body;
+    const user = await User.findByEmail(correo);
 
-    res.json({
-      status: true,
-      message: 'Si el correo está registrado, recibirás instrucciones para recuperar tu contraseña.'
-    });
+   const responseMessage = 'Si el correo está registrado, recibirás instrucciones para recuperar tu contraseña.';
 
-    if (user) {
+    if (!user) {
+      return res.json({
+        status: true,
+        message: responseMessage
+      });
     }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.tokenRecuperacion = resetToken;
+    user.tokenRecuperacionExpira = resetTokenExpiry;
+    await user.save();
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS 
+      }
+        });
+
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/recuperarcontrasena?token=${resetToken}`;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'mkalpinni@gmail.com',
+      to: user.correo,
+      subject: 'Recuperación de Contraseña - Mkalpin Inmobiliaria',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <p>Hola ${user.nombre},</p>
+          <p>Has solicitado recuperar tu contraseña. Haz clic en el siguiente enlace para restablecer tu contraseña:</p>
+          <p style="margin: 20px 0;">
+            <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Restablecer Contraseña</a>
+          </p>
+          <p>Este enlace expirará en 10 minutos por seguridad.</p>
+          <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+          <p>Saludos,<br>Equipo de Mkalpin Negocios Inmobiliairios</p>
+        </div>
+      `
+    };
+
+    try {
+      await transporter.sendMail(mailOptions);
+
+      res.json({
+        status: true,
+        message: responseMessage
+      });
+    } catch (emailError) {
+      console.error('Error enviando email:', emailError);
+
+      user.tokenRecuperacion = undefined;
+      user.tokenRecuperacionExpira = undefined;
+      await user.save();
+
+      res.status(500).json({
+        status: false,
+        message: 'Error interno del servidor al enviar el correo'
+      });
+    }
+
   } catch (error) {
     console.error('Error en recuperación de contraseña:', error);
     res.status(500).json({
@@ -357,6 +416,38 @@ try {
   }
 });
 
+router.post('/reestablecer-contrasena', async (req, res) => {
+  try {
+    const { token, nuevaContraseña } = req.body;
+    const user = await User.findOne({
+      tokenRecuperacion: token,
+      tokenRecuperacionExpira: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: 'Token inválido o expirado. Solicita un nuevo enlace de recuperación.'
+      });
+    }
+
+    user.contrasenaHash = nuevaContraseña;
+
+    user.tokenRecuperacion = undefined;
+    user.tokenRecuperacionExpira = undefined;
+
+    await user.save();
+
+    res.json({
+      message: 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.'
+    });
+
+  } catch (error) {
+    console.error('Error restableciendo contraseña:', error);
+    res.status(500).json({
+      message: 'Error interno del servidor'
+    });
+  }
+});
 router.get('/Todos', protect, async (req, res) => {
   try {
     if (req.user.idrol !== 3) {

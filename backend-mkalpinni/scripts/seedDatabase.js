@@ -29,9 +29,9 @@ async function seedDatabase() {
     await adminUser.save();
 
     const propietarioUser = new User({
-      nombre: 'María Sofia',
-      apellido: 'García',
-      correo: 'maria.garcia@email.com',
+      nombre: 'Sofia',
+      apellido: 'Kalpin',
+      correo: 'sofikalpin@hotmail.com',
       contrasenaHash: 'password123',
       idrol: 1,
       telefono: '+5411234567893'
