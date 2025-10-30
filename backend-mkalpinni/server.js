@@ -13,7 +13,7 @@ const propertyRoutes = require('./src/routes/properties');
 const clientRoutes = require('./src/routes/clients');
 const reservationRoutes = require('./src/routes/reservations');
 const contactRoutes = require('./src/routes/contact');
-const tasacionRoutes = require('./src/routes/tasaciones');
+const tasacionRoutes = require('./src/routes/Appraise');
 const configRoutes = require('./src/routes/config');
 
 const { errorHandler } = require('./src/middleware/errorHandler');
