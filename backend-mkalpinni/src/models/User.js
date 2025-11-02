@@ -30,12 +30,12 @@ const userSchema = new mongoose.Schema({
   idrol: {
     type: Number,
     required: true,
-    enum: [1, 2, 3, 4],
+    enum: [1, 2, 3],
     default: 2
   },
   rol: {
     type: String,
-    enum: ['Propietario', 'Inquilino', 'Administrador', 'Comprador'],
+    enum: ['Propietario', 'Inquilino', 'Administrador'],
     default: 'Inquilino'
   },
   autProf: {
@@ -46,10 +46,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: [20, 'El teléfono no puede exceder 20 caracteres']
-  },
-  fotoRuta: {
-    type: String,
-    trim: true
   },
   activo: {
     type: Boolean,
@@ -64,19 +60,18 @@ const userSchema = new mongoose.Schema({
   },
   bloqueadoHasta: {
     type: Date
+  },
+  tokenRecuperacion: {
+    type: String
+  },
+  tokenRecuperacionExpira: {
+    type: Date
   }
 }, {
   timestamps: {
     createdAt: 'fechaCreacion',
     updatedAt: 'fechaActualizacion'
   }
-}, {
-  tokenRecuperacion: {
-    type: String
-  },
-  tokenRecuperacionExpira: {
-    type: Date
-  },
 });
 
 userSchema.index({ idrol: 1 });
@@ -99,9 +94,6 @@ userSchema.pre('save', async function(next) {
       case 3:
         this.rol = 'Administrador';
         this.autProf = true;
-        break;
-      case 4:
-        this.rol = 'Comprador';
         break;
       default:
         this.rol = 'Inquilino';
