@@ -366,8 +366,8 @@ router.post('/RecuperarContrasena', [
       }
         });
 
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/recuperarcontrasena?token=${resetToken}`;
-
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/recuperarcontrasena?ref=${resetToken}`;
+    
     const mailOptions = {
       from: process.env.EMAIL_USER || 'mkalpinni@gmail.com',
       to: user.correo,
@@ -412,7 +412,7 @@ router.post('/RecuperarContrasena', [
 
 router.post('/reestablecer-contrasena', async (req, res) => {
   try {
-    const { token, nuevaContraseña } = req.body;
+    const { ref: token, nuevaContraseña } = req.body;
     
     if (!token || !nuevaContraseña) {
       return res.status(400).json({

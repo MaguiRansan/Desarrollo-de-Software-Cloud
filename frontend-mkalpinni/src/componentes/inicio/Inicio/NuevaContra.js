@@ -10,7 +10,7 @@ const ResetPassword = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   
-  let token = queryParams.get('token');
+  let token = queryParams.get('ref');
   if (token) {
     token = decodeURIComponent(token).trim();
   }
@@ -77,7 +77,7 @@ const ResetPassword = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ token: token, nuevaContraseña: newPassword }),
+        body: JSON.stringify({ ref: token, nuevaContraseña: newPassword }),
       });
 
       if (!response.ok) {
