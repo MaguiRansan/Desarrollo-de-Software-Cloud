@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema({
   idrol: {
     type: Number,
     required: true,
-   enum: [1, 2, 3, 4],
+    enum: [1, 2, 3, 4],
     default: 2
   },
   rol: {
@@ -47,7 +47,7 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: [20, 'El teléfono no puede exceder 20 caracteres']
   },
-    fotoRuta: {
+  fotoRuta: {
     type: String,
     trim: true
   },
