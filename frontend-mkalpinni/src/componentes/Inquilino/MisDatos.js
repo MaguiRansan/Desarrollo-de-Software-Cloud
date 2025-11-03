@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
 import Header from "../inicio/Componentes/Header";
 import Footer from "../inicio/Componentes/Footer";
+import UserRoleDisplay from "./UserRoleDisplay";
 
 const MisDatos = () => {
   const [userData, setUserData] = useState({
@@ -48,9 +49,12 @@ const MisDatos = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
       <Header />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-center text-gray-800 mb-8">
-          Mis Datos
-        </h1>
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">
+            Mis Datos
+          </h1>
+          <UserRoleDisplay />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
             <div className="flex justify-between items-center mb-6">
@@ -143,8 +147,7 @@ const MisDatos = () => {
         {isEditingAllowed && (
           <div className="text-center mt-8">
             <p className="text-gray-600">
-              Puedes editar tus datos durante las primeras 24 horas después de la
-              subida.
+              Puedes editar tus datos durante las primeras 24 horas después de la subida.
             </p>
           </div>
         )}

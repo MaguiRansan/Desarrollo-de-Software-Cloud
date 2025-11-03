@@ -207,7 +207,7 @@ export const AdminProvider = ({ children }) => {
     dispatch({ type: ACTIONS.SET_ERROR, key, value: error.message });
     dispatch({ type: ACTIONS.SET_LOADING, key, value: false });
     addNotification('error', `Error: ${error.message}`);
-  }, [addNotification]);
+  }, []);
 
   const addNotification = useCallback((type, message) => {
     dispatch({
