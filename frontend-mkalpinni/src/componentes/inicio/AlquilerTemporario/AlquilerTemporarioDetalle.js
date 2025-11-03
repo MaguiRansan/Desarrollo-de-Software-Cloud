@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from "react-router-dom";
-import { FaBuilding, FaTree, FaBed, FaBath, FaCar, FaWifi, FaMapMarkerAlt, FaTimes } from "react-icons/fa";
+import { FaBuilding, FaTree, FaBed, FaBath, FaCar, FaWifi,FaCheck, FaMapMarkerAlt, FaTimes } from "react-icons/fa";
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import { API_BASE_URL } from '../../../config/apiConfig';
