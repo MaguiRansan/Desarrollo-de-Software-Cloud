@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from "react-router-dom";
 import Header from '../Componentes/Header';
-import { MapPin, Home, Bath, Maximize, Search, Bookmark, DollarSign, BedDouble, Filter, Loader2, RefreshCw } from 'lucide-react';
+import { MapPin, Home, Bath, Maximize, Search, Bookmark, DollarSign, BedDouble, Filter, Loader2, RefreshCw, Calendar } from 'lucide-react';
 import Footer from '../Componentes/Footer';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -92,46 +92,23 @@ const MapContainer = React.memo(({ propiedades, propiedadSeleccionada, onMarkerC
 
 const AlquilerTemporario = () => {
     const navigate = useNavigate();
-    const location = useLocation();
 
     const [propiedadesRaw, setPropiedadesRaw] = useState([]);
     const [filtros, setFiltros] = useState({
         precioMin: '', precioMax: '', banos: '',
-        tipo: location.state?.tipoPropiedad || '',
-        barrio: location.state?.barrio || '',
-        checkIn: location.state?.checkIn || '',
-        checkOut: location.state?.checkOut || '',
-        adultos: location.state?.adultos || 1,
-        niños: location.state?.menores || 0,
-        habitacionesFiltro: location.state?.habitaciones || 1,
+        tipo: '',
+        barrio: '',
+        checkIn: '',
+        checkOut: '',
+        adultos: 1,
+        niños: 0,
+        habitacionesFiltro: 1,
     });
-    const [searchTerm, setSearchTerm] = useState(location.state?.barrio || '');
     const [propiedadesFiltradas, setPropiedadesFiltradas] = useState([]);
     const [propiedadSeleccionada, setPropiedadSeleccionada] = useState(null);
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
-    const [mostrarSelectorHuespedes, setMostrarSelectorHuespedes] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [availableLocations, setAvailableLocations] = useState([]);
-    const [searchError, setSearchError] = useState('');
-    const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
-    const [filteredLocationSuggestions, setFilteredLocationSuggestions] = useState([]);
-    const searchInputRef = useRef(null);
-
-    const buildUniqueLocations = useCallback((items) => {
-        if (!Array.isArray(items)) return [];
-        const normalized = items
-            .flatMap(entry => [entry?.barrio, entry?.localidad, entry?.provincia])
-            .filter(Boolean)
-            .map(value => value.trim())
-            .filter(Boolean);
-        return [...new Set(normalized)];
-    }, []);
-
-    const fallbackLocations = useMemo(
-        () => buildUniqueLocations(propiedadesRaw),
-        [propiedadesRaw, buildUniqueLocations]
-    );
 
     const fetchPropiedades = useCallback(async (apiParams = {}) => {
         setLoading(true); setError(null);
@@ -184,14 +161,6 @@ const AlquilerTemporario = () => {
         fetchPropiedades(apiFilterParams);
     }, [fetchPropiedades, filtros.barrio, filtros.precioMin, filtros.precioMax, filtros.habitacionesFiltro, filtros.tipo]);
 
-    useEffect(() => {
-        const locBarrio = location.state?.barrio;
-        if (locBarrio) {
-            if (locBarrio !== filtros.barrio) setFiltros(prev => ({ ...prev, barrio: locBarrio }));
-            if (locBarrio !== searchTerm) setSearchTerm(locBarrio);
-        }
-    }, [location.state?.barrio, filtros.barrio, searchTerm]);
-
     const aplicarTodosLosFiltros = useCallback(() => {
         let currentFilteredProperties = [...propiedadesRaw];
         const totalHuespedesDeseados = parseInt(filtros.adultos, 10) + parseInt(filtros.niños, 10);
@@ -213,74 +182,6 @@ const AlquilerTemporario = () => {
     }, [propiedadesRaw, aplicarTodosLosFiltros]); 
 
     const handleFiltroChange = (e) => { const { name, value } = e.target; setFiltros(prev => ({ ...prev, [name]: value })); };
-    const handleSearchChange = (e) => {
-        const value = e.target.value;
-        setSearchTerm(value);
-        setSearchError('');
-        const pool = availableLocations.length
-            ? availableLocations
-            : fallbackLocations;
-        if (value.trim()) {
-            const normalized = value.trim().toLowerCase();
-            const suggestions = pool.filter(location =>
-                location.toLowerCase().includes(normalized)
-            ).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-            setFilteredLocationSuggestions(suggestions);
-            setShowLocationSuggestions(true);
-        } else {
-            setFilteredLocationSuggestions([]);
-            setShowLocationSuggestions(false);
-        }
-    };
-
-    const handleSelectLocation = (location) => {
-        setSearchTerm(location);
-        setFiltros(prev => ({ ...prev, barrio: location }));
-        setFilteredLocationSuggestions([]);
-        setShowLocationSuggestions(false);
-        setSearchError('');
-        searchInputRef.current?.focus();
-    };
-
-    const handleMainSearch = () => {
-        const trimmedValue = searchTerm.trim();
-        const pool = availableLocations.length
-            ? availableLocations
-            : fallbackLocations;
-        if (trimmedValue) {
-            const normalizedValue = trimmedValue.toLowerCase();
-            const matchedLocation =
-                pool.find(location => location.toLowerCase() === normalizedValue) ||
-                pool.find(location => location.toLowerCase().includes(normalizedValue));
-            if (!matchedLocation) {
-                setSearchError('Selecciona una ubicación válida.');
-                setShowLocationSuggestions(true);
-                setFilteredLocationSuggestions(pool.filter(location =>
-                    location.toLowerCase().includes(normalizedValue)
-                ).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' })));
-                searchInputRef.current?.focus();
-                return;
-            }
-            setSearchTerm(matchedLocation);
-            setFiltros(prev => ({ ...prev, barrio: matchedLocation }));
-        } else {
-            setSearchTerm('');
-            setFiltros(prev => ({ ...prev, barrio: '' }));
-        }
-        setShowLocationSuggestions(false);
-        setFilteredLocationSuggestions([]);
-        setSearchError('');
-        setMostrarFiltros(false);
-    };
-
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleMainSearch();
-        }
-    };
-
-    const handleAplicarHuespedes = () => setMostrarSelectorHuespedes(false);
 
     const aplicarFiltrosLaterales = () => {
         setMostrarFiltros(false);
@@ -289,13 +190,10 @@ const AlquilerTemporario = () => {
     const limpiarFiltros = () => { 
         const initialFiltros = {
             precioMin: '', precioMax: '', banos: '', tipo: '', barrio: '',
-            checkIn: '', checkOut: '', adultos: 1, niños: 0, habitacionesFiltro: 1,
+            checkIn: '', checkOut: '',
+            adultos: 1, niños: 0, habitacionesFiltro: 1,
         };
         setFiltros(initialFiltros);
-        setSearchTerm('');
-        setSearchError('');
-        setShowLocationSuggestions(false);
-        setFilteredLocationSuggestions([]);
     };
 
     const toggleFavorito = async (id, e) => {
@@ -306,126 +204,19 @@ const AlquilerTemporario = () => {
     };
 
     const tiposOptions = [...new Set(propiedadesRaw.map(p => p.tipo))].filter(Boolean).sort();
-    const banosApiOptions = [...new Set(propiedadesRaw.map(p => p.banos))].filter(Boolean).sort((a, b) => a - b);
-    const totalHuespedesDisplay = parseInt(filtros.adultos, 10) + parseInt(filtros.niños, 10);
-
-    useEffect(() => {
-        const fetchLocations = async () => {
-            try {
-                const response = await fetch(`${API_BASE_URL}/Propiedad/Obtener`);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                if (data.status && Array.isArray(data.value)) {
-                    const temporarias = data.value.filter(
-                        (prop) => prop.esAlquilerTemporario || prop.transaccionTipo?.toLowerCase().includes('temporario')
-                    );
-                    const normalizedLocations = buildUniqueLocations(temporarias).sort((a, b) =>
-                        a.localeCompare(b, 'es', { sensitivity: 'base' })
-                    );
-                    setAvailableLocations(normalizedLocations);
-                }
-            } catch (err) {
-                console.error('Error cargando ubicaciones:', err);
-            }
-        };
-        fetchLocations();
-    }, [buildUniqueLocations]);
 
     return (
         <div className="flex flex-col min-h-screen bg-white-50">
             <Header />
 
-            {/* Barra Superior */}
             <div className="bg-gray-200 text-black py-16 mb-10 mt-1">
                 <div className="container mx-auto px-4 text-center">
-                    <h1 className="text-4xl font-bold mb-4">Encuentra su alojamiento</h1>
+                    <h1 className="text-4xl font-bold mb-4">Alojamiento de Alquiler Temporario</h1>
                     <p className="text-xl opacity-90 max-w-2xl mx-auto mb-8">Explora nuestra selección de propiedades exclusivas y encuentra tu hogar perfecto con nosotros.</p>
-                    <div className="bg-white rounded-xl shadow-lg p-6 max-w-4xl mx-auto">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {/* Ubicación */}
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">¿A dónde vas?</label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        placeholder="Ubicación"
-                                        className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 ${searchError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
-                                        value={searchTerm}
-                                        onChange={handleSearchChange}
-                                        onFocus={() => {
-                                            if (searchTerm.trim()) {
-                                                setShowLocationSuggestions(true);
-                                            }
-                                        }}
-                                        onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 150)}
-                                        onKeyPress={handleKeyPress}
-                                        autoComplete="off"
-                                        ref={searchInputRef}
-                                        aria-invalid={Boolean(searchError)}
-                                    />
-                                    {showLocationSuggestions && (
-                                        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-                                            {filteredLocationSuggestions.length > 0 ? (
-                                                filteredLocationSuggestions.map((location) => (
-                                                    <button
-                                                        key={location}
-                                                        type="button"
-                                                        className="w-full text-left px-4 py-2 hover:bg-gray-100"
-                                                        onMouseDown={() => handleSelectLocation(location)}
-                                                    >
-                                                        {location}
-                                                    </button>
-                                                ))
-                                            ) : (
-                                                <div className="px-4 py-2 text-sm text-gray-500">
-                                                    No hay coincidencias disponibles.
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                {searchError && <p className="mt-2 text-sm text-red-600">{searchError}</p>}
-                            </div>
-                            {/* Check-in */}
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha de Entrada</label>
-                                <input type="date" name="checkIn" value={filtros.checkIn} onChange={handleFiltroChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                            </div>
-                            {/* Check-out */}
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha de Salida</label>
-                                <input type="date" name="checkOut" value={filtros.checkOut} onChange={handleFiltroChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                            </div>
-                            {/* Huéspedes */}
-                            <div className="relative"> 
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Huéspedes</label>
-                                <button onClick={() => setMostrarSelectorHuespedes(s => !s)} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left">
-                                    {totalHuespedesDisplay} huéspedes, {filtros.habitacionesFiltro} hab.
-                                </button>
-                                {mostrarSelectorHuespedes && (
-                                    <div className="absolute bg-white p-4 rounded-lg shadow-lg mt-2 z-50 w-64"> 
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between items-center"><label className="text-sm font-semibold text-gray-700">Adultos</label><input type="number" name="adultos" min="1" max="10" value={filtros.adultos} onChange={handleFiltroChange} className="w-16 p-1 border border-gray-300 rounded-lg text-center"/></div>
-                                            <div className="flex justify-between items-center"><label className="text-sm font-semibold text-gray-700">Niños</label><input type="number" name="niños" min="0" max="5" value={filtros.niños} onChange={handleFiltroChange} className="w-16 p-1 border border-gray-300 rounded-lg text-center"/></div>
-                                            <div className="flex justify-between items-center"><label className="text-sm font-semibold text-gray-700">Habitaciones</label><input type="number" name="habitacionesFiltro" min="1" max="10" value={filtros.habitacionesFiltro} onChange={handleFiltroChange} className="w-16 p-1 border border-gray-300 rounded-lg text-center"/></div>
-                                            <div className="pt-2"><button onClick={handleAplicarHuespedes} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3 text-sm rounded-lg">Aplicar</button></div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        {/* Botón Buscar */}
-                        <div className="mt-6">
-                            <button onClick={handleMainSearch} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center" disabled={loading}>
-                                {loading ? <Loader2 className="mr-2 animate-spin" size={18} /> : <Search size={18} className="mr-2" />} {loading ? 'Buscando...' : 'Buscar'}
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
 
             <main className="container mx-auto p-4 flex-grow">
-                {/* Filtros */}
                 <div className="md:hidden mb-4">
                     <button onClick={() => setMostrarFiltros(s => !s)} className="w-full bg-white shadow rounded-lg p-3 flex items-center justify-center text-gray-700 font-medium">
                         <Filter size={18} className="mr-2 text-blue-600" /> {mostrarFiltros ? 'Ocultar' : 'Mostrar'} filtros
@@ -437,7 +228,48 @@ const AlquilerTemporario = () => {
                         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
                             <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center"><Filter size={20} className="mr-2 text-blue-600" /> Filtrar</h2>
                             <div className="space-y-5">
-                                {/* Precio */}
+                                
+                                <div className="space-y-3">
+                                    <label className="block text-sm font-semibold text-gray-700"><div className="flex items-center gap-2"><Calendar size={16} className="text-blue-600" /> Fechas de estadía</div></label>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">Fecha de Entrada</label>
+                                            <input 
+                                                type="date" 
+                                                name="checkIn" 
+                                                value={filtros.checkIn} 
+                                                min={new Date().toISOString().split('T')[0]}
+                                                onChange={handleFiltroChange} 
+                                                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">Fecha de Salida</label>
+                                            <input 
+                                                type="date" 
+                                                name="checkOut" 
+                                                value={filtros.checkOut} 
+                                                min={filtros.checkIn || new Date().toISOString().split('T')[0]}
+                                                onChange={handleFiltroChange} 
+                                                disabled={!filtros.checkIn}
+                                                className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${!filtros.checkIn ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'}`}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2"><div className="flex items-center gap-2"><MapPin size={16} className="text-blue-600" /> Ubicación (Barrio)</div></label>
+                                    <input 
+                                        type="text" 
+                                        name="barrio" 
+                                        placeholder="Escribe un barrio/localidad" 
+                                        value={filtros.barrio} 
+                                        onChange={handleFiltroChange} 
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                
                                 <div className="bg-gray-50 p-4 rounded-lg">
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">Precio por Noche</label>
                                     <div className="flex items-center gap-3">
@@ -446,18 +278,30 @@ const AlquilerTemporario = () => {
                                         <div className="relative flex-1"><span className="absolute inset-y-0 left-3 flex items-center text-gray-500"><DollarSign size={16} /></span><input type="number" name="precioMax" placeholder="Máx." value={filtros.precioMax} onChange={handleFiltroChange} className="w-full pl-8 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
                                     </div>
                                 </div>
-                                {/* Baños */}
+                                
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2"><div className="flex items-center gap-2"><BedDouble size={16} className="text-blue-600" /> Habitaciones (mín.)</div></label>
+                                    <input 
+                                        type="number" 
+                                        name="habitacionesFiltro" 
+                                        min="1" 
+                                        value={filtros.habitacionesFiltro} 
+                                        onChange={handleFiltroChange} 
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2"><div className="flex items-center gap-2"><Bath size={16} className="text-blue-600" /> Baños (mín.)</div></label>
                                     <div className="relative">
                                         <select name="banos" value={filtros.banos} onChange={handleFiltroChange} className="w-full p-3 border border-gray-300 rounded-lg appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10">
                                             <option value="">Todos</option>
-                                            {banosApiOptions.map(num => <option key={num} value={num}>{num}</option>)}
+                                            {[...new Set(propiedadesRaw.map(p => p.banos))].filter(Boolean).sort((a, b) => a - b).map(num => <option key={num} value={num}>{num}</option>)}
                                         </select>
                                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></div>
                                     </div>
                                 </div>
-                                {/* Tipo */}
+                                
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2"><div className="flex items-center gap-2"><Home size={16} className="text-blue-600" /> Tipo</div></label>
                                     <div className="relative">
@@ -468,7 +312,7 @@ const AlquilerTemporario = () => {
                                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></div>
                                     </div>
                                 </div>
-                                {/* Botones */}
+                                
                                 <div className="pt-4 space-y-3">
                                     <button onClick={aplicarFiltrosLaterales} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center" disabled={loading}>
                                         {loading && <Loader2 className="mr-2 animate-spin" size={18} />} Aplicar filtros
@@ -482,11 +326,9 @@ const AlquilerTemporario = () => {
                         </div>
                     </div>
 
-                    {/* Contenido Principal */}
                     <div className="w-full md:w-3/4 space-y-6">
-                        {/* Mapa */}
                         <div className="bg-white p-4 rounded-xl shadow-md h-64 md:h-96 relative overflow-hidden">
-                            <h2 className="text-xl font-bold mb-4 text-gray-800 flex items-center"><MapPin size={18} className="mr-2 text-blue-600" /> Ubicación</h2>
+                            <h2 className="text-xl font-bold mb-4 text-gray-800 flex items-center"><MapPin size={18} className="mr-2 text-blue-600" /> Ubicación en el Mapa</h2>
                             <div className="absolute inset-0 mt-16 rounded-lg overflow-hidden" style={{ height: 'calc(100% - 4rem)' }}>
                                 <MapContainer
                                     propiedades={propiedadesFiltradas} 
@@ -505,7 +347,6 @@ const AlquilerTemporario = () => {
                             </div>
                         </div>
 
-                        {/* Lista de Propiedades */}
                         <div>
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-xl font-bold text-gray-800 flex items-center"><Home size={20} className="mr-2 text-blue-600" /> Propiedades disponibles</h2>
