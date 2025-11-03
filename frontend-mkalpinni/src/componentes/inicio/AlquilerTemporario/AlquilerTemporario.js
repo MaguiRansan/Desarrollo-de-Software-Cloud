@@ -365,7 +365,7 @@ const AlquilerTemporario = () => {
                                                 <img src={prop.imagenes?.[0] || `https://picsum.photos/seed/${prop.id}/400/300`} alt={prop.titulo} className="absolute inset-0 w-full h-full object-cover" />
                                                 <div className="absolute top-3 left-3 right-3 flex justify-between items-start"> 
                                                     <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">{prop.tipo}</div>
-                            
+                                
                                                     <button onClick={(e) => toggleFavorito(prop.id, e)} className={`p-2 rounded-full shadow-md transition-colors ${prop.favorito ? 'bg-red-500 text-white' : 'bg-white text-gray-600 hover:text-red-500'}`}>
                                                         <Bookmark size={18} className={prop.favorito ? 'fill-current' : ''} />
                                                     </button>
@@ -383,6 +383,25 @@ const AlquilerTemporario = () => {
                                                     
                                                     <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-lg"><Maximize size={16} /><span>{prop.superficie || '?'} m²</span></div>
                                                 </div>
+
+                                                {prop.servicios?.length > 0 && (
+                                                    <div className="mt-4">
+                                                        <h4 className="text-sm font-semibold text-gray-800 mb-2">Servicios incluidos</h4>
+                                                        <div className="flex flex-wrap gap-2 text-xs text-gray-700">
+                                                            {prop.servicios.slice(0, 4).map(servicio => (
+                                                                <span key={servicio} className="bg-gray-100 px-2 py-1 rounded-full border border-gray-200">
+                                                                    {servicio}
+                                                                </span>
+                                                            ))}
+                                                            {prop.servicios.length > 4 && (
+                                                                <span className="text-gray-500">
+                                                                    +{prop.servicios.length - 4} más
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 <button onClick={() => navigate(`/alquilertemporario/detalle/${prop.id}`)} className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-all shadow-sm hover:shadow">
                                                     Ver detalles
                                                 </button>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation, Link, useParams } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar, FaCar, FaTree, FaSnowflake, FaSwimmingPool, FaLock, FaWifi, FaTv, FaUtensils } from "react-icons/fa";
+import { useParams } from "react-router-dom";
+import { FaBuilding, FaTree, FaBed, FaBath, FaCar, FaWifi, FaCheck, FaTimes } from "react-icons/fa";
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import { API_BASE_URL } from '../../../config/apiConfig';
@@ -53,6 +53,8 @@ const AlquilerTemporarioDetalle = () => {
                 lng: isNaN(lng) ? null : lng,
             },
             imagenes: fetchedInmueble.imagenes || [],
+            servicios: fetchedInmueble.servicios || [],
+            especificaciones: fetchedInmueble.especificaciones || [],
             caracteristicas: [
               { icon: <FaBuilding />, texto: `${fetchedInmueble.metrosCuadradosConstruidos || 'N/A'} m² construidos` },
               { icon: <FaTree />, texto: `${fetchedInmueble.metrosCuadradosTerreno || 'N/A'} m² de terreno` },
@@ -60,13 +62,6 @@ const AlquilerTemporarioDetalle = () => {
               { icon: <FaBath />, texto: `${fetchedInmueble.banos || 'N/A'} Baños` },
               { icon: <FaCar />, texto: `${fetchedInmueble.estacionamientos || 'N/A'} Estacionamientos` },
               { icon: <FaWifi />, texto: fetchedInmueble.tieneWifi ? "WiFi de alta velocidad" : "Sin WiFi" }
-            ],
-            especificaciones: [
-              { icon: <FaUtensils />, texto: fetchedInmueble.cocinaEquipada ? "Cocina equipada" : "Cocina básica" },
-              { icon: <FaTv />, texto: fetchedInmueble.tieneSmartTv ? "Smart TV" : "TV" },
-              { icon: <FaSnowflake />, texto: fetchedInmueble.tieneAireAcondicionado ? "Aire acondicionado" : "Sin Aire Acondicionado" },
-              { icon: <FaSwimmingPool />, texto: fetchedInmueble.tienePiscina ? "Piscina" : "Sin Piscina" },
-              { icon: <FaLock />, texto: fetchedInmueble.seguridad24hs ? "Seguridad 24hs" : "Sin Seguridad 24hs" }
             ],
             disponibilidad: fetchedInmueble.disponibilidad || { minEstadia: 1, maxEstadia: 365, fechasOcupadas: [] },
             precio: `$${fetchedInmueble.precio} / semana`
@@ -205,7 +200,7 @@ const AlquilerTemporarioDetalle = () => {
           mapRef.current = null;
         }
       };
-    }, [lat, lng, activeTab, titulo, direccion]);
+    }, [lat, lng, titulo, direccion]);
 
     if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng) || lat === null || lng === null) {
         return <p className="text-gray-500 p-4 bg-gray-100 rounded-lg">Ubicación geográfica no disponible para esta propiedad.</p>;
@@ -318,26 +313,33 @@ const AlquilerTemporarioDetalle = () => {
 
               {activeTab === "especificaciones" && (
                 <div>
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    {inmueble.especificaciones.map((item, index) => (
-                      <div key={index} className="flex items-center p-3 bg-white rounded-lg shadow-sm">
-                        <span className="text-gray-700 text-xl mr-3">{item.icon}</span>
-                        <span className="text-gray-700">{item.texto}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {inmueble.especificaciones && inmueble.especificaciones.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                      {inmueble.especificaciones.map((item, index) => {
+                        const texto = typeof item === 'string' ? item : item?.texto;
+                        if (!texto) return null;
+                        return (
+                          <div key={`${index}-${texto}`} className="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                            <span className="mr-3 text-lg leading-none">•</span>
+                            <span className="text-gray-700">{texto}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-600 text-sm mb-6">Esta propiedad no tiene especificaciones declaradas.</p>
+                  )}
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <h3 className="font-medium text-gray-900 mb-2">Servicios incluidos</h3>
-                    <ul className="text-gray-700 space-y-2 pl-5 list-disc grid grid-cols-2">
-                      <li>Limpieza inicial</li>
-                      <li>Ropa de cama y toallas</li>
-                      <li>WiFi de alta velocidad</li>
-                      <li>TV por cable</li>
-                      <li>Estacionamiento cubierto</li>
-                      <li>Aire acondicionado</li>
-                      <li>Servicio de conserjería</li>
-                      <li>Kit de bienvenida</li>
-                    </ul>
+                    {inmueble.servicios && inmueble.servicios.length > 0 ? (
+                      <ul className="text-gray-700 space-y-2 pl-5 list-disc grid grid-cols-2">
+                        {inmueble.servicios.map((servicio) => (
+                          <li key={servicio}>{servicio}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-600 text-sm">Esta propiedad no tiene servicios declarados.</p>
+                    )}
                   </div>
                 </div>
               )}
