@@ -78,6 +78,10 @@ const propertySchema = new mongoose.Schema({
     type: Number,
     min: [0, 'La superficie no puede ser negativa']
   },
+  terrenoM2: {
+    type: Number,
+    min: [0, 'La superficie del terreno no puede ser negativa']
+  },
   estado: {
     type: String,
     enum: ['Disponible', 'Reservado', 'Ocupado', 'Vendido'],
@@ -107,6 +111,7 @@ const propertySchema = new mongoose.Schema({
   precioPorSemana: { type: Number, min: [0, 'El precio por semana debe ser mayor a 0'] },
   precioPorMes: { type: Number, min: [0, 'El precio por mes debe ser mayor a 0'] },
   capacidadPersonas: { type: Number, min: [1, 'La capacidad debe ser al menos 1 persona'] },
+  especificaciones: { type: [String], default: [] },
   servicios: { type: [String], default: [] },
   reglasPropiedad: { type: [String], default: [] },
   horarioCheckIn: { type: String, match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato de hora inválido (HH:MM)'] },
