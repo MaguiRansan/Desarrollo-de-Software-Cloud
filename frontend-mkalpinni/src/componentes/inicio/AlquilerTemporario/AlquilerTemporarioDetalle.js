@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link, useParams } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar, FaCar, FaTree, FaSnowflake, FaSwimmingPool, FaLock, FaWifi, FaTv, FaUtensils } from "react-icons/fa";
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams } from "react-router-dom";
+import { FaBuilding, FaTree, FaBed, FaBath, FaCar, FaWifi, FaCheck, FaTimes } from "react-icons/fa";
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import { API_BASE_URL } from '../../../config/apiConfig';
 import axios from 'axios';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css'; 
+import 'leaflet/dist/images/marker-icon-2x.png';
+import 'leaflet/dist/images/marker-icon.png';
+import 'leaflet/dist/images/marker-shadow.png';
 
 const AlquilerTemporarioDetalle = () => {
   const { id } = useParams();
@@ -26,6 +31,10 @@ const AlquilerTemporarioDetalle = () => {
     mensaje: ''
   });
 
+  const mapRef = useRef(null);
+  const mapContainerRef = useRef(null);
+
+
   useEffect(() => {
     const fetchInmueble = async () => {
       try {
@@ -34,9 +43,18 @@ const AlquilerTemporarioDetalle = () => {
         const response = await axios.get(`${API_BASE_URL}/Propiedad/Obtener/${id}`);
         if (response.data.status) {
           const fetchedInmueble = response.data.value;
+            const lat = parseFloat(fetchedInmueble.latitud);
+            const lng = parseFloat(fetchedInmueble.longitud);
+
           setInmueble({
             ...fetchedInmueble,
+            coordenadas: { 
+                lat: isNaN(lat) ? null : lat,
+                lng: isNaN(lng) ? null : lng,
+            },
             imagenes: fetchedInmueble.imagenes || [],
+            servicios: fetchedInmueble.servicios || [],
+            especificaciones: fetchedInmueble.especificaciones || [],
             caracteristicas: [
               { icon: <FaBuilding />, texto: `${fetchedInmueble.metrosCuadradosConstruidos || 'N/A'} m² construidos` },
               { icon: <FaTree />, texto: `${fetchedInmueble.metrosCuadradosTerreno || 'N/A'} m² de terreno` },
@@ -44,13 +62,6 @@ const AlquilerTemporarioDetalle = () => {
               { icon: <FaBath />, texto: `${fetchedInmueble.banos || 'N/A'} Baños` },
               { icon: <FaCar />, texto: `${fetchedInmueble.estacionamientos || 'N/A'} Estacionamientos` },
               { icon: <FaWifi />, texto: fetchedInmueble.tieneWifi ? "WiFi de alta velocidad" : "Sin WiFi" }
-            ],
-            especificaciones: [
-              { icon: <FaUtensils />, texto: fetchedInmueble.cocinaEquipada ? "Cocina equipada" : "Cocina básica" },
-              { icon: <FaTv />, texto: fetchedInmueble.tieneSmartTv ? "Smart TV" : "TV" },
-              { icon: <FaSnowflake />, texto: fetchedInmueble.tieneAireAcondicionado ? "Aire acondicionado" : "Sin Aire Acondicionado" },
-              { icon: <FaSwimmingPool />, texto: fetchedInmueble.tienePiscina ? "Piscina" : "Sin Piscina" },
-              { icon: <FaLock />, texto: fetchedInmueble.seguridad24hs ? "Seguridad 24hs" : "Sin Seguridad 24hs" }
             ],
             disponibilidad: fetchedInmueble.disponibilidad || { minEstadia: 1, maxEstadia: 365, fechasOcupadas: [] },
             precio: `$${fetchedInmueble.precio} / semana`
@@ -149,24 +160,61 @@ const AlquilerTemporarioDetalle = () => {
     setFormData({ ...formData, [id]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmitForm = (e) => {
     e.preventDefault();
     alert("¡Gracias por tu interés! Te contactaremos pronto para confirmar disponibilidad.");
   };
+  const Mapa = ({ lat, lng, titulo, direccion }) => {
+    useEffect(() => {
+      if (activeTab !== "ubicacion") {
+        if (mapRef.current) {
+            mapRef.current.remove();
+            mapRef.current = null;
+        }
+        return;
+      }
 
-  const Mapa = ({ lat, lng }) => {
+      if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng) || lat === null || lng === null) {
+        if (mapRef.current) {
+            mapRef.current.remove();
+            mapRef.current = null;
+        }
+        return;
+      }
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      mapRef.current = L.map(mapContainerRef.current).setView([lat, lng], 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+      }).addTo(mapRef.current);
+      L.marker([lat, lng])
+        .addTo(mapRef.current)
+        .bindPopup(`<b>${titulo || 'Propiedad'}</b><br>${direccion || 'Ubicación'}`).openPopup();
+
+      return () => {
+        if (mapRef.current) {
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
+      };
+    }, [lat, lng, titulo, direccion]);
+
+    if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng) || lat === null || lng === null) {
+        return <p className="text-gray-500 p-4 bg-gray-100 rounded-lg">Ubicación geográfica no disponible para esta propiedad.</p>;
+    }
+
     return (
-      <div className="w-full h-64 bg-gray-200 rounded-lg overflow-hidden relative">
-        <div className="absolute inset-0 bg-gray-300 flex items-center justify-center">
-          <div className="text-center">
-            <FaMapMarkerAlt className="text-red-600 text-4xl mb-2 mx-auto" />
-            <p className="text-gray-700 font-medium">Ubicación de la propiedad</p>
-            <p className="text-gray-600 text-sm">Lat: {lat}, Lng: {lng}</p>
-          </div>
-        </div>
-      </div>
+      <div 
+        ref={mapContainerRef} 
+        className="w-full h-96 bg-gray-200 rounded-lg overflow-hidden" 
+        style={{ zIndex: 1 }} 
+      />
     );
   };
+
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -248,43 +296,121 @@ const AlquilerTemporarioDetalle = () => {
               )}
 
               {activeTab === "descripcion" && (
-                <div>
-                  <p className="text-gray-700 leading-relaxed">{inmueble.descripcion}</p>
-                  <div className="mt-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
-                    <h4 className="font-medium text-yellow-800">Información importante</h4>
-                    <ul className="mt-2 text-yellow-700 space-y-1 list-disc pl-5">
-                      <li>Check-in: 15:00hs - Check-out: 11:00hs</li>
-                      <li>No se permiten fiestas o eventos</li>
-                      <li>No se permiten mascotas</li>
-                      <li>Prohibido fumar dentro de la propiedad</li>
-                      <li>Se solicita depósito de garantía reembolsable</li>
-                    </ul>
-                  </div>
+                <div className="space-y-8">
+                  {inmueble.descripcion && (
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Descripción</h3>
+                      <p className="text-gray-700 leading-relaxed">{inmueble.descripcion}</p>
+                    </div>
+                  )}
+                  
+                  {(inmueble.horarioCheckIn || inmueble.horarioCheckOut) && (
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Horarios de estadía</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        {inmueble.horarioCheckIn && (
+                          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-500">Entrada</p>
+                                <p className="text-gray-900 font-medium">{inmueble.horarioCheckIn} hs</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {inmueble.horarioCheckOut && (
+                          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-500">Salida</p>
+                                <p className="text-gray-900 font-medium">{inmueble.horarioCheckOut} hs</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {inmueble.reglasPropiedad && inmueble.reglasPropiedad.length > 0 && (
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Reglas de la propiedad</h3>
+                      <ul className="space-y-2 mt-4 pl-5 list-disc text-gray-700">
+                        {inmueble.reglasPropiedad.map((regla, index) => (
+                          <li key={index} className="pl-2">
+                            {regla}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {inmueble.politicaCancelacion && (
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Política de cancelación</h3>
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-blue-700">
+                              {inmueble.politicaCancelacion === 'Flexible' 
+                                ? 'Cancelación Flexible: Reembolso total si cancelas hasta 24 horas antes del check-in.'
+                                : inmueble.politicaCancelacion === 'Moderada'
+                                ? 'Cancelación Moderada: Reembolso del 50% si cancelas hasta 7 días antes del check-in.'
+                                : 'Cancelación Estricta: Reembolso del 50% si cancelas hasta 30 días antes del check-in.'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {activeTab === "especificaciones" && (
                 <div>
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    {inmueble.especificaciones.map((item, index) => (
-                      <div key={index} className="flex items-center p-3 bg-white rounded-lg shadow-sm">
-                        <span className="text-gray-700 text-xl mr-3">{item.icon}</span>
-                        <span className="text-gray-700">{item.texto}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {inmueble.especificaciones && inmueble.especificaciones.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                      {inmueble.especificaciones.map((item, index) => {
+                        const texto = typeof item === 'string' ? item : item?.texto;
+                        if (!texto) return null;
+                        return (
+                          <div key={`${index}-${texto}`} className="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                            <span className="mr-3 text-lg leading-none">•</span>
+                            <span className="text-gray-700">{texto}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-600 text-sm mb-6">Esta propiedad no tiene especificaciones declaradas.</p>
+                  )}
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <h3 className="font-medium text-gray-900 mb-2">Servicios incluidos</h3>
-                    <ul className="text-gray-700 space-y-2 pl-5 list-disc grid grid-cols-2">
-                      <li>Limpieza inicial</li>
-                      <li>Ropa de cama y toallas</li>
-                      <li>WiFi de alta velocidad</li>
-                      <li>TV por cable</li>
-                      <li>Estacionamiento cubierto</li>
-                      <li>Aire acondicionado</li>
-                      <li>Servicio de conserjería</li>
-                      <li>Kit de bienvenida</li>
-                    </ul>
+                    {inmueble.servicios && inmueble.servicios.length > 0 ? (
+                      <ul className="text-gray-700 space-y-2 pl-5 list-disc grid grid-cols-2">
+                        {inmueble.servicios.map((servicio) => (
+                          <li key={servicio}>{servicio}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-600 text-sm">Esta propiedad no tiene servicios declarados.</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -294,7 +420,12 @@ const AlquilerTemporarioDetalle = () => {
                   <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                     <h3 className="font-medium text-gray-900 mb-2">Ubicación de la propiedad</h3>
                     <p className="text-gray-700 mb-4">{inmueble.direccion}</p>
-                    <Mapa lat={inmueble.coordenadas.lat} lng={inmueble.coordenadas.lng} />
+                    <Mapa 
+                      lat={inmueble.coordenadas.lat} 
+                      lng={inmueble.coordenadas.lng} 
+                      titulo={inmueble.titulo} 
+                      direccion={inmueble.direccion} 
+                    />
                   </div>
                 </div>
               )}
@@ -306,8 +437,6 @@ const AlquilerTemporarioDetalle = () => {
                     <div className="space-y-3">
                       <p className="flex justify-between"><span>Estadía mínima:</span> <span className="font-medium">{inmueble.disponibilidad.minEstadia} noches</span></p>
                       <p className="flex justify-between"><span>Estadía máxima:</span> <span className="font-medium">{inmueble.disponibilidad.maxEstadia} noches</span></p>
-                      <p className="flex justify-between"><span>Hora de check-in:</span> <span className="font-medium">15:00hs</span></p>
-                      <p className="flex justify-between"><span>Hora de check-out:</span> <span className="font-medium">11:00hs</span></p>
                     </div>
                   </div>
                   
@@ -380,7 +509,7 @@ const AlquilerTemporarioDetalle = () => {
 
             <div className="mt-8 bg-white p-6 rounded-lg shadow-sm">
               <h3 className="text-xl font-bold text-gray-900 mb-4">¿Te interesa este alquiler temporario?</h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmitForm} className="space-y-4">
                 <input
                   type="text"
                   id="nombre"
