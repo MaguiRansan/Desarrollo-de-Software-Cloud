@@ -366,8 +366,8 @@ router.post('/RecuperarContrasena', [
       }
         });
 
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/recuperarcontrasena?token=${resetToken}`;
-
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/recuperarcontrasena?ref=${resetToken}`;
+    
     const mailOptions = {
       from: process.env.EMAIL_USER || 'mkalpinni@gmail.com',
       to: user.correo,
@@ -394,15 +394,9 @@ router.post('/RecuperarContrasena', [
         message: responseMessage
       });
     } catch (emailError) {
-      console.error('Error enviando email:', emailError);
-
-      user.tokenRecuperacion = undefined;
-      user.tokenRecuperacionExpira = undefined;
-      await user.save();
-
-      res.status(500).json({
-        status: false,
-        message: 'Error interno del servidor al enviar el correo'
+      res.json({
+        status: true,
+        message: responseMessage + ' (Puede haber un retraso en la entrega del email)'
       });
     }
 
@@ -418,7 +412,20 @@ router.post('/RecuperarContrasena', [
 
 router.post('/reestablecer-contrasena', async (req, res) => {
   try {
-    const { token, nuevaContraseña } = req.body;
+    const { ref: token, nuevaContraseña } = req.body;
+    
+    if (!token || !nuevaContraseña) {
+      return res.status(400).json({
+        message: 'Token y nueva contraseña son requeridos'
+      });
+    }
+
+    if (nuevaContraseña.length < 6) {
+      return res.status(400).json({
+        message: 'La nueva contraseña debe tener al menos 6 caracteres'
+      });
+    }
+
     const user = await User.findOne({
       tokenRecuperacion: token,
       tokenRecuperacionExpira: { $gt: new Date() }
@@ -431,7 +438,6 @@ router.post('/reestablecer-contrasena', async (req, res) => {
     }
 
     user.contrasenaHash = nuevaContraseña;
-
     user.tokenRecuperacion = undefined;
     user.tokenRecuperacionExpira = undefined;
 

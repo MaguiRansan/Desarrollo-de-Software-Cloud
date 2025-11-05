@@ -64,19 +64,18 @@ const userSchema = new mongoose.Schema({
   },
   bloqueadoHasta: {
     type: Date
+  },
+  tokenRecuperacion: {
+    type: String
+  },
+  tokenRecuperacionExpira: {
+    type: Date
   }
 }, {
   timestamps: {
     createdAt: 'fechaCreacion',
     updatedAt: 'fechaActualizacion'
   }
-}, {
-  tokenRecuperacion: {
-    type: String
-  },
-  tokenRecuperacionExpira: {
-    type: Date
-  },
 });
 
 userSchema.index({ idrol: 1 });
