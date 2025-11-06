@@ -56,6 +56,7 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
 
   const renderPropertyImage = (property) => {
     if (property.images && property.images.length > 0) {
+    
       if (property.images[0] instanceof File) {
         return (
           <img
@@ -65,6 +66,7 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
           />
         );
       }
+      
       if (typeof property.images[0] === 'string') {
         return (
           <img
@@ -74,17 +76,21 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
           />
         );
       }
+      
       if (property.images[0]?.rutaArchivo) {
         return (
           <img
-            src={`/uploads/${property.images[0].rutaArchivo}`}
+            src={property.images[0].rutaArchivo}
             alt={property.title}
             className="w-full h-48 object-cover"
+            onError={(e) => {
+              e.target.src = "https://cdn.prod.website-files.com/61e9b342b016364181c41f50/62a014dd84797690c528f25e_38.jpg";
+            }}
           />
         );
       }
     }
-    
+
     return (
       <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
         <span className="text-gray-500">Sin imagen</span>
@@ -328,9 +334,12 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                       />
                     ) : image?.rutaArchivo ? (
                       <img
-                        src={`/uploads/${image.rutaArchivo}`}
+                        src={image.rutaArchivo}
                         alt={`Imagen ${index + 1}`}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = "https://cdn.prod.website-files.com/61e9b342b016364181c41f50/62a014dd84797690c528f25e_38.jpg";
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-200 flex items-center justify-center">
