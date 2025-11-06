@@ -14,7 +14,15 @@ const storage = multer.diskStorage({
       const clientId = req.params.id;
       uploadPath = path.join(__dirname, '../../uploads/clientes', clientId.toString());
     } else if (req.originalUrl.includes('/Tasacion/')) {
-      const tasacionId = req.params.id;
+      let tasacionId = req.params?.id;
+
+      if (!tasacionId) {
+        if (!req.tasacionUploadTempId) {
+          req.tasacionUploadTempId = `temp-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        }
+        tasacionId = req.tasacionUploadTempId;
+      }
+
       uploadPath = path.join(__dirname, '../../uploads/tasaciones', tasacionId.toString());
     } else {
       uploadPath = path.join(__dirname, '../../uploads/general');
