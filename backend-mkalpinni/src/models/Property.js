@@ -78,6 +78,10 @@ const propertySchema = new mongoose.Schema({
     type: Number,
     min: [0, 'La superficie no puede ser negativa']
   },
+  terrenoM2: {
+    type: Number,
+    min: [0, 'La superficie del terreno no puede ser negativa']
+  },
   estado: {
     type: String,
     enum: ['Disponible', 'Reservado', 'Ocupado', 'Vendido'],

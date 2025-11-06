@@ -56,12 +56,10 @@ const AlquilerTemporarioDetalle = () => {
             servicios: fetchedInmueble.servicios || [],
             especificaciones: fetchedInmueble.especificaciones || [],
             caracteristicas: [
-              { icon: <FaBuilding />, texto: `${fetchedInmueble.metrosCuadradosConstruidos || 'N/A'} m² construidos` },
-              { icon: <FaTree />, texto: `${fetchedInmueble.metrosCuadradosTerreno || 'N/A'} m² de terreno` },
+              { icon: <FaBuilding />, texto: `${fetchedInmueble.superficieM2 || 'N/A'} m² construidos` },
+              { icon: <FaTree />, texto: `${fetchedInmueble.terrenoM2 || 'N/A'} m² de terreno` },
               { icon: <FaBed />, texto: `${fetchedInmueble.habitaciones || 'N/A'} Habitaciones` },
-              { icon: <FaBath />, texto: `${fetchedInmueble.banos || 'N/A'} Baños` },
-              { icon: <FaCar />, texto: `${fetchedInmueble.estacionamientos || 'N/A'} Estacionamientos` },
-              { icon: <FaWifi />, texto: fetchedInmueble.tieneWifi ? "WiFi de alta velocidad" : "Sin WiFi" }
+              { icon: <FaBath />, texto: `${fetchedInmueble.banos || 'N/A'} Baños` }
             ],
             disponibilidad: fetchedInmueble.disponibilidad || { minEstadia: 1, maxEstadia: 365, fechasOcupadas: [] },
             precio: `$${fetchedInmueble.precio} / semana`
