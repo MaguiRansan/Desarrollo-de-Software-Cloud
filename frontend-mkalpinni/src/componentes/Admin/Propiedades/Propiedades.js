@@ -112,6 +112,8 @@ const PropertyManagement = () => {
   const handleAddProperty = () => {
     setEditingProperty(null);
     setNewProperty({
+      _id: undefined,  
+      id: undefined,
       title: '',
       description: '',
       address: '',
@@ -136,6 +138,8 @@ const PropertyManagement = () => {
   const handleEditProperty = (property) => {
     setEditingProperty(property);
     setNewProperty({
+      _id: property.id || property._id,  
+      id: property.id || property._id,
       title: property.title,
       description: property.description || '',
       address: property.address,
@@ -178,7 +182,7 @@ const PropertyManagement = () => {
     }
   };
 
-  const handleSaveProperty = async (propertyData) => {
+  const handleSaveProperty = async (propertyData, imageFiles = []) => {
     setIsSubmitting(true);
     
     try {
@@ -199,27 +203,29 @@ const PropertyManagement = () => {
                 propertyData.status === 'ocupado' ? 'Ocupado' : 'Reservado',
         locador: propertyData.lessor || '',
         locatario: propertyData.lessee || '',
-        permitemascotas: propertyData.allowsPets || false,
+        permitenascotas: propertyData.allowsPets || false,
         activo: true
       };
 
       let response;
+      let createdOrUpdatedId;
+
       if (editingProperty) {
         response = await propertyService.update(editingProperty.id, backendData);
         if (response.status) {
+          createdOrUpdatedId = editingProperty.id;
           setProperties(prevProperties => 
             prevProperties.map(prop => 
               prop.id === editingProperty.id ? { ...prop, ...propertyData } : prop
             )
           );
-          showNotification('Propiedad actualizada exitosamente');
         }
       } else {
         response = await propertyService.create(backendData);
         if (response.status && response.value) {
-          const newProp = { ...propertyData, id: response.value._id || Date.now() };
+          createdOrUpdatedId = response.value._id || response.value.id;
+          const newProp = { ...propertyData, id: createdOrUpdatedId };
           setProperties(prevProperties => [...prevProperties, newProp]);
-          showNotification('Propiedad creada exitosamente');
         }
       }
 
@@ -227,6 +233,31 @@ const PropertyManagement = () => {
         throw new Error(response.message || 'Error al guardar la propiedad');
       }
 
+      if (createdOrUpdatedId && imageFiles && imageFiles.length > 0) {
+        console.log('Uploading', imageFiles.length, 'images to property:', createdOrUpdatedId);
+        try {
+          const uploadResp = await propertyService.uploadImages(createdOrUpdatedId, imageFiles);
+          if (uploadResp && uploadResp.status) {
+            console.log('Images uploaded successfully');
+            
+            const refreshResp = await propertyService.getById(createdOrUpdatedId);
+            if (refreshResp && refreshResp.status) {
+              setProperties(prevProperties =>
+                prevProperties.map(prop =>
+                  prop.id === createdOrUpdatedId ? refreshResp.value : prop
+                )
+              );
+            }
+          } else {
+            console.warn('Image upload failed:', uploadResp);
+          }
+        } catch (uploadErr) {
+          console.error('Error uploading images:', uploadErr);
+          showNotification('Propiedad guardada pero hubo error al subir imágenes', 'error');
+        }
+      }
+
+      showNotification(editingProperty ? 'Propiedad actualizada exitosamente' : 'Propiedad creada exitosamente');
       setShowForm(false);
       setEditingProperty(null);
       
@@ -242,6 +273,8 @@ const PropertyManagement = () => {
     setShowForm(false);
     setEditingProperty(null);
     setNewProperty({
+      _id: undefined,
+      id: undefined,
       title: '',
       description: '',
       address: '',
