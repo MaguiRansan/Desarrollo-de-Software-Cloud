@@ -53,23 +53,23 @@ const AlquilerDetalle = () => {
                     setLoading(false);
                     return;
                 }
+                
                 const rawPropiedad = propiedadData.value;
                 rawPropiedad.latitud = parseFloat(rawPropiedad.latitud) || null;
                 rawPropiedad.longitud = parseFloat(rawPropiedad.longitud) || null;
-                const imagenesResponse = await fetch(`${API_BASE_URL}/ImagenesPropiedad/ObtenerPropiedad/${id}`);
-                const imagenesData = await imagenesResponse.json();
 
-                if (imagenesData.status && imagenesData.value && imagenesData.value.length > 0) {
-                    const fetchedImages = imagenesData.value.map(img => img.url).filter(url => url);
-                    setImagenes(fetchedImages);
-                    if (fetchedImages.length > 0) {
-                        setMainImage(fetchedImages[0]);
-                    } else {
-                        setMainImage(defaultPlaceholderImage);
-                    }
+                const imagenesArray = rawPropiedad.imagenes || [];
+                const fetchedImages = imagenesArray.map(img => {
+                    if (typeof img === 'string') return img;
+                    if (img.rutaArchivo) return img.rutaArchivo;
+                    if (img.url) return img.url;
+                    return null;
+                }).filter(url => url);
+
+                setImagenes(fetchedImages);
+                if (fetchedImages.length > 0) {
+                    setMainImage(fetchedImages[0]);
                 } else {
-                    console.warn("No se recibieron URLs de imágenes o la API de imágenes falló:", imagenesData.msg || "Sin datos");
-                    setImagenes([]);
                     setMainImage(defaultPlaceholderImage);
                 }
 
@@ -170,7 +170,6 @@ const AlquilerDetalle = () => {
         }
 
         return (
-            // Contenedor del mapa, debe tener un alto definido
             <div 
                 ref={mapContainerRef} 
                 className="w-full h-96 bg-gray-200 rounded-lg overflow-hidden" 
@@ -204,7 +203,6 @@ const AlquilerDetalle = () => {
             : `$${propiedad.precio?.toLocaleString('es-AR')}`,
         direccion: `${propiedad.ubicacion || ''}${propiedad.barrio ? `, ${propiedad.barrio}` : ''}`,
         coordenadas: {
-            // Se asegura que sean números para Leaflet
             lat: parseFloat(propiedad.latitud) || null,
             lng: parseFloat(propiedad.longitud) || null
         },

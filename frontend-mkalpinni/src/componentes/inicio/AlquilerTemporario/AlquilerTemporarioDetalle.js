@@ -43,30 +43,38 @@ const AlquilerTemporarioDetalle = () => {
         const response = await axios.get(`${API_BASE_URL}/Propiedad/Obtener/${id}`);
         if (response.data.status) {
           const fetchedInmueble = response.data.value;
-            const lat = parseFloat(fetchedInmueble.latitud);
-            const lng = parseFloat(fetchedInmueble.longitud);
+          const lat = parseFloat(fetchedInmueble.latitud);
+          const lng = parseFloat(fetchedInmueble.longitud);
+
+          const imagenesArray = fetchedInmueble.imagenes || [];
+          const imagenesUrls = imagenesArray.map(img => {
+            if (typeof img === 'string') return img;
+            if (img.rutaArchivo) return img.rutaArchivo;
+            if (img.url) return img.url;
+            return null;
+          }).filter(url => url);
 
           setInmueble({
             ...fetchedInmueble,
             coordenadas: { 
-                lat: isNaN(lat) ? null : lat,
-                lng: isNaN(lng) ? null : lng,
+              lat: isNaN(lat) ? null : lat,
+              lng: isNaN(lng) ? null : lng,
             },
-            imagenes: fetchedInmueble.imagenes || [],
+            imagenes: imagenesUrls,
             servicios: fetchedInmueble.servicios || [],
-            especificaciones: fetchedInmueble.especificaciones || [],
             caracteristicas: [
-              { icon: <FaBuilding />, texto: `${fetchedInmueble.metrosCuadradosConstruidos || 'N/A'} m² construidos` },
-              { icon: <FaTree />, texto: `${fetchedInmueble.metrosCuadradosTerreno || 'N/A'} m² de terreno` },
+              { icon: <FaBuilding />, texto: `${fetchedInmueble.superficieM2 || 'N/A'} m² construidos` },
+              { icon: <FaTree />, texto: `${fetchedInmueble.terrenoM2 || 'N/A'} m² de terreno` },
               { icon: <FaBed />, texto: `${fetchedInmueble.habitaciones || 'N/A'} Habitaciones` },
               { icon: <FaBath />, texto: `${fetchedInmueble.banos || 'N/A'} Baños` },
               { icon: <FaCar />, texto: `${fetchedInmueble.estacionamientos || 'N/A'} Estacionamientos` },
               { icon: <FaWifi />, texto: fetchedInmueble.tieneWifi ? "WiFi de alta velocidad" : "Sin WiFi" }
             ],
             disponibilidad: fetchedInmueble.disponibilidad || { minEstadia: 1, maxEstadia: 365, fechasOcupadas: [] },
-            precio: `$${fetchedInmueble.precio} / semana`
+            precio: `$${fetchedInmueble.precio} / noche`
           });
-          setMainImage(fetchedInmueble.imagenes && fetchedInmueble.imagenes.length > 0 ? fetchedInmueble.imagenes[0] : "/api/placeholder/800/500");
+          
+          setMainImage(imagenesUrls.length > 0 ? imagenesUrls[0] : "/api/placeholder/800/500");
         } else {
           setError(response.data.msg || "No se pudo cargar la propiedad.");
         }
