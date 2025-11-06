@@ -122,7 +122,22 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                 property.status === 'ocupado' ? 'bg-gray-100' : ''
               }`}
             >
-              {renderPropertyImage(property)}
+              {property.images && property.images.length > 0 && typeof property.images[0] === 'string' && property.images[0].startsWith('http') ? (
+                <img 
+                  src={property.images[0]} 
+                  alt={property.title}
+                  className="w-full h-48 object-cover rounded"
+                  onError={(e) => {
+                    console.error('Error loading image:', property.images[0]);
+                    e.target.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-48 bg-gray-200 flex items-center justify-center rounded">
+                  <span className="text-gray-400">Sin imagen</span>
+                </div>
+              )}
+
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-2xl font-bold text-gray-900">{property.title}</h3>
@@ -224,7 +239,21 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
               }`}
             >
               <div className="w-48 h-32 flex-shrink-0">
-                {renderPropertyImage(property)}
+                {property.images && property.images.length > 0 && typeof property.images[0] === 'string' && property.images[0].startsWith('http') ? (
+                  <img 
+                    src={property.images[0]} 
+                    alt={property.title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Error cargando imagen:', property.images[0]);
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                    <span className="text-gray-500">Sin imagen</span>
+                  </div>
+                )}
               </div>
               
               <div className="flex-1 p-6">
@@ -320,15 +349,19 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
               {selectedProperty.images && selectedProperty.images.length > 0 ? (
                 selectedProperty.images.map((image, index) => (
                   <div key={index} className="w-full h-48 object-cover rounded-lg overflow-hidden">
-                    {image instanceof File ? (
-                      <img
-                        src={URL.createObjectURL(image)}
-                        alt={`Imagen ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : typeof image === 'string' ? (
+                    {typeof image === 'string' && image.startsWith('http') ? (
                       <img
                         src={image}
+                        alt={`Imagen ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error('Error cargando imagen:', image);
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : image instanceof File ? (
+                      <img
+                        src={URL.createObjectURL(image)}
                         alt={`Imagen ${index + 1}`}
                         className="w-full h-full object-cover"
                       />
@@ -386,6 +419,7 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
             <div className="text-gray-600 mb-6">
               <p className="text-gray-600">Descripción: {selectedProperty.description}</p>
             </div>
+
             <div className="flex space-x-2">
               <button
                 onClick={closeModal}

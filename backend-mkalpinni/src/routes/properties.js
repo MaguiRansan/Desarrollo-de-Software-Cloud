@@ -430,7 +430,7 @@ router.post('/SubirImagenes/:id', [
     res.json({
       status: true,
       message: `Se subieron ${uploadedImages.length} imágenes exitosamente`,
-      imagenes: imageUrls
+      value: saved  
     });
 
   } catch (error) {
