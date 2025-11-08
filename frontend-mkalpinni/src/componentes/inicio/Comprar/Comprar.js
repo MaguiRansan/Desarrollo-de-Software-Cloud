@@ -401,7 +401,6 @@ const Comprar = () => {
                   </div>
                 </div>
 
-                {/* Si necesitas un filtro de ubicación/barrio explícito, puedes añadirlo aquí */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     <div className="flex items-center gap-2">
@@ -411,7 +410,7 @@ const Comprar = () => {
                   </label>
                   <div className="relative">
                     <select
-                      name="barrio" // Este nombre se mapea al parámetro 'ubicacion' del backend
+                      name="barrio"
                       value={filtros.barrio}
                       onChange={handleFiltroChange}
                       className="w-full p-3 border border-gray-300 rounded-lg appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
@@ -447,8 +446,8 @@ const Comprar = () => {
                             ubicacion: '',
                             transaccionTipo: 'Venta'
                         });
-                        setSearchTerm(''); // También resetea la barra de búsqueda principal
-                        fetchPropiedades({transaccionTipo: 'Venta'}); // Recarga todas las propiedades de venta
+                        setSearchTerm(''); 
+                        fetchPropiedades({transaccionTipo: 'Venta'}); 
                     }}
                     className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center"
                   >
@@ -515,18 +514,29 @@ const Comprar = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {propiedadesFiltradas.map(propiedad => (
                     <div
-                      key={propiedad.idPropiedad} // Usar idPropiedad de la API
+                      key={propiedad.idPropiedad}
                       className={`bg-white rounded-xl shadow-md overflow-hidden cursor-pointer transition-all hover:shadow-lg
                         ${propiedadSeleccionada?.idPropiedad === propiedad.idPropiedad ? 'ring-2 ring-blue-500 transform scale-102' : ''}`}
                       onClick={() => setPropiedadSeleccionada(propiedad)}
                     >
                       <div className="h-52 bg-gray-200 relative">
                         <div className="absolute top-0 left-0 right-0 bottom-0">
-                          <img src={`https://picsum.photos/seed/${propiedad.idPropiedad}/400/300`} alt={propiedad.titulo} className="w-full h-full object-cover" />
+                          <img 
+                            src={
+                              propiedad.imagenes && propiedad.imagenes.length > 0
+                                ? (propiedad.imagenes[0].rutaArchivo || propiedad.imagenes[0].url || propiedad.imagenes[0])
+                                : `https://picsum.photos/seed/${propiedad.idPropiedad}/400/300`
+                            }
+                            alt={propiedad.titulo} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.src = `https://picsum.photos/seed/${propiedad.idPropiedad}/400/300`;
+                            }}
+                          />
                         </div>
                         <div className="absolute top-0 left-0 right-0 p-3 flex justify-between items-start">
                           <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">
-                            {propiedad.transaccionTipo} {/* Mostrar tipo de transacción */}
+                            {propiedad.transaccionTipo} 
                           </div>
                           <button
                             onClick={(e) => toggleFavorito(propiedad.idPropiedad, e)}
@@ -556,7 +566,7 @@ const Comprar = () => {
                           </div>
                           <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-lg">
                             <Maximize size={16} />
-                            <span>{propiedad.superficieM2} m²</span> {/* Usar superficieM2 */}
+                            <span>{propiedad.superficieM2} m²</span>
                           </div>
                         </div>
                         <button

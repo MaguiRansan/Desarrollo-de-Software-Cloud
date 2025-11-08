@@ -21,6 +21,9 @@ const TasacionPage = () => {
     tipoPropiedad: "casa",
     estadoPropiedad: "bueno",
     ubicacionTipo: "urbano",
+    barrioPropiedad: "",
+    localidadPropiedad: "",
+    provinciaPropiedad: "",
   });
 
   const [step, setStep] = useState(1);
@@ -28,6 +31,8 @@ const TasacionPage = () => {
   const [isCalculating, setIsCalculating] = useState(false);
   const [imagePreview, setImagePreview] = useState([]);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [tasacionRequestId, setTasacionRequestId] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -47,27 +52,35 @@ const TasacionPage = () => {
     setIsCalculating(true);
     setError(null);
     setValorTasacion(null);
+    setSuccessMessage(null);
+    setTasacionRequestId(null);
 
     try {
+      const formPayload = new FormData();
+
+      formPayload.append("direccion", formData.direccion);
+      formPayload.append("tipoPropiedad", formData.tipoPropiedad);
+      formPayload.append("ubicacionTipo", formData.ubicacionTipo);
+      formPayload.append("metrosCuadrados", formData.metrosCuadrados);
+      formPayload.append("habitaciones", formData.habitaciones);
+      formPayload.append("banos", formData.banos);
+      formPayload.append("antiguedadAnios", formData.antiguedadAnios);
+      formPayload.append("estadoPropiedad", formData.estadoPropiedad);
+      formPayload.append("descripcionPropiedad", formData.descripcionPropiedad);
+      formPayload.append("nombreContacto", formData.nombreContacto);
+      formPayload.append("telefonoContacto", formData.telefonoContacto);
+      formPayload.append("correoContacto", formData.correoContacto);
+      formPayload.append("barrioPropiedad", formData.barrioPropiedad);
+      formPayload.append("localidadPropiedad", formData.localidadPropiedad);
+      formPayload.append("provinciaPropiedad", formData.provinciaPropiedad);
+
+      formData.imagenes.forEach((file) => {
+        formPayload.append("imagenes", file);
+      });
+
       const response = await fetch(`${API_BASE_URL}/Tasacion/Crear`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          direccion: formData.direccion,
-          metrosCuadrados: parseFloat(formData.metrosCuadrados),
-          habitaciones: parseInt(formData.habitaciones),
-          banos: parseInt(formData.banos),
-          antiguedadAnios: parseInt(formData.antiguedadAnios),
-          descripcionPropiedad: formData.descripcionPropiedad,
-          nombreContacto: formData.nombreContacto,
-          telefonoContacto: formData.telefonoContacto,
-          correoContacto: formData.correoContacto,
-          tipoPropiedad: formData.tipoPropiedad,
-          estadoPropiedad: formData.estadoPropiedad,
-          ubicacionTipo: formData.ubicacionTipo,
-        }),
+        body: formPayload,
       });
 
       const data = await response.json();
@@ -76,10 +89,14 @@ const TasacionPage = () => {
         throw new Error(data.message || "Error al procesar la tasación");
       }
 
-      if (data.success || data.value) {
-        setValorTasacion(data.value?.valorEstimado || data.valorEstimado || data.valor);
+      if (data.status) {
+        setSuccessMessage(
+          data.message ||
+            "¡Gracias! Tu solicitud de tasación fue enviada correctamente. Nos comunicaremos contigo a la brevedad."
+        );
+        setTasacionRequestId(data.value?.idTasacion || null);
       } else {
-        setError(data.message || "No se pudo calcular la tasación");
+        setError(data.message || "No se pudo procesar la solicitud de tasación");
       }
     } catch (error) {
       setError(error.message || "Error de conexión con el servidor");
@@ -132,7 +149,7 @@ const TasacionPage = () => {
           <div className="absolute top-0 right-0 w-40 h-40 bg-blue-100 rounded-full -mr-20 -mt-20 opacity-50"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-100 rounded-full -ml-12 -mb-12 opacity-70"></div>
 
-          {!valorTasacion && (
+          {!successMessage && (
             <div className="mb-8 relative z-10">
               <div className="w-full bg-gray-100 h-2 rounded-full mb-2">
                 <div
@@ -157,8 +174,8 @@ const TasacionPage = () => {
           )}
 
           <h2 className="text-4xl font-bold text-gray-900 text-center mb-8 relative z-10">
-            {valorTasacion !== null
-              ? "Resultado de la Tasación"
+            {successMessage
+              ? "Solicitud enviada"
               : "Tasa tu propiedad con Nosotros"}
           </h2>
 
@@ -169,7 +186,7 @@ const TasacionPage = () => {
             </div>
           )}
 
-          {valorTasacion !== null ? (
+          {successMessage ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -178,14 +195,16 @@ const TasacionPage = () => {
             >
               <div className="text-center bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-2xl shadow-inner">
                 <h3 className="text-xl font-bold text-blue-800">
-                  En breve nos comunicaremos contigo
+                  {successMessage}
                 </h3>
-                <p className="text-5xl font-extrabold text-blue-900 mt-4 mb-2">
-               
+                <p className="text-sm text-blue-600 mt-4">
+                  Nos comunicaremos utilizando los datos de contacto proporcionados.
                 </p>
-                <p className="text-sm text-blue-600">
-                  Basado en las características proporcionadas
-                </p>
+                {tasacionRequestId && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    ID de solicitud: {tasacionRequestId}
+                  </p>
+                )}
               </div>
 
               <div className="bg-gray-50 p-6 rounded-2xl">
@@ -203,6 +222,24 @@ const TasacionPage = () => {
                       {formData.tipoPropiedad}
                     </p>
                   </div>
+                  {formData.barrioPropiedad && (
+                    <div>
+                      <p className="text-gray-600">Barrio</p>
+                      <p className="font-medium">{formData.barrioPropiedad}</p>
+                    </div>
+                  )}
+                  {formData.localidadPropiedad && (
+                    <div>
+                      <p className="text-gray-600">Localidad</p>
+                      <p className="font-medium">{formData.localidadPropiedad}</p>
+                    </div>
+                  )}
+                  {formData.provinciaPropiedad && (
+                    <div>
+                      <p className="text-gray-600">Provincia</p>
+                      <p className="font-medium">{formData.provinciaPropiedad}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-gray-600">Tamaño</p>
                     <p className="font-medium">{formData.metrosCuadrados} m²</p>
@@ -227,6 +264,8 @@ const TasacionPage = () => {
             <button
               onClick={() => {
                 setValorTasacion(null);
+                setSuccessMessage(null);
+                setTasacionRequestId(null);
                 setStep(1);
                 setFormData({
                   direccion: "",
@@ -242,6 +281,9 @@ const TasacionPage = () => {
                   tipoPropiedad: "casa",
                   estadoPropiedad: "bueno",
                   ubicacionTipo: "urbano",
+                  barrioPropiedad: "",
+                  localidadPropiedad: "",
+                  provinciaPropiedad: "",
                 });
                 setImagePreview([]);
                 setError(null);
@@ -289,6 +331,52 @@ const TasacionPage = () => {
                     />
                   </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Barrio:
+                      </label>
+                      <input
+                        type="text"
+                        name="barrioPropiedad"
+                        value={formData.barrioPropiedad}
+                        onChange={handleChange}
+                        required
+                        className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-200"
+                        placeholder="Ej: Centro"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Localidad:
+                      </label>
+                      <input
+                        type="text"
+                        name="localidadPropiedad"
+                        value={formData.localidadPropiedad}
+                        onChange={handleChange}
+                        required
+                        className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-200"
+                        placeholder="Ej: Rosario"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                      Provincia:
+                    </label>
+                    <input
+                      type="text"
+                      name="provinciaPropiedad"
+                      value={formData.provinciaPropiedad}
+                      onChange={handleChange}
+                      required
+                      className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-200"
+                      placeholder="Ej: Santa Fe"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">
                       Tipo de propiedad:
@@ -309,7 +397,7 @@ const TasacionPage = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Ubicación:
+                      Ubicación del inmueble:
                     </label>
                     <select
                       name="ubicacionTipo"
@@ -437,6 +525,7 @@ const TasacionPage = () => {
                       name="descripcionPropiedad"
                       value={formData.descripcionPropiedad}
                       onChange={handleChange}
+                      required
                       className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-200"
                       placeholder="Describe características adicionales..."
                       rows="3"
@@ -605,7 +694,7 @@ const TasacionPage = () => {
             </form>
           )}
 
-          {!valorTasacion && !isCalculating && (
+          {!successMessage && !isCalculating && (
             <div className="mt-8 pt-8 border-t border-gray-100">
               <h4 className="text-lg font-semibold text-gray-800 mb-4">
                 Ventajas de Nuestra Tasación

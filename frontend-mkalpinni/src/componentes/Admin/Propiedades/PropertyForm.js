@@ -1,11 +1,13 @@
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
 import React, { useState } from 'react';
+import { propertyService } from '../../../services/api';
 
 const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitting = false }) => {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [newUser, setNewUser] = useState('');
   const [userType, setUserType] = useState('');
+  const [localSubmitting, setLocalSubmitting] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -32,8 +34,8 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     onChange({ ...property, images: newImages });
   };
 
-  const handleSave = () => {
-    if (!property.title || !property.address || !property.price || property.images.length === 0) {
+  const handleSave = async () => {
+    if (!property.title || !property.address || !property.price) {
       alert('Por favor complete los campos requeridos');
       return;
     }
@@ -41,7 +43,81 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
       alert('Por favor ingrese el nombre del locador y locatario.');
       return;
     }
-    onSave(property);
+
+    const propertyId = property._id || property.id || property.idPropiedad;
+    console.log('=== PropertyForm.handleSave ===');
+    console.log('Editing:', editing);
+    console.log('Property._id:', property._id);
+    console.log('Property.id:', property.id);
+    console.log('Property.idPropiedad:', property.idPropiedad);
+    console.log('Resolved propertyId:', propertyId);
+    console.log('All property keys:', Object.keys(property));
+
+    const { images, _id, id, idPropiedad, ...propertyData } = property;
+    const imageFiles = (images || []).filter(file => file instanceof File);
+
+    console.log('Image files to upload:', imageFiles.length);
+
+    if (!propertyId && editing) {
+      alert('Error: No se encontró el ID de la propiedad. Recarga la página e intenta nuevamente.');
+      console.error('PropertyId is undefined and editing is true');
+      return;
+    }
+
+    if (typeof onSave === 'function') {
+      onSave(propertyData, imageFiles);
+      return;
+    }
+
+    setLocalSubmitting(true);
+    try {
+      let result;
+      
+      if (editing && propertyId) {
+        console.log('Updating property with ID:', propertyId);
+        result = await propertyService.update(propertyId, propertyData);
+        if (!result || result.status === false) {
+          throw new Error(result?.message || 'Error updating property');
+        }
+        console.log('Update successful');
+      } else if (!editing) {
+        console.log('Creating new property');
+        result = await propertyService.create(propertyData);
+        if (!result || result.status === false) {
+          throw new Error(result?.message || 'Error creating property');
+        }
+        console.log('Create successful');
+      } else {
+        throw new Error('Cannot determine if creating or updating');
+      }
+
+      const createdOrUpdatedId = (result.value && (result.value._id || result.value.id)) || propertyId;
+      console.log('ID for image upload:', createdOrUpdatedId);
+
+      if (createdOrUpdatedId && imageFiles.length > 0) {
+        console.log('Uploading', imageFiles.length, 'images');
+        const uploadResp = await propertyService.uploadImages(createdOrUpdatedId, imageFiles);
+        console.log('Upload complete:', uploadResp?.status);
+      }
+
+      let refreshed;
+      if (createdOrUpdatedId) {
+        const getResp = await propertyService.getById(createdOrUpdatedId);
+        if (getResp && getResp.status) {
+          refreshed = getResp.value;
+        }
+      }
+
+      alert(editing ? 'Propiedad actualizada' : 'Propiedad creada');
+      if (typeof onChange === 'function' && refreshed) {
+        onChange(refreshed);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setLocalSubmitting(false);
+    }
   };
 
   const openRegisterModal = (type) => {
@@ -368,14 +444,14 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
       <div className="flex space-x-4">
         <button
           onClick={handleSave}
-          disabled={isSubmitting}
+          disabled={isSubmitting || localSubmitting}
           className={`${
-            isSubmitting 
+            isSubmitting || localSubmitting
               ? 'bg-gray-400 cursor-not-allowed' 
               : 'bg-blue-600 hover:bg-blue-700'
           } text-white font-bold py-3 px-6 rounded-lg flex items-center space-x-2 transition duration-300`}
         >
-          {isSubmitting ? (
+          {isSubmitting || localSubmitting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               <span>Guardando...</span>

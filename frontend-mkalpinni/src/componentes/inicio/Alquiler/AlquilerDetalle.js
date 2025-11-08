@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link, useParams } from "react-router-dom";
 import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar, FaCar, FaTree, FaSnowflake, FaSwimmingPool, FaLock } from "react-icons/fa";
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import { API_BASE_URL } from '../../../config/apiConfig';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
 
 const AlquilerDetalle = () => {
     const { id } = useParams();
@@ -20,6 +23,16 @@ const AlquilerDetalle = () => {
         email: '',
         telefono: '',
         mensaje: ''
+    });
+    const [showSuccess, setShowSuccess] = useState(false);
+
+    const mapRef = useRef(null);
+    const mapContainerRef = useRef(null);
+    const customIcon = L.divIcon({
+        className: 'custom-marker-detail',
+        html: `<div class="bg-blue-600 text-white p-2 rounded-full shadow-lg border-2 border-white"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 36]
     });
 
     useEffect(() => {
@@ -41,25 +54,27 @@ const AlquilerDetalle = () => {
                     setLoading(false);
                     return;
                 }
+                
+                const rawPropiedad = propiedadData.value;
+                rawPropiedad.latitud = parseFloat(rawPropiedad.latitud) || null;
+                rawPropiedad.longitud = parseFloat(rawPropiedad.longitud) || null;
 
-                const imagenesResponse = await fetch(`${API_BASE_URL}/ImagenesPropiedad/ObtenerPropiedad/${id}`);
-                const imagenesData = await imagenesResponse.json();
+                const imagenesArray = rawPropiedad.imagenes || [];
+                const fetchedImages = imagenesArray.map(img => {
+                    if (typeof img === 'string') return img;
+                    if (img.rutaArchivo) return img.rutaArchivo;
+                    if (img.url) return img.url;
+                    return null;
+                }).filter(url => url);
 
-                if (imagenesData.status && imagenesData.value && imagenesData.value.length > 0) {
-                    const fetchedImages = imagenesData.value.map(img => img.url).filter(url => url);
-                    setImagenes(fetchedImages);
-                    if (fetchedImages.length > 0) {
-                        setMainImage(fetchedImages[0]);
-                    } else {
-                        setMainImage(defaultPlaceholderImage);
-                    }
+                setImagenes(fetchedImages);
+                if (fetchedImages.length > 0) {
+                    setMainImage(fetchedImages[0]);
                 } else {
-                    console.warn("No se recibieron URLs de imágenes o la API de imágenes falló:", imagenesData.msg || "Sin datos");
-                    setImagenes([]);
                     setMainImage(defaultPlaceholderImage);
                 }
 
-                setPropiedad(propiedadData.value);
+                setPropiedad(rawPropiedad);
                 setLoading(false);
 
             } catch (err) {
@@ -91,27 +106,31 @@ const AlquilerDetalle = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await fetch(`${API_BASE_URL}/Contacto/EnviarConsulta`, {
+            const response = await fetch(`${API_BASE_URL}/Contacto/EnviarConsultaPropiedad`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     ...formData,
-                    propiedadId: id
+                    idPropiedad: id,
+                    tituloPropiedad: propiedad?.titulo || 'Propiedad en alquiler',
+                    mensaje: formData.mensaje || `Consulta sobre la propiedad: ${propiedad?.titulo || ''}`
                 })
             });
 
             const data = await response.json();
 
             if (data.status) {
-                alert("¡Gracias por tu interés! Te contactaremos pronto.");
+                setShowSuccess(true);
                 setFormData({
                     nombre: '',
                     email: '',
                     telefono: '',
                     mensaje: ''
                 });
+                // Hide success message after 5 seconds
+                setTimeout(() => setShowSuccess(false), 5000);
             } else {
                 alert("Hubo un error al enviar tu consulta. Por favor intenta nuevamente: " + (data.msg || "Error desconocido."));
             }
@@ -120,28 +139,50 @@ const AlquilerDetalle = () => {
             alert("Error de conexión al enviar el formulario. Por favor intenta más tarde.");
         }
     };
+    const Mapa = ({ lat, lng, titulo, ubicacion }) => {
+        
+        useEffect(() => {
+            if (activeTab !== "ubicacion") return;
 
-    const Mapa = ({ lat, lng }) => {
+            if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+                console.warn("Coordenadas inválidas para el mapa.");
+                return; 
+            }
+
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+
+            mapRef.current = L.map(mapContainerRef.current).setView([lat, lng], 16);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19,
+            }).addTo(mapRef.current);
+            L.marker([lat, lng], { icon: customIcon })
+                .addTo(mapRef.current)
+                .bindPopup(`<b>${titulo || 'Propiedad'}</b><br>${ubicacion || 'Ubicación'}`).openPopup();
+            return () => {
+                if (mapRef.current) {
+                    mapRef.current.remove();
+                    mapRef.current = null;
+                }
+            };
+        }, [lat, lng, activeTab, titulo, ubicacion]); 
+
+        if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+             return <p className="text-gray-500 p-4 bg-gray-100 rounded-lg">Ubicación geográfica no disponible o inválida.</p>;
+        }
+
         return (
-            <div className="w-full h-64 bg-gray-200 rounded-lg overflow-hidden relative">
-                <div className="absolute inset-0 bg-gray-300 flex items-center justify-center">
-                    <div className="text-center">
-                        <FaMapMarkerAlt className="text-red-600 text-4xl mb-2 mx-auto" />
-                        <p className="text-gray-700 font-medium">Ubicación de la propiedad</p>
-                        <p className="text-gray-600 text-sm">Lat: {lat || 'N/A'}, Lng: {lng || 'N/A'}</p>
-                    </div>
-                </div>
-            </div>
+            <div 
+                ref={mapContainerRef} 
+                className="w-full h-96 bg-gray-200 rounded-lg overflow-hidden" 
+                style={{ zIndex: 1 }}
+            />
         );
     };
 
-    if (loading) {
-        return (
-            <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-                <p className="text-lg text-gray-700">Cargando detalles de la propiedad...</p>
-            </div>
-        );
-    }
 
     if (error) {
         return (
@@ -167,8 +208,8 @@ const AlquilerDetalle = () => {
             : `$${propiedad.precio?.toLocaleString('es-AR')}`,
         direccion: `${propiedad.ubicacion || ''}${propiedad.barrio ? `, ${propiedad.barrio}` : ''}`,
         coordenadas: {
-            lat: propiedad.latitud || null,
-            lng: propiedad.longitud || null
+            lat: parseFloat(propiedad.latitud) || null,
+            lng: parseFloat(propiedad.longitud) || null
         },
         descripcion: propiedad.descripcion || "No hay descripción disponible para esta propiedad.",
         caracteristicas: [
@@ -242,12 +283,6 @@ const AlquilerDetalle = () => {
                                 Descripción
                             </button>
                             <button
-                                className={`py-2 px-4 font-medium ${activeTab === "especificaciones" ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-500 hover:text-gray-900"}`}
-                                onClick={() => setActiveTab("especificaciones")}
-                            >
-                                Detalles
-                            </button>
-                            <button
                                 className={`py-2 px-4 font-medium ${activeTab === "ubicacion" ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-500 hover:text-gray-900"}`}
                                 onClick={() => setActiveTab("ubicacion")}
                             >
@@ -289,7 +324,12 @@ const AlquilerDetalle = () => {
                                     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                                         <h3 className="font-medium text-gray-900 mb-2">Ubicación de la propiedad</h3>
                                         <p className="text-gray-700 mb-4">{inmuebleDisplay.direccion}</p>
-                                        <Mapa lat={inmuebleDisplay.coordenadas.lat} lng={inmuebleDisplay.coordenadas.lng} />
+                                        <Mapa 
+                                            lat={inmuebleDisplay.coordenadas.lat} 
+                                            lng={inmuebleDisplay.coordenadas.lng}
+                                            titulo={inmuebleDisplay.titulo}
+                                            ubicacion={inmuebleDisplay.direccion}
+                                        />
                                     </div>
                                 </div>
                             )}
@@ -297,6 +337,11 @@ const AlquilerDetalle = () => {
 
                         <div className="mt-8 bg-white p-6 rounded-lg shadow-sm">
                             <h3 className="text-xl font-bold text-gray-900 mb-4">¿Te interesa esta propiedad?</h3>
+                            {showSuccess && (
+                                <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                                    ¡Gracias por tu interés! Hemos recibido tu consulta y nos pondremos en contacto contigo a la brevedad.
+                                </div>
+                            )}
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <input
                                     type="text"
@@ -355,8 +400,8 @@ const AlquilerDetalle = () => {
                                         <h3 className="font-bold text-gray-900 text-lg mb-2">{similar.titulo}</h3>
                                         <p className="text-gray-600 text-sm mb-3">{similar.direccion}</p>
                                         <div className="flex space-x-2 text-sm text-gray-700">
-                                            {similar.detalles.map((detalle, idx) => (
-                                                <span key={idx} className="bg-gray-100 px-3 py-1 rounded-full">{detalle}</span>
+                                            {similar.descripcion.map((descripcion, idx) => (
+                                                <span key={idx} className="bg-gray-100 px-3 py-1 rounded-full">{descripcion}</span>
                                             ))}
                                         </div>
                                     </div>
