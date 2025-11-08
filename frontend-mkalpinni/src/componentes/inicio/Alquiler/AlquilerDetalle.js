@@ -24,6 +24,7 @@ const AlquilerDetalle = () => {
         telefono: '',
         mensaje: ''
     });
+    const [showSuccess, setShowSuccess] = useState(false);
 
     const mapRef = useRef(null);
     const mapContainerRef = useRef(null);
@@ -105,27 +106,31 @@ const AlquilerDetalle = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await fetch(`${API_BASE_URL}/Contacto/EnviarConsulta`, {
+            const response = await fetch(`${API_BASE_URL}/Contacto/EnviarConsultaPropiedad`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     ...formData,
-                    propiedadId: id
+                    idPropiedad: id,
+                    tituloPropiedad: propiedad?.titulo || 'Propiedad en alquiler',
+                    mensaje: formData.mensaje || `Consulta sobre la propiedad: ${propiedad?.titulo || ''}`
                 })
             });
 
             const data = await response.json();
 
             if (data.status) {
-                alert("¡Gracias por tu interés! Te contactaremos pronto.");
+                setShowSuccess(true);
                 setFormData({
                     nombre: '',
                     email: '',
                     telefono: '',
                     mensaje: ''
                 });
+                // Hide success message after 5 seconds
+                setTimeout(() => setShowSuccess(false), 5000);
             } else {
                 alert("Hubo un error al enviar tu consulta. Por favor intenta nuevamente: " + (data.msg || "Error desconocido."));
             }
@@ -332,6 +337,11 @@ const AlquilerDetalle = () => {
 
                         <div className="mt-8 bg-white p-6 rounded-lg shadow-sm">
                             <h3 className="text-xl font-bold text-gray-900 mb-4">¿Te interesa esta propiedad?</h3>
+                            {showSuccess && (
+                                <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                                    ¡Gracias por tu interés! Hemos recibido tu consulta y nos pondremos en contacto contigo a la brevedad.
+                                </div>
+                            )}
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <input
                                     type="text"

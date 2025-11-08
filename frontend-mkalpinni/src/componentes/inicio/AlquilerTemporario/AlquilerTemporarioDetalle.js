@@ -25,11 +25,12 @@ const AlquilerTemporarioDetalle = () => {
     nombre: '',
     email: '',
     telefono: '',
-    fechaIngreso: '',
+    fechaEntrada: '',
     fechaSalida: '',
     cantidadPersonas: '',
     mensaje: ''
   });
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
@@ -166,10 +167,46 @@ const AlquilerTemporarioDetalle = () => {
     setFormData({ ...formData, [id]: value });
   };
 
-  const handleSubmitForm = (e) => {
+  const handleSubmitForm = async (e) => {
     e.preventDefault();
-    alert("¡Gracias por tu interés! Te contactaremos pronto para confirmar disponibilidad.");
+    
+    // Basic validation
+    if (!formData.nombre || !formData.email || !formData.telefono || !formData.fechaEntrada || !formData.fechaSalida || !formData.cantidadPersonas) {
+      alert('Por favor complete todos los campos obligatorios');
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/Contacto/AlquilerTemporal`, {
+        ...formData,
+        propiedadId: id,
+        propiedadTitulo: inmueble?.titulo || 'Alquiler Temporario'
+      });
+
+      if (response.data.status) {
+        setShowSuccess(true);
+        // Reset form
+        setFormData({
+          nombre: '',
+          email: '',
+          telefono: '',
+          fechaEntrada: '',
+          fechaSalida: '',
+          cantidadPersonas: '',
+          mensaje: ''
+        });
+        // Hide success message after 5 seconds
+        setTimeout(() => setShowSuccess(false), 5000);
+      } else {
+        alert('Hubo un error al enviar tu consulta. Por favor, inténtalo nuevamente.');
+      }
+    } catch (error) {
+      console.error('Error al enviar la consulta:', error);
+      const errorMessage = error.response?.data?.message || 'Error al enviar la consulta. Por favor, inténtalo nuevamente.';
+      alert(errorMessage);
+    }
   };
+
   const Mapa = ({ lat, lng, titulo, direccion }) => {
     useEffect(() => {
       if (activeTab !== "ubicacion") {
@@ -515,6 +552,11 @@ const AlquilerTemporarioDetalle = () => {
 
             <div className="mt-8 bg-white p-6 rounded-lg shadow-sm">
               <h3 className="text-xl font-bold text-gray-900 mb-4">¿Te interesa este alquiler temporario?</h3>
+              {showSuccess && (
+                <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                  ¡Gracias por tu interés en este alquiler temporario! Hemos recibido tu consulta y nos pondremos en contacto contigo a la brevedad.
+                </div>
+              )}
               <form onSubmit={handleSubmitForm} className="space-y-4">
                 <input
                   type="text"
@@ -541,6 +583,14 @@ const AlquilerTemporarioDetalle = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-900"
                   placeholder="Teléfono"
+                />
+                <input
+                  type="date"
+                  id="fechaEntrada"
+                  value={formData.fechaEntrada}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  placeholder="Fecha de entrada"
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -595,27 +645,6 @@ const AlquilerTemporarioDetalle = () => {
                 </button>
               </form>
             </div>
-          </div>
-        </div>
-
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Otras Propiedades en Alquiler Temporario</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {inmueble.similares && inmueble.similares.map((similar, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                <img src={similar.imagen} alt={similar.titulo} className="w-full h-48 object-cover" />
-                <div className="p-4">
-                  <h3 className="font-bold text-gray-900 text-lg mb-2">{similar.titulo}</h3>
-                  <p className="text-gray-600 text-sm mb-3">{similar.direccion}</p>
-                  <p className="font-semibold text-gray-900 mb-3">{similar.precio}</p>
-                  <div className="flex space-x-2 text-sm text-gray-700">
-                    {similar.detalles.map((detalle, idx) => (
-                      <span key={idx} className="bg-gray-100 px-3 py-1 rounded-full">{detalle}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
