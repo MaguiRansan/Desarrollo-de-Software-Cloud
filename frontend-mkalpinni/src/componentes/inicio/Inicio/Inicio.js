@@ -436,7 +436,7 @@ const InmobiliariaLanding = () => {
                           alt={propiedad.titulo}
                           className="w-full h-96 lg:h-116 object-cover"
                         />
-                        {/* Favorito deshabilitado: ícono eliminado intencionalmente */}
+                        {}
                         <div className="absolute bottom-4 left-4">
                           <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium text-xl">
                             {propiedad.precio}
