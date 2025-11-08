@@ -5,6 +5,7 @@ const { validateContact, validateId } = require('../middleware/validation');
 const { body, query } = require('express-validator');
 const { handleValidationErrors } = require('../middleware/validation');
 const nodemailer = require('nodemailer');
+const { body: bodyValidator } = require('express-validator');
 
 const router = express.Router();
 
@@ -258,6 +259,67 @@ router.put('/MarcarLeido/:id', [protect, validateId], async (req, res) => {
   }
 });
 
+router.post('/EnviarConsultaPropiedad', validateContact, async (req, res) => {
+  console.log('Datos recibidos para consulta de propiedad:', req.body); 
+  try {
+    const { idPropiedad, tituloPropiedad, ...contactData } = req.body;
+    
+    const contact = new Contact({
+      ...contactData,
+      tipoConsulta: 'Propiedad',
+      idPropiedadConsulta: idPropiedad,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('user-agent')
+    });
+    
+    await contact.save();
+
+    const mailOptions = {
+      from: `"MKAlpini Inmobiliaria - Consulta por Propiedad" <${process.env.EMAIL_FROM}>`,
+      to: process.env.TASACION_EMAIL_TO, 
+      subject: `📌 Consulta por la propiedad: ${tituloPropiedad || 'Propiedad sin título'}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h2 style="color: #4f46e5; margin-top: 0;">Consulta por Propiedad</h2>
+            <h3 style="margin-top: 0; color: #1f2937;">${tituloPropiedad || 'Propiedad sin título'}</h3>
+            
+            <div style="background-color: white; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #4f46e5;">
+              <p style="margin: 5px 0;"><strong>🔹 Propiedad:</strong> ${tituloPropiedad || 'No especificada'}</p>
+              <p style="margin: 5px 0;"><strong>👤 Nombre:</strong> ${contactData.nombre || 'No proporcionado'}</p>
+              <p style="margin: 5px 0;"><strong>📧 Email:</strong> ${contactData.email || 'No proporcionado'}</p>
+              <p style="margin: 5px 0;"><strong>📱 Teléfono:</strong> ${contactData.telefono || 'No proporcionado'}</p>
+              <div style="margin-top: 15px; padding: 10px; background-color: #f3f4f6; border-radius: 4px;">
+                <p style="margin: 0 0 5px 0; font-weight: 500;">Mensaje:</p>
+                <p style="margin: 0; white-space: pre-line;">${contactData.mensaje || 'El contacto no dejó un mensaje.'}</p>
+              </div>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; margin: 20px 0 0 0; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+              Este mensaje fue enviado desde el formulario de contacto de la propiedad en MKAlpini Inmobiliaria.
+            </p>
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(201).json({
+      status: true,
+      message: 'Tu consulta ha sido enviada. Nos pondremos en contacto contigo pronto.',
+      value: { idContacto: contact._id }
+    });
+  } catch (error) {
+    console.error('Error enviando consulta de propiedad:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Error interno del servidor al enviar la consulta',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 router.delete('/Eliminar/:id', [protect, validateId], async (req, res) => {
   try {
     if (req.user.idrol !== 3) {
@@ -273,6 +335,99 @@ router.delete('/Eliminar/:id', [protect, validateId], async (req, res) => {
     res.status(500).json({
       status: false,
       message: 'Error interno del servidor',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Endpoint para consultas de alquiler temporal
+router.post('/AlquilerTemporal', [
+  body('nombre').notEmpty().withMessage('El nombre es requerido'),
+  body('email').isEmail().withMessage('Email inválido'),
+  body('telefono').notEmpty().withMessage('El teléfono es requerido'),
+  body('fechaEntrada').isISO8601().withMessage('Fecha de entrada inválida'),
+  body('fechaSalida').isISO8601().withMessage('Fecha de salida inválida'),
+  body('cantidadPersonas').isInt({ min: 1 }).withMessage('La cantidad de personas debe ser al menos 1'),
+  handleValidationErrors
+], async (req, res) => {
+  console.log('Datos recibidos para alquiler temporal:', req.body);
+  
+  try {
+    const { fechaEntrada, fechaSalida, cantidadPersonas, ...contactData } = req.body;
+    
+    // Validar que la fecha de entrada sea anterior a la de salida
+    if (new Date(fechaEntrada) >= new Date(fechaSalida)) {
+      return res.status(400).json({
+        status: false,
+        message: 'La fecha de entrada debe ser anterior a la fecha de salida'
+      });
+    }
+
+    const alquilerData = {
+      ...contactData,
+      tipoConsulta: 'Alquiler',
+      detallesAdicionales: {
+        tipo: 'Temporal',
+        fechaEntrada: new Date(fechaEntrada),
+        fechaSalida: new Date(fechaSalida),
+        cantidadPersonas: parseInt(cantidadPersonas)
+      },
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('user-agent')
+    };
+
+    const contact = new Contact(alquilerData);
+    await contact.save();
+
+    // Formatear fechas para el correo
+    const formatoFecha = (fecha) => {
+      return new Date(fecha).toLocaleDateString('es-AR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    };
+
+    const mailOptions = {
+      from: `"MKAlpini Inmobiliaria - Consulta de Alquiler Temporal" <${process.env.EMAIL_FROM}>`,
+      to: process.env.EMAIL_TO || process.env.EMAIL_USER,
+      subject: `Consulta de alquiler temporal de ${contactData.nombre || 'Cliente'}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4f46e5;">Consulta de Alquiler Temporal</h2>
+          <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #374151; margin-top: 0;">Datos del Cliente</h3>
+            <p><strong>👤 Nombre:</strong> ${contactData.nombre || 'No proporcionado'}</p>
+            <p><strong>✉️ Email:</strong> ${contactData.email || 'No proporcionado'}</p>
+            <p><strong>📱 Teléfono:</strong> ${contactData.telefono || 'No proporcionado'}</p>
+            
+            <h3 style="color: #374151; margin-top: 20px;">Detalles del Alquiler</h3>
+            <p><strong>🏠 Fecha de Entrada:</strong> ${formatoFecha(fechaEntrada)}</p>
+            <p><strong>🚪 Fecha de Salida:</strong> ${formatoFecha(fechaSalida)}</p>
+            <p><strong>👥 Cantidad de Personas:</strong> ${cantidadPersonas}</p>
+            
+            ${contactData.mensaje ? `
+            <div style="margin-top: 15px; padding: 10px; background-color: #fff; border-left: 4px solid #4f46e5;">
+              <p style="margin: 0;"><strong>Mensaje adicional:</strong></p>
+              <p style="white-space: pre-line; margin: 10px 0 0 0;">${contactData.mensaje}</p>
+            </div>` : ''}
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(201).json({
+      status: true,
+      message: 'Solicitud de alquiler temporal enviada con éxito. Nos pondremos en contacto contigo pronto.',
+      value: { idContacto: contact._id }
+    });
+  } catch (error) {
+    console.error('Error procesando solicitud de alquiler temporal:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Error interno del servidor al procesar la solicitud',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
