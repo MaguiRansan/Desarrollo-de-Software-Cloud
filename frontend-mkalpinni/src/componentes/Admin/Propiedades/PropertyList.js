@@ -56,33 +56,28 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
 
   const renderPropertyImage = (property) => {
     if (property.images && property.images.length > 0) {
-    
-      if (property.images[0] instanceof File) {
+      const firstImage = property.images[0];
+      
+      if (typeof firstImage === 'string') {
         return (
           <img
-            src={URL.createObjectURL(property.images[0])}
+            src={firstImage}
             alt={property.title}
-            className="w-full h-48 object-cover"
+            className="w-full h-48 object-cover rounded"
+            onError={(e) => {
+              console.error('Error loading image:', firstImage);
+              e.target.src = "https://cdn.prod.website-files.com/61e9b342b016364181c41f50/62a014dd84797690c528f25e_38.jpg";
+            }}
           />
         );
       }
       
-      if (typeof property.images[0] === 'string') {
+      if (firstImage?.rutaArchivo) {
         return (
           <img
-            src={property.images[0]}
+            src={firstImage.rutaArchivo}
             alt={property.title}
-            className="w-full h-48 object-cover"
-          />
-        );
-      }
-      
-      if (property.images[0]?.rutaArchivo) {
-        return (
-          <img
-            src={property.images[0].rutaArchivo}
-            alt={property.title}
-            className="w-full h-48 object-cover"
+            className="w-full h-48 object-cover rounded"
             onError={(e) => {
               e.target.src = "https://cdn.prod.website-files.com/61e9b342b016364181c41f50/62a014dd84797690c528f25e_38.jpg";
             }}
@@ -92,8 +87,8 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
     }
 
     return (
-      <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-        <span className="text-gray-500">Sin imagen</span>
+      <div className="w-full h-48 bg-gray-200 flex items-center justify-center rounded">
+        <span className="text-gray-400">Sin imagen</span>
       </div>
     );
   };
@@ -122,103 +117,89 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                 property.status === 'ocupado' ? 'bg-gray-100' : ''
               }`}
             >
-              {property.images && property.images.length > 0 && typeof property.images[0] === 'string' && property.images[0].startsWith('http') ? (
-                <img 
-                  src={property.images[0]} 
-                  alt={property.title}
-                  className="w-full h-48 object-cover rounded"
-                  onError={(e) => {
-                    console.error('Error loading image:', property.images[0]);
-                    e.target.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-48 bg-gray-200 flex items-center justify-center rounded">
-                  <span className="text-gray-400">Sin imagen</span>
+              {renderPropertyImage(property)}
+              
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-2xl font-bold text-gray-900">{property.title}</h3>
+                  <span className="text-green-600 font-bold text-xl">${property.price.toLocaleString()}</span>
                 </div>
-              )}
 
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-2xl font-bold text-gray-900">{property.title}</h3>
-                <span className="text-green-600 font-bold text-xl">${property.price.toLocaleString()}</span>
-              </div>
-
-              <p className="text-gray-600 mb-4 flex items-center">
-                <FaMapMarkerAlt className="mr-2 text-blue-500" />
-                {property.address}
-              </p>
-
-              <div className="flex space-x-4 text-gray-600 mb-6">
-                <span className="flex items-center">
-                  <FaBed className="mr-2 text-blue-500" />
-                  {property.bedrooms} dormitorios
-                </span>
-                <span className="flex items-center">
-                  <FaBath className="mr-2 text-blue-500" />
-                  {property.bathrooms} baños
-                </span>
-                <span className="flex items-center">
-                  <FaRulerCombined className="mr-2 text-blue-500" />
-                  {property.squareMeters} m²
-                </span>
-              </div>
-
-              <div className="flex items-center mb-4">
-                <FaTag className="mr-2 text-blue-500" />
-                <span className="text-gray-600">Tipo: {property.type}</span>
-              </div>
-
-              <div className="text-gray-600 mb-6">
-                <p className="flex items-center">
+                <p className="text-gray-600 mb-4 flex items-center">
                   <FaMapMarkerAlt className="mr-2 text-blue-500" />
-                  Barrio: {property.neighborhood}
+                  {property.address}
                 </p>
-                <p className="flex items-center">
-                  Localidad: {property.locality}
-                </p>
-                <p className="flex items-center">
-                  Provincia: {property.province}
-                </p>
-              </div>
 
-              <div className="text-gray-600 mb-6">
-                <p className="flex items-center">
-                  Estado: {property.status}
-                </p>
-                {property.status === 'reservado' && (
-                  <div>
-                    <p className="text-gray-600">Locador: {property.lessor}</p>
-                    <p className="text-gray-600">Locatario: {property.lessee}</p>
-                  </div>
-                )}
-              </div>
+                <div className="flex space-x-4 text-gray-600 mb-6">
+                  <span className="flex items-center">
+                    <FaBed className="mr-2 text-blue-500" />
+                    {property.bedrooms} dormitorios
+                  </span>
+                  <span className="flex items-center">
+                    <FaBath className="mr-2 text-blue-500" />
+                    {property.bathrooms} baños
+                  </span>
+                  <span className="flex items-center">
+                    <FaRulerCombined className="mr-2 text-blue-500" />
+                    {property.squareMeters} m²
+                  </span>
+                </div>
 
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => onEdit(property)}
-                  className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300"
-                >
-                  <FaEdit />
-                  <span>Editar</span>
-                </button>
-                <button
-                  onClick={() => onDelete(property.id)}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300"
-                >
-                  <FaTrash />
-                  <span>Eliminar</span>
-                </button>
-                <button
-                  onClick={() => handleViewProperty(property)}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300"
-                >
-                  <FaEye />
-                  <span>Ver</span>
-                </button>
+                <div className="flex items-center mb-4">
+                  <FaTag className="mr-2 text-blue-500" />
+                  <span className="text-gray-600">Tipo: {property.type}</span>
+                </div>
+
+                <div className="text-gray-600 mb-6">
+                  <p className="flex items-center">
+                    <FaMapMarkerAlt className="mr-2 text-blue-500" />
+                    Barrio: {property.neighborhood}
+                  </p>
+                  <p className="flex items-center">
+                    Localidad: {property.locality}
+                  </p>
+                  <p className="flex items-center">
+                    Provincia: {property.province}
+                  </p>
+                </div>
+
+                <div className="text-gray-600 mb-6">
+                  <p className="flex items-center">
+                    Estado: {property.status}
+                  </p>
+                  {property.status === 'reservado' && (
+                    <div>
+                      <p className="text-gray-600">Locador: {property.lessor}</p>
+                      <p className="text-gray-600">Locatario: {property.lessee}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => onEdit(property)}
+                    className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300"
+                  >
+                    <FaEdit />
+                    <span>Editar</span>
+                  </button>
+                  <button
+                    onClick={() => onDelete(property.id)}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300"
+                  >
+                    <FaTrash />
+                    <span>Eliminar</span>
+                  </button>
+                  <button
+                    onClick={() => handleViewProperty(property)}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300"
+                  >
+                    <FaEye />
+                    <span>Ver</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
           ))}
 
           {filteredProperties.length === 0 && (
@@ -239,21 +220,7 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
               }`}
             >
               <div className="w-48 h-32 flex-shrink-0">
-                {property.images && property.images.length > 0 && typeof property.images[0] === 'string' && property.images[0].startsWith('http') ? (
-                  <img 
-                    src={property.images[0]} 
-                    alt={property.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      console.error('Error cargando imagen:', property.images[0]);
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-500">Sin imagen</span>
-                  </div>
-                )}
+                {renderPropertyImage(property)}
               </div>
               
               <div className="flex-1 p-6">
