@@ -1,12 +1,28 @@
 const express = require('express');
 const Contact = require('../models/Contact');
 const { protect } = require('../middleware/auth');
-const { validateContact, validateId, handleValidationErrors } = require('../middleware/validation');
+const { validateContact, validateId } = require('../middleware/validation');
 const { body, query } = require('express-validator');
+const { handleValidationErrors } = require('../middleware/validation');
+const nodemailer = require('nodemailer');
 
 const router = express.Router();
 
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  secure: process.env.EMAIL_SECURE === 'true',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
 router.post('/Enviar', validateContact, async (req, res) => {
+  console.log('Datos recibidos:', req.body); 
   try {
     const contactData = {
       ...req.body,
@@ -15,6 +31,28 @@ router.post('/Enviar', validateContact, async (req, res) => {
     };
     const contact = new Contact(contactData);
     await contact.save();
+
+    const mailOptions = {
+      from: `"MKAlpini Inmobiliaria - Formulario de Contacto" <${process.env.EMAIL_FROM}>`,
+      to: process.env.TASACION_EMAIL_TO, 
+      subject: `Nuevo mensaje de contacto desde la web de ${contactData.nombre || 'No proporcionado'}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>📌 Nombre:</strong> ${contactData.nombre || 'No proporcionado'}</p>
+            <p><strong>✉️ Email:</strong> ${contactData.email || 'No proporcionado'}</p>
+            <p><strong>📱 Teléfono:</strong> ${contactData.telefono || 'No proporcionado'}</p>
+            <div style="margin-top: 15px; padding: 10px; background-color: #fff; border-left: 4px solid #4f46e5;">
+              <p style="margin: 0;"><strong>Mensaje:</strong></p>
+              <p style="white-space: pre-line; margin: 10px 0 0 0;">${contactData.mensaje || 'Sin mensaje'}</p>
+            </div>
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
     res.status(201).json({
       status: true,
       message: 'Mensaje enviado exitosamente. Te responderemos pronto.',
