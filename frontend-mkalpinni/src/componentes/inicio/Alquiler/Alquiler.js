@@ -429,14 +429,25 @@ const Alquiler = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {propiedadesFiltradas.map(propiedad => (
                     <div
-                      key={propiedad.idPropiedad} 
+                      key={propiedad.idPropiedad}
                       className={`bg-white rounded-xl shadow-md overflow-hidden cursor-pointer transition-all hover:shadow-lg
                         ${propiedadSeleccionada?.idPropiedad === propiedad.idPropiedad ? 'ring-2 ring-blue-500 transform scale-102' : ''}`}
                       onClick={() => setPropiedadSeleccionada(propiedad)}
                     >
                       <div className="h-52 bg-gray-200 relative">
                         <div className="absolute top-0 left-0 right-0 bottom-0">
-                          <img src={`https://picsum.photos/seed/${propiedad.idPropiedad}/400/300`} alt={propiedad.titulo} className="w-full h-full object-cover" />
+                          <img 
+                            src={
+                              propiedad.imagenes && propiedad.imagenes.length > 0
+                                ? (propiedad.imagenes[0].rutaArchivo || propiedad.imagenes[0].url || propiedad.imagenes[0])
+                                : `https://picsum.photos/seed/${propiedad.idPropiedad}/400/300`
+                            }
+                            alt={propiedad.titulo} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.src = `https://picsum.photos/seed/${propiedad.idPropiedad}/400/300`;
+                            }}
+                          />
                         </div>
                         <div className="absolute top-0 left-0 right-0 p-3 flex justify-between items-start">
                           <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">{propiedad.transaccionTipo}</div>

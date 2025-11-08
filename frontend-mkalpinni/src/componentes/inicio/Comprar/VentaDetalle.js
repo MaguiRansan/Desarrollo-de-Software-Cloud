@@ -40,16 +40,19 @@ const DetalleInmueble = () => {
                 }
                 const data = await response.json();
 
-
                 if (data.status && data.value) {
                     setInmueble(data.value);
 
-                    const imagenes = data.value.imagenesPropiedads || data.value.imagenes || [];
-                    if (imagenes.length > 0) {
-                        const primeraImagen = typeof imagenes[0] === 'string'
-                            ? imagenes[0]
-                            : imagenes[0].urlImagen || imagenes[0].imagenUrl;
-                        setMainImage(primeraImagen);
+                    const imagenes = data.value.imagenes || [];
+                    const imagenesUrls = imagenes.map(img => {
+                        if (typeof img === 'string') return img;
+                        if (img.rutaArchivo) return img.rutaArchivo;
+                        if (img.url) return img.url;
+                        return null;
+                    }).filter(url => url);
+
+                    if (imagenesUrls.length > 0) {
+                        setMainImage(imagenesUrls[0]);
                     }
                 } else {
                     setError(data.msg || "No se pudo cargar la propiedad.");
@@ -153,11 +156,12 @@ const DetalleInmueble = () => {
         if (!inmueble) return [];
 
         if (Array.isArray(inmueble.imagenes)) {
-            return inmueble.imagenes;
-        }
-
-        if (Array.isArray(inmueble.imagenesPropiedads)) {
-            return inmueble.imagenesPropiedads.map(img => img.urlImagen || img.imagenUrl);
+            return inmueble.imagenes.map(img => {
+                if (typeof img === 'string') return img;
+                if (img.rutaArchivo) return img.rutaArchivo;
+                if (img.url) return img.url;
+                return null;
+            }).filter(url => url);
         }
 
         return [];

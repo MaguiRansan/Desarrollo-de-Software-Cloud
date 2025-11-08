@@ -9,21 +9,26 @@ class ApiService {
 
   async request(url, options = {}) {
     const token = sessionStorage.getItem('authToken');
-    
-    
+
     const config = {
       headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-        ...options.headers,
+        ...(options.headers || {}),
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       },
       ...options,
     };
 
+    if (config.body && !(config.body instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+
+      if (typeof config.body !== 'string') {
+        config.body = JSON.stringify(config.body);
+      }
+    }
+    
     try {
       const response = await fetch(`${this.baseURL}${url}`, config);
-      
-      
+
       let data;
       try {
         data = await response.json();
@@ -31,7 +36,7 @@ class ApiService {
         console.error('Error parsing response JSON:', parseError);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       if (!response.ok) {
         const errorMessage = data?.message || data?.error || `HTTP ${response.status}: ${response.statusText}`;
         const error = new Error(errorMessage);
@@ -55,19 +60,11 @@ class ApiService {
   }
 
   post(url, data, options = {}) {
-    return this.request(url, {
-      method: 'POST',
-      body: JSON.stringify(data),
-      ...options,
-    });
+    return this.request(url, { method: 'POST', body: data, ...options });
   }
 
   put(url, data, options = {}) {
-    return this.request(url, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-      ...options,
-    });
+    return this.request(url, { method: 'PUT', body: data, ...options });
   }
 
   delete(url, options = {}) {
@@ -212,6 +209,31 @@ export const propertyService = {
       transaccionTipo: 'Alquiler',
       esAlquilerTemporario: true 
     });
+  },
+
+  uploadImages: async (id, files = []) => {
+    if (!id) throw new Error('Property id is required for image upload');
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('imagenes', file);
+    });
+
+    return await api.post(`/Propiedad/SubirImagenes/${id}`, formData);
+  },
+
+  createWithImages: async (propertyData, imageFiles = []) => {
+    const createResp = await api.post('/Propiedad/Crear', propertyData);
+    if (createResp.status && createResp.value && imageFiles.length > 0) {
+      const propId = createResp.value._id || createResp.value.id;
+      if (propId) {
+        await api.post(`/Propiedad/SubirImagenes/${propId}`, (() => {
+          const fd = new FormData();
+          imageFiles.forEach(f => fd.append('imagenes', f));
+          return fd;
+        })());
+      }
+    }
+    return createResp;
   }
 };
 

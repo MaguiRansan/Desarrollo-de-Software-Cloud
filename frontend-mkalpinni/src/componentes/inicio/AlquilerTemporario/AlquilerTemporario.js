@@ -362,7 +362,19 @@ const AlquilerTemporario = () => {
                                     {propiedadesFiltradas.map(prop => (
                                         <div key={prop.id} onClick={() => setPropiedadSeleccionada(prop)} className={`bg-white rounded-xl shadow-md overflow-hidden cursor-pointer transition-all hover:shadow-lg ${propiedadSeleccionada?.id === prop.id ? 'ring-2 ring-blue-500 scale-102' : ''}`}>
                                             <div className="h-52 bg-gray-200 relative">
-                                                <img src={prop.imagenes?.[0] || `https://picsum.photos/seed/${prop.id}/400/300`} alt={prop.titulo} className="absolute inset-0 w-full h-full object-cover" />
+                          <img 
+                            src={
+                              prop.imagenes && prop.imagenes.length > 0
+                                ? (prop.imagenes[0].rutaArchivo || prop.imagenes[0].url || prop.imagenes[0])
+                                : `https://picsum.photos/seed/${prop.id}/400/300`
+                            }
+                            alt={prop.titulo} 
+                            className="absolute inset-0 w-full h-full object-cover" 
+                            onError={(e) => {
+                              e.target.src = `https://picsum.photos/seed/${prop.id}/400/300`;
+                            }}
+                          />
+
                                                 <div className="absolute top-3 left-3 right-3 flex justify-between items-start"> 
                                                     <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">{prop.tipo}</div>
                                 

@@ -10,7 +10,6 @@ import imagen2 from './pexels-sofia-falco-1148410914-32506369.jpg';
 import imagen3 from './pexels-vividcafe-681333.jpg';
 import HomeSearch from './HomeSearch';
 import { propertyService } from '../../../services/api';
-import { API_STATIC_URL } from '../../../config/apiConfig';
 
 const CookieBanner = () => {
   const [showBanner, setShowBanner] = useState(false);
@@ -185,7 +184,7 @@ const InmobiliariaLanding = () => {
             titulo: prop.titulo,
             precio: prop.precio ? `$${prop.precio.toLocaleString('es-AR')}` : 'Precio a consultar',
             imagen: prop.imagenes && prop.imagenes.length > 0 
-              ? `${API_STATIC_URL}/uploads/${prop.imagenes[0].rutaArchivo}`
+              ? (prop.imagenes[0].rutaArchivo || prop.imagenes[0].url)  // ← CAMBIAR AQUÍ
               : "https://cdn.prod.website-files.com/61e9b342b016364181c41f50/62a014dd84797690c528f25e_38.jpg",
             ubicacion: `${prop.ubicacion || ''}${prop.localidad ? `, ${prop.localidad}` : ''}${prop.provincia ? `, ${prop.provincia}` : ''}`,
             caracteristicas: { 
