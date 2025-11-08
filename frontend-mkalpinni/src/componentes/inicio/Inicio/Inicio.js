@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate} from "react-router-dom";
-import { Home, MapPin, ChevronRight, ChevronLeft, User, Heart } from 'lucide-react';
+import { Home, MapPin, ChevronRight, ChevronLeft, User } from 'lucide-react';
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import L from 'leaflet';
@@ -221,7 +221,7 @@ const InmobiliariaLanding = () => {
             titulo: prop.titulo,
             precio: prop.precio ? `$${prop.precio.toLocaleString('es-AR')}` : 'Precio a consultar',
             imagen: prop.imagenes && prop.imagenes.length > 0 
-              ? `${API_STATIC_URL}/uploads/${prop.imagenes[0].rutaArchivo}`
+              ? (prop.imagenes[0].rutaArchivo || prop.imagenes[0].url)  // ← CAMBIAR AQUÍ
               : "https://cdn.prod.website-files.com/61e9b342b016364181c41f50/62a014dd84797690c528f25e_38.jpg",
             ubicacion: `${prop.ubicacion || ''}${prop.localidad ? `, ${prop.localidad}` : ''}${prop.provincia ? `, ${prop.provincia}` : ''}`,
             caracteristicas: { 
@@ -508,14 +508,7 @@ const InmobiliariaLanding = () => {
                           alt={propiedad.titulo}
                           className="w-full h-96 lg:h-116 object-cover"
                         />
-                        <div className="absolute top-4 right-4">
-                          <button
-                            className="bg-white/80 hover:bg-white p-2 rounded-full backdrop-blur-sm transition-all"
-                            aria-label="Add to favorites"
-                          >
-                            <Heart className="h-5 w-5 text-red-500" />
-                          </button>
-                        </div>
+                        {}
                         <div className="absolute bottom-4 left-4">
                           <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium text-xl">
                             {propiedad.precio}

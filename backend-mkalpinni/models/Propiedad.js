@@ -17,28 +17,7 @@ const PropertyManagement = () => {
 
   useEffect(() => {
     if (apiProperties && apiProperties.length > 0) {
-
-      const normalizedProperties = apiProperties.map(prop => ({
-        ...prop,
-        images: prop.imagenes || prop.images || [],
-        title: prop.titulo || prop.title,
-        description: prop.descripcion || prop.description,
-        address: prop.direccion || prop.address,
-        neighborhood: prop.barrio || prop.neighborhood,
-        locality: prop.localidad || prop.locality,
-        province: prop.provincia || prop.province,
-        type: prop.tipoPropiedad || prop.type,
-        operationType: prop.transaccionTipo === 'Venta' ? 'venta' : prop.transaccionTipo === 'Alquiler' ? 'alquiler' : prop.operationType,
-        price: prop.precio || prop.price,
-        bedrooms: prop.habitaciones || prop.bedrooms,
-        bathrooms: prop.banos || prop.bathrooms,
-        squareMeters: prop.superficieM2 || prop.squareMeters,
-        status: prop.estado === 'Disponible' ? 'disponible' : prop.estado === 'Ocupado' ? 'ocupado' : prop.status,
-        lessor: prop.locador || prop.lessor,
-        lessee: prop.locatario || prop.lessee,
-        allowsPets: prop.permitenascotas || prop.allowsPets
-      }));
-      setProperties(normalizedProperties);
+      setProperties(apiProperties);
     }
   }, [apiProperties]);
 
@@ -260,16 +239,12 @@ const PropertyManagement = () => {
           const uploadResp = await propertyService.uploadImages(createdOrUpdatedId, imageFiles);
           if (uploadResp && uploadResp.status) {
             console.log('Images uploaded successfully');
-  
-            if (uploadResp.value) {
+            
+            const refreshResp = await propertyService.getById(createdOrUpdatedId);
+            if (refreshResp && refreshResp.status) {
               setProperties(prevProperties =>
                 prevProperties.map(prop =>
-                  prop.id === createdOrUpdatedId 
-                    ? { 
-                        ...prop, 
-                        images: uploadResp.value.imagenes || uploadResp.value.images || [] 
-                      } 
-                    : prop
+                  prop.id === createdOrUpdatedId ? refreshResp.value : prop
                 )
               );
             }

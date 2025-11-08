@@ -99,7 +99,7 @@ const parseNumericField = (value) => {
 const router = express.Router();
 
 router.post('/Crear', [
-  ...uploadTasacionImages,
+  uploadTasacionImages,
   handleMulterError,
   body('direccion').trim().isLength({ min: 5, max: 500 }).withMessage('La dirección debe tener entre 5 y 500 caracteres'),
   body('barrioPropiedad').trim().notEmpty().withMessage('El barrio es requerido').isLength({ max: 100 }).withMessage('El barrio no puede exceder 100 caracteres'),
@@ -458,7 +458,7 @@ router.put('/ProgramarVisita/:id', [
 router.post('/SubirImagenes/:id', [
   protect,
   validateId,
-  ...uploadTasacionImages,
+  uploadTasacionImages,
   handleMulterError
 ], async (req, res) => {
   try {
