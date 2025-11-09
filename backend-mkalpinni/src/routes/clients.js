@@ -269,7 +269,7 @@ router.delete('/Eliminar/:id', validateId, async (req, res) => {
   }
 });
 
-router.post('/SubirDocumento/:id', [validateId, ...uploadClientDocument, handleMulterError], async (req, res) => {
+router.post('/SubirDocumento/:id', [validateId, uploadClientDocument, handleMulterError], async (req, res) => {
   try {
     const client = await Client.findOne({ _id: req.params.id, activo: true });
     if (!client) {

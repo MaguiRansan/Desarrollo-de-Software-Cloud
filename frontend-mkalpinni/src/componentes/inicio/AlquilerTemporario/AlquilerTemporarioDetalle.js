@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link, useParams } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar, FaCar, FaTree, FaSnowflake, FaSwimmingPool, FaLock, FaWifi, FaTv, FaUtensils } from "react-icons/fa";
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams } from "react-router-dom";
+import { FaBuilding, FaTree, FaBed, FaBath, FaCar, FaWifi, FaCheck, FaTimes } from "react-icons/fa";
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import { API_BASE_URL } from '../../../config/apiConfig';
 import axios from 'axios';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css'; 
+import 'leaflet/dist/images/marker-icon-2x.png';
+import 'leaflet/dist/images/marker-icon.png';
+import 'leaflet/dist/images/marker-shadow.png';
 
 const AlquilerTemporarioDetalle = () => {
   const { id } = useParams();
@@ -26,6 +31,10 @@ const AlquilerTemporarioDetalle = () => {
     mensaje: ''
   });
 
+  const mapRef = useRef(null);
+  const mapContainerRef = useRef(null);
+
+
   useEffect(() => {
     const fetchInmueble = async () => {
       try {
@@ -34,28 +43,38 @@ const AlquilerTemporarioDetalle = () => {
         const response = await axios.get(`${API_BASE_URL}/Propiedad/Obtener/${id}`);
         if (response.data.status) {
           const fetchedInmueble = response.data.value;
+          const lat = parseFloat(fetchedInmueble.latitud);
+          const lng = parseFloat(fetchedInmueble.longitud);
+
+          const imagenesArray = fetchedInmueble.imagenes || [];
+          const imagenesUrls = imagenesArray.map(img => {
+            if (typeof img === 'string') return img;
+            if (img.rutaArchivo) return img.rutaArchivo;
+            if (img.url) return img.url;
+            return null;
+          }).filter(url => url);
+
           setInmueble({
             ...fetchedInmueble,
-            imagenes: fetchedInmueble.imagenes || [],
+            coordenadas: { 
+              lat: isNaN(lat) ? null : lat,
+              lng: isNaN(lng) ? null : lng,
+            },
+            imagenes: imagenesUrls,
+            servicios: fetchedInmueble.servicios || [],
             caracteristicas: [
-              { icon: <FaBuilding />, texto: `${fetchedInmueble.metrosCuadradosConstruidos || 'N/A'} m² construidos` },
-              { icon: <FaTree />, texto: `${fetchedInmueble.metrosCuadradosTerreno || 'N/A'} m² de terreno` },
+              { icon: <FaBuilding />, texto: `${fetchedInmueble.superficieM2 || 'N/A'} m² construidos` },
+              { icon: <FaTree />, texto: `${fetchedInmueble.terrenoM2 || 'N/A'} m² de terreno` },
               { icon: <FaBed />, texto: `${fetchedInmueble.habitaciones || 'N/A'} Habitaciones` },
               { icon: <FaBath />, texto: `${fetchedInmueble.banos || 'N/A'} Baños` },
               { icon: <FaCar />, texto: `${fetchedInmueble.estacionamientos || 'N/A'} Estacionamientos` },
               { icon: <FaWifi />, texto: fetchedInmueble.tieneWifi ? "WiFi de alta velocidad" : "Sin WiFi" }
             ],
-            especificaciones: [
-              { icon: <FaUtensils />, texto: fetchedInmueble.cocinaEquipada ? "Cocina equipada" : "Cocina básica" },
-              { icon: <FaTv />, texto: fetchedInmueble.tieneSmartTv ? "Smart TV" : "TV" },
-              { icon: <FaSnowflake />, texto: fetchedInmueble.tieneAireAcondicionado ? "Aire acondicionado" : "Sin Aire Acondicionado" },
-              { icon: <FaSwimmingPool />, texto: fetchedInmueble.tienePiscina ? "Piscina" : "Sin Piscina" },
-              { icon: <FaLock />, texto: fetchedInmueble.seguridad24hs ? "Seguridad 24hs" : "Sin Seguridad 24hs" }
-            ],
             disponibilidad: fetchedInmueble.disponibilidad || { minEstadia: 1, maxEstadia: 365, fechasOcupadas: [] },
-            precio: `$${fetchedInmueble.precio} / semana`
+            precio: `$${fetchedInmueble.precio} / noche`
           });
-          setMainImage(fetchedInmueble.imagenes && fetchedInmueble.imagenes.length > 0 ? fetchedInmueble.imagenes[0] : "/api/placeholder/800/500");
+          
+          setMainImage(imagenesUrls.length > 0 ? imagenesUrls[0] : "/api/placeholder/800/500");
         } else {
           setError(response.data.msg || "No se pudo cargar la propiedad.");
         }
@@ -149,24 +168,61 @@ const AlquilerTemporarioDetalle = () => {
     setFormData({ ...formData, [id]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmitForm = (e) => {
     e.preventDefault();
     alert("¡Gracias por tu interés! Te contactaremos pronto para confirmar disponibilidad.");
   };
+  const Mapa = ({ lat, lng, titulo, direccion }) => {
+    useEffect(() => {
+      if (activeTab !== "ubicacion") {
+        if (mapRef.current) {
+            mapRef.current.remove();
+            mapRef.current = null;
+        }
+        return;
+      }
 
-  const Mapa = ({ lat, lng }) => {
+      if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng) || lat === null || lng === null) {
+        if (mapRef.current) {
+            mapRef.current.remove();
+            mapRef.current = null;
+        }
+        return;
+      }
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      mapRef.current = L.map(mapContainerRef.current).setView([lat, lng], 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+      }).addTo(mapRef.current);
+      L.marker([lat, lng])
+        .addTo(mapRef.current)
+        .bindPopup(`<b>${titulo || 'Propiedad'}</b><br>${direccion || 'Ubicación'}`).openPopup();
+
+      return () => {
+        if (mapRef.current) {
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
+      };
+    }, [lat, lng, titulo, direccion]);
+
+    if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng) || lat === null || lng === null) {
+        return <p className="text-gray-500 p-4 bg-gray-100 rounded-lg">Ubicación geográfica no disponible para esta propiedad.</p>;
+    }
+
     return (
-      <div className="w-full h-64 bg-gray-200 rounded-lg overflow-hidden relative">
-        <div className="absolute inset-0 bg-gray-300 flex items-center justify-center">
-          <div className="text-center">
-            <FaMapMarkerAlt className="text-red-600 text-4xl mb-2 mx-auto" />
-            <p className="text-gray-700 font-medium">Ubicación de la propiedad</p>
-            <p className="text-gray-600 text-sm">Lat: {lat}, Lng: {lng}</p>
-          </div>
-        </div>
-      </div>
+      <div 
+        ref={mapContainerRef} 
+        className="w-full h-96 bg-gray-200 rounded-lg overflow-hidden" 
+        style={{ zIndex: 1 }} 
+      />
     );
   };
+
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -265,26 +321,33 @@ const AlquilerTemporarioDetalle = () => {
 
               {activeTab === "especificaciones" && (
                 <div>
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    {inmueble.especificaciones.map((item, index) => (
-                      <div key={index} className="flex items-center p-3 bg-white rounded-lg shadow-sm">
-                        <span className="text-gray-700 text-xl mr-3">{item.icon}</span>
-                        <span className="text-gray-700">{item.texto}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {inmueble.especificaciones && inmueble.especificaciones.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                      {inmueble.especificaciones.map((item, index) => {
+                        const texto = typeof item === 'string' ? item : item?.texto;
+                        if (!texto) return null;
+                        return (
+                          <div key={`${index}-${texto}`} className="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                            <span className="mr-3 text-lg leading-none">•</span>
+                            <span className="text-gray-700">{texto}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-600 text-sm mb-6">Esta propiedad no tiene especificaciones declaradas.</p>
+                  )}
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <h3 className="font-medium text-gray-900 mb-2">Servicios incluidos</h3>
-                    <ul className="text-gray-700 space-y-2 pl-5 list-disc grid grid-cols-2">
-                      <li>Limpieza inicial</li>
-                      <li>Ropa de cama y toallas</li>
-                      <li>WiFi de alta velocidad</li>
-                      <li>TV por cable</li>
-                      <li>Estacionamiento cubierto</li>
-                      <li>Aire acondicionado</li>
-                      <li>Servicio de conserjería</li>
-                      <li>Kit de bienvenida</li>
-                    </ul>
+                    {inmueble.servicios && inmueble.servicios.length > 0 ? (
+                      <ul className="text-gray-700 space-y-2 pl-5 list-disc grid grid-cols-2">
+                        {inmueble.servicios.map((servicio) => (
+                          <li key={servicio}>{servicio}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-600 text-sm">Esta propiedad no tiene servicios declarados.</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -294,7 +357,12 @@ const AlquilerTemporarioDetalle = () => {
                   <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                     <h3 className="font-medium text-gray-900 mb-2">Ubicación de la propiedad</h3>
                     <p className="text-gray-700 mb-4">{inmueble.direccion}</p>
-                    <Mapa lat={inmueble.coordenadas.lat} lng={inmueble.coordenadas.lng} />
+                    <Mapa 
+                      lat={inmueble.coordenadas.lat} 
+                      lng={inmueble.coordenadas.lng} 
+                      titulo={inmueble.titulo} 
+                      direccion={inmueble.direccion} 
+                    />
                   </div>
                 </div>
               )}
@@ -380,7 +448,7 @@ const AlquilerTemporarioDetalle = () => {
 
             <div className="mt-8 bg-white p-6 rounded-lg shadow-sm">
               <h3 className="text-xl font-bold text-gray-900 mb-4">¿Te interesa este alquiler temporario?</h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmitForm} className="space-y-4">
                 <input
                   type="text"
                   id="nombre"

@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link, useParams } from "react-router-dom";
 import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar, FaCar, FaTree, FaSnowflake, FaSwimmingPool, FaLock } from "react-icons/fa";
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import { API_BASE_URL } from '../../../config/apiConfig';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
 
 const DetalleInmueble = () => {
     const { id } = useParams();
@@ -18,6 +21,14 @@ const DetalleInmueble = () => {
         telefono: '',
         mensaje: ''
     });
+    const mapRef = useRef(null);
+    const mapContainerRef = useRef(null);
+    const customIcon = L.divIcon({
+        className: 'custom-marker-detail',
+        html: `<div class="bg-blue-600 text-white p-2 rounded-full shadow-lg border-2 border-white"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 36]
+    });
 
     useEffect(() => {
         const fetchInmueble = async () => {
@@ -28,17 +39,20 @@ const DetalleInmueble = () => {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
-                
-                
+
                 if (data.status && data.value) {
                     setInmueble(data.value);
-                    
-                    const imagenes = data.value.imagenesPropiedads || data.value.imagenes || [];
-                    if (imagenes.length > 0) {
-                        const primeraImagen = typeof imagenes[0] === 'string' 
-                            ? imagenes[0] 
-                            : imagenes[0].urlImagen || imagenes[0].imagenUrl;
-                        setMainImage(primeraImagen);
+
+                    const imagenes = data.value.imagenes || [];
+                    const imagenesUrls = imagenes.map(img => {
+                        if (typeof img === 'string') return img;
+                        if (img.rutaArchivo) return img.rutaArchivo;
+                        if (img.url) return img.url;
+                        return null;
+                    }).filter(url => url);
+
+                    if (imagenesUrls.length > 0) {
+                        setMainImage(imagenesUrls[0]);
                     }
                 } else {
                     setError(data.msg || "No se pudo cargar la propiedad.");
@@ -72,21 +86,45 @@ const DetalleInmueble = () => {
         e.preventDefault();
         alert("¡Gracias por tu interés! Te contactaremos pronto.");
     };
+    const Mapa = ({ lat, lng, titulo, ubicacion }) => {
+        useEffect(() => {
+            if (activeTab !== "ubicacion") return;
 
-    const Mapa = ({ lat, lng }) => {
+            if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+                console.warn("Coordenadas inválidas para el mapa.");
+                return; 
+            }
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+            mapRef.current = L.map(mapContainerRef.current).setView([lat, lng], 16);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19,
+            }).addTo(mapRef.current);
+
+            L.marker([lat, lng], { icon: customIcon })
+                .addTo(mapRef.current)
+                .bindPopup(`<b>${titulo || 'Propiedad'}</b><br>${ubicacion || 'Ubicación'}`).openPopup();
+            return () => {
+                if (mapRef.current) {
+                    mapRef.current.remove();
+                    mapRef.current = null;
+                }
+            };
+        }, [lat, lng, activeTab, titulo, ubicacion]); 
+
         if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
-            return <p className="text-gray-500">Ubicación no disponible o inválida.</p>;
+            return <p className="text-gray-500 p-4 bg-gray-100 rounded-lg">Ubicación geográfica no disponible o inválida para esta propiedad.</p>;
         }
+
         return (
-            <div className="w-full h-64 bg-gray-200 rounded-lg overflow-hidden relative">
-                <div className="absolute inset-0 bg-gray-300 flex items-center justify-center">
-                    <div className="text-center">
-                        <FaMapMarkerAlt className="text-red-600 text-4xl mb-2 mx-auto" />
-                        <p className="text-gray-700 font-medium">Ubicación de la propiedad</p>
-                        <p className="text-gray-600 text-sm">Lat: {lat.toFixed(6)}, Lng: {lng.toFixed(6)}</p>
-                    </div>
-                </div>
-            </div>
+            <div 
+                ref={mapContainerRef} 
+                className="w-full h-96 bg-gray-200 rounded-lg overflow-hidden" 
+                style={{ zIndex: 1 }} 
+            />
         );
     };
 
@@ -116,15 +154,16 @@ const DetalleInmueble = () => {
 
     const obtenerImagenes = () => {
         if (!inmueble) return [];
-        
+
         if (Array.isArray(inmueble.imagenes)) {
-            return inmueble.imagenes;
+            return inmueble.imagenes.map(img => {
+                if (typeof img === 'string') return img;
+                if (img.rutaArchivo) return img.rutaArchivo;
+                if (img.url) return img.url;
+                return null;
+            }).filter(url => url);
         }
-        
-        if (Array.isArray(inmueble.imagenesPropiedads)) {
-            return inmueble.imagenesPropiedads.map(img => img.urlImagen || img.imagenUrl);
-        }
-        
+
         return [];
     };
 
@@ -264,12 +303,18 @@ const DetalleInmueble = () => {
                                 </div>
                             )}
 
+                            {}
                             {activeTab === "ubicacion" && (
                                 <div>
                                     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                                         <h3 className="font-medium text-gray-900 mb-2">Ubicación de la propiedad</h3>
                                         <p className="text-gray-700 mb-4">{inmueble.ubicacion|| 'Dirección no disponible.'}</p>
-                                        <Mapa lat={inmueble.latitud} lng={inmueble.longitud} />
+                                        <Mapa 
+                                            lat={inmueble.latitud} 
+                                            lng={inmueble.longitud} 
+                                            titulo={inmueble.titulo}
+                                            ubicacion={inmueble.ubicacion}
+                                        />
                                     </div>
                                 </div>
                             )}

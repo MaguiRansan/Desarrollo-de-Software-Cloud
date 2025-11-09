@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
-import { Search, Home, MapPin, ChevronRight, ChevronLeft, User, Heart, ChevronDown } from 'lucide-react';
+import { useNavigate} from "react-router-dom";
+import { Home, MapPin, ChevronRight, ChevronLeft, User, Heart } from 'lucide-react';
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import L from 'leaflet';
@@ -11,9 +10,6 @@ import imagen2 from './pexels-sofia-falco-1148410914-32506369.jpg';
 import imagen3 from './pexels-vividcafe-681333.jpg';
 import HomeSearch from './HomeSearch';
 import { propertyService } from '../../../services/api';
-import { API_STATIC_URL } from '../../../config/apiConfig';
-
-
 
 const CookieBanner = () => {
   const [showBanner, setShowBanner] = useState(false);
@@ -53,8 +49,8 @@ const CookieBanner = () => {
 const InmobiliariaLanding = () => {
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
-  const navigate = useNavigate(); // Inicializar useNavigate
-  const [propertyType, setPropertyType] = useState(''); // Estado para el tipo de propiedad
+  const navigate = useNavigate(); 
+  const [propertyType, setPropertyType] = useState('');
 
   const officeCoordinates = [-34.603387, -58.375253];
 
@@ -92,7 +88,7 @@ const InmobiliariaLanding = () => {
 
     if (activeTab === 'alquilerTemp') {
       if (!checkInDate || !checkOutDate) {
-        alert('Por favor selecciona las fechas de check-in y check-out');
+        alert('Por favor selecciona las fechas de entrada y salida');
         return;
       }
       const checkIn = new Date(checkInDate);
@@ -101,11 +97,11 @@ const InmobiliariaLanding = () => {
       today.setHours(0, 0, 0, 0);
 
       if (checkIn < today) {
-        alert('La fecha de check-in no puede ser anterior a hoy');
+        alert('La fecha de entrada no puede ser anterior a hoy');
         return;
       }
       if (checkOut <= checkIn) {
-        alert('La fecha de check-out debe ser posterior al check-in');
+        alert('La fecha de salida debe ser posterior a la fecha de entrada');
         return;
       }
     }
@@ -188,7 +184,7 @@ const InmobiliariaLanding = () => {
             titulo: prop.titulo,
             precio: prop.precio ? `$${prop.precio.toLocaleString('es-AR')}` : 'Precio a consultar',
             imagen: prop.imagenes && prop.imagenes.length > 0 
-              ? `${API_STATIC_URL}/uploads/${prop.imagenes[0].rutaArchivo}`
+              ? (prop.imagenes[0].rutaArchivo || prop.imagenes[0].url)  // ← CAMBIAR AQUÍ
               : "https://cdn.prod.website-files.com/61e9b342b016364181c41f50/62a014dd84797690c528f25e_38.jpg",
             ubicacion: `${prop.ubicacion || ''}${prop.localidad ? `, ${prop.localidad}` : ''}${prop.provincia ? `, ${prop.provincia}` : ''}`,
             caracteristicas: { 
@@ -196,6 +192,8 @@ const InmobiliariaLanding = () => {
               banos: prop.banos || 0, 
               superficie: `${prop.superficieM2 || 0}m²` 
             },
+            transaccionTipo: prop.transaccionTipo,
+            esAlquilerTemporario: Boolean(prop.esAlquilerTemporario),
           }));
           setPropiedadesDestacadas(propiedades);
         } else {
@@ -279,6 +277,26 @@ const InmobiliariaLanding = () => {
     setCurrentProperty(index);
   };
 
+  const resolvePropertyDetailPath = (propiedad) => {
+    const transaction = propiedad.transaccionTipo?.toLowerCase() || '';
+    if (propiedad.esAlquilerTemporario || transaction.includes('temporario')) {
+      return `/alquilerTemporario/detalle/${propiedad.id}`;
+    }
+    if (transaction === 'alquiler') {
+      return `/alquiler/detalle/${propiedad.id}`;
+    }
+    if (transaction === 'venta') {
+      return `/venta/detalle/${propiedad.id}`;
+    }
+    return `/propiedad/detalle/${propiedad.id}`;
+  };
+
+  const handleViewDetails = (propiedad) => {
+    navigate(resolvePropertyDetailPath(propiedad), {
+      state: { propiedadId: propiedad.id }
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <CookieBanner />
@@ -345,29 +363,32 @@ const InmobiliariaLanding = () => {
         </div>
       </div>
 
-      {/* Aquí pasamos los props a HomeSearch */}
-      <HomeSearch
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        guestsInfo={guestsInfo}
-        setGuestsInfo={setGuestsInfo}
-        checkInDate={checkInDate}
-        setCheckInDate={setCheckInDate}
-        checkOutDate={checkOutDate}
-        setCheckOutDate={setCheckOutDate}
-        handleSearch={handleSearch} // Pasamos la función de búsqueda
-        propertyType={propertyType} // Pasamos el tipo de propiedad
-        setPropertyType={setPropertyType} // Pasamos la función para actualizar el tipo de propiedad
-      />
+      <div className="bg-gray-50 py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <HomeSearch
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            guestsInfo={guestsInfo}
+            setGuestsInfo={setGuestsInfo}
+            checkInDate={checkInDate}
+            setCheckInDate={setCheckInDate}
+            checkOutDate={checkOutDate}
+            setCheckOutDate={setCheckOutDate}
+            handleSearch={handleSearch}
+            propertyType={propertyType}
+            setPropertyType={setPropertyType}
+          />
+        </div>
+      </div>
 
-      <div className="py-20 bg-gray-50">
+      <div className="pb-20 bg-gray-50">
         <div className="max-full mx-auto px-4 sm:px-6 lg:px-8 h-full">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-3">Propiedades Destacadas</h2>
+            <h2 className="text-5xl font-bold text-gray-900 mb-3">Propiedades Destacadas</h2>
             <div className="w-16 h-1 bg-blue-600 mx-auto mb-6"></div>
-            <p className="text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Descubre nuestras propiedades más exclusivas seleccionadas especialmente para ti
             </p>
           </div>
@@ -451,46 +472,48 @@ const InmobiliariaLanding = () => {
                           </div>
                         </div>
 
-                        <button className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-300">
+                        <button className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duración-300"
+                          onClick={() => handleViewDetails(propiedad)}
+                        >
                           Ver Detalles
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
+                </div>
+              </div>
+
+              <button
+                onClick={prevProperty}
+                className="absolute top-1/2 -translate-y-1/2 -left-5 bg-white shadow-lg p-3 rounded-full hover:bg-gray-100 transition-all duration-300 z-10"
+                aria-label="Previous property"
+              >
+                <ChevronLeft className="h-6 w-6 text-gray-700" />
+              </button>
+              <button
+                onClick={nextProperty}
+                className="absolute top-1/2 -translate-y-1/2 -right-5 bg-white shadow-lg p-3 rounded-full hover:bg-gray-100 transition-all duration-300 z-10"
+                aria-label="Next property"
+              >
+                <ChevronRight className="h-6 w-6 text-gray-700" />
+              </button>
+
+              <div className="flex justify-center mt-8 space-x-2">
+                {propiedadesDestacadas.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToProperty(index)}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      index === currentProperty
+                        ? 'bg-blue-600 w-8'
+                        : 'bg-gray-300 hover:bg-gray-400'
+                    }`}
+                    aria-label={`Go to property ${index + 1}`}
+                  />
+                ))}
               </div>
             </div>
-
-            <button
-              onClick={prevProperty}
-              className="absolute top-1/2 -translate-y-1/2 -left-5 bg-white shadow-lg p-3 rounded-full hover:bg-gray-100 transition-all duration-300 z-10"
-              aria-label="Previous property"
-            >
-              <ChevronLeft className="h-6 w-6 text-gray-700" />
-            </button>
-            <button
-              onClick={nextProperty}
-              className="absolute top-1/2 -translate-y-1/2 -right-5 bg-white shadow-lg p-3 rounded-full hover:bg-gray-100 transition-all duration-300 z-10"
-              aria-label="Next property"
-            >
-              <ChevronRight className="h-6 w-6 text-gray-700" />
-            </button>
-
-            <div className="flex justify-center mt-8 space-x-2">
-              {propiedadesDestacadas.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToProperty(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    index === currentProperty
-                      ? 'bg-blue-600 w-8'
-                      : 'bg-gray-300 hover:bg-gray-400'
-                  }`}
-                  aria-label={`Go to property ${index + 1}`}
-                />
-              ))}
-            </div>
-          </div>
           )}
           
           {/* Mensaje cuando no hay propiedades */}

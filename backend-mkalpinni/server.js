@@ -13,14 +13,13 @@ const propertyRoutes = require('./src/routes/properties');
 const clientRoutes = require('./src/routes/clients');
 const reservationRoutes = require('./src/routes/reservations');
 const contactRoutes = require('./src/routes/contact');
-const tasacionRoutes = require('./src/routes/tasaciones');
+const tasacionRoutes = require('./src/routes/Appraise');
 const configRoutes = require('./src/routes/config');
 
 const { errorHandler } = require('./src/middleware/errorHandler');
 const { notFound } = require('./src/middleware/notFound');
 
 const app = express();
-const PORT = process.env.PORT || 5228;
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -77,56 +76,74 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mkalpin_inmobiliaria')
-.then(() => {
-})
-.catch((error) => {
-  console.error('❌ Error conectando a MongoDB:', error);
-  process.exit(1);
-});
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mkalpin_inmobiliaria';
 
-app.use('/API/Usuario', authRoutes);
-app.use('/API/Propiedad', propertyRoutes);
-app.use('/API/Cliente', clientRoutes);
-app.use('/API/Reserva', reservationRoutes);
-app.use('/API/Contacto', contactRoutes);
-app.use('/API/Tasacion', tasacionRoutes);
-app.use('/API/Config', configRoutes);
+const mongooseOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 10000,
+};
 
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: true,
-    message: 'API funcionando correctamente',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0'
-  });
-});
+async function startServer() {
+  try {
+    console.log('Intentando conectar a MongoDB...');
+    await mongoose.connect(MONGO_URI, mongooseOptions);
+    console.log('Conectado a MongoDB');
 
-app.get('/', (req, res) => {
-  res.json({
-    status: true,
-    message: 'Bienvenido a la API de Mkalpin Negocios Inmobiliarios',
-    version: '1.0.0',
-    documentation: '/api-docs'
-  });
-});
+    app.use('/API/Usuario', authRoutes);
+    app.use('/API/Propiedad', propertyRoutes);
+    app.use('/API/Cliente', clientRoutes);
+    app.use('/API/Reserva', reservationRoutes);
+    app.use('/API/Contacto', contactRoutes);
+    app.use('/API/Tasacion', tasacionRoutes);
+    app.use('/API/Config', configRoutes);
 
-app.use(notFound);
-app.use(errorHandler);
+    app.get('/health', (req, res) => {
+      res.json({ 
+        status: true,
+        message: 'API funcionando correctamente',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0'
+      });
+    });
 
-process.on('unhandledRejection', (err) => {
-  console.error('❌ Error no manejado:', err);
-  server.close(() => {
-    process.exit(1);
-  });
-});
+    app.get('/', (req, res) => {
+      res.json({
+        status: true,
+        message: 'Bienvenido a la API de Mkalpin Negocios Inmobiliarios',
+        version: '1.0.0',
+        documentation: '/api-docs'
+      });
+    });
 
-process.on('uncaughtException', (err) => {
-  console.error('❌ Excepción no capturada:', err);
-  process.exit(1);
-});
+    app.use(notFound);
+    app.use(errorHandler);
 
-const server = app.listen(PORT, () => {
-});
+    process.on('unhandledRejection', (err) => {
+      console.error('❌ Error no manejado:', err);
+      server.close(() => {
+        process.exit(1);
+      });
+    });
+
+    process.on('uncaughtException', (err) => {
+      console.error('❌ Excepción no capturada:', err);
+      process.exit(1);
+    });
+
+    const PORT = process.env.PORT || 5228;
+    const server = app.listen(PORT, () => {
+      console.log(`Servidor API iniciado en http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error('Error conectando a MongoDB:', err);
+    setTimeout(() => {
+      console.log('Reintentando conexión a MongoDB...');
+      startServer();
+    }, 5000);
+  }
+}
+
+startServer();
 
 module.exports = app;

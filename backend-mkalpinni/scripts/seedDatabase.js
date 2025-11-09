@@ -29,9 +29,9 @@ async function seedDatabase() {
     await adminUser.save();
 
     const propietarioUser = new User({
-      nombre: 'María Sofia',
-      apellido: 'García',
-      correo: 'maria.garcia@email.com',
+      nombre: 'Sofia',
+      apellido: 'Kalpin',
+      correo: 'sofikalpin@hotmail.com',
       contrasenaHash: 'password123',
       idrol: 1,
       telefono: '+5411234567893'
@@ -46,8 +46,18 @@ async function seedDatabase() {
       telefono: '+5411234567893'
     });
 
+    const compradorUser = new User({
+      nombre: 'Carlos',
+      apellido: 'Rodríguez',
+      correo: 'carlos.rodriguez@email.com',
+      contrasenaHash: 'password123',
+      idrol: 4,
+      telefono: '+5411234567895'
+    });
+
     await propietarioUser.save();
     await inquilinoUser.save();
+    await compradorUser.save();
 
     const clienteLocador = new Client({
       nombreCompleto: 'Roberto Carlos Fernández',
@@ -115,7 +125,8 @@ async function seedDatabase() {
         precioPorSemana: 50000,
         precioPorMes: 180000,
         capacidadPersonas: 4,
-        servicios: ['WiFi', 'Aire Acondicionado', 'Cocina Equipada', 'TV por Cable', 'Ropa de Cama'],
+        especificaciones: ['Cocina Equipada', 'Seguridad 24hs', 'Smart TV', 'Aire acondicionado', 'Sin Piscina'],
+        servicios: ['WiFi', 'Limpieza general', 'Estacionamiento', 'Kit de Bienvenida', 'Ropa de Cama', 'Servicio de conserjeria'],
         reglasPropiedad: ['No fumar', 'No mascotas', 'Respetar horarios de descanso'],
         horarioCheckIn: '15:00',
         horarioCheckOut: '11:00',
