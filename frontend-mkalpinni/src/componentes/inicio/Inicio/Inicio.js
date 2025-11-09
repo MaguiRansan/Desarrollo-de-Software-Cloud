@@ -611,7 +611,7 @@ const InmobiliariaLanding = () => {
               </h2>
               <div className="w-24 h-1 bg-blue-600 rounded-full"></div>
               <p className="text-lg text-gray-600">
-                En **Mkalpin Negocios Inmobiliarios**, nos especializamos en ofrecer soluciones inmobiliarias integrales
+                En <strong>Mkalpin Negocios Inmobiliarios</strong>, nos especializamos en ofrecer soluciones inmobiliarias integrales
                 tanto para clientes particulares como inversores. Con más de 8 años de experiencia en el mercado,
                 nos hemos consolidado como líderes en el sector, gracias a nuestro compromiso con la excelencia
                 y la satisfacción de nuestros clientes.

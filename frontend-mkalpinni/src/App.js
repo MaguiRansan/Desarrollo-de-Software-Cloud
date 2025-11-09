@@ -1,5 +1,5 @@
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
+import { FaHome, FaBuilding, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtegerRuta from "./ProtectedRoute";
 import { UserProvider } from "./Context/UserContext";
@@ -34,11 +34,8 @@ import EditPerfil from "./componentes/Perfil/EditarPerfil";
 import Admin from "./componentes/Admin/Admi";
 import PropiedadesA from "./componentes/Admin/Propiedades/Propiedades";
 import AlquilerTem from "./componentes/Admin/AlquilerTemporario/Temporarios";
-import RegistroCliente from "./componentes/Admin/Clientes/RegistroCliente";
-import Reportes from "./componentes/Admin/Reportes/Reportes";
 import Configuracion from "./componentes/Admin/Configuracion/Configuracion";
 import Actividad from "./componentes/Admin/Actividad/Actividad";
-import Pagos from "./componentes/Admin/Pagos/Pagos";
 
 function App() {
   return (
@@ -89,20 +86,6 @@ function App() {
               </AdminProvider>
             </ProtegerRuta>
           } />
-          <Route path="/admin/clientes" element={
-            <ProtegerRuta>
-              <AdminProvider>
-                <RegistroCliente />
-              </AdminProvider>
-            </ProtegerRuta>
-          } />
-          <Route path="/admin/reportes" element={
-            <ProtegerRuta>
-              <AdminProvider>
-                <Reportes />
-              </AdminProvider>
-            </ProtegerRuta>
-          } />
           <Route path="/admin/configuracion" element={
             <ProtegerRuta>
               <AdminProvider>
@@ -114,20 +97,6 @@ function App() {
             <ProtegerRuta>
               <AdminProvider>
                 <Actividad />
-              </AdminProvider>
-            </ProtegerRuta>
-          } />
-          <Route path="/admin/pagos" element={
-            <ProtegerRuta>
-              <AdminProvider>
-                <Pagos />
-              </AdminProvider>
-            </ProtegerRuta>
-          } />
-          <Route path="/registrar-cliente" element={
-            <ProtegerRuta>
-              <AdminProvider>
-                <RegistroCliente />
               </AdminProvider>
             </ProtegerRuta>
           } />

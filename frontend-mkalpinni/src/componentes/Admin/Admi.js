@@ -1,14 +1,10 @@
 import React from 'react';
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
+import { Link } from "react-router-dom";
+import { FaHome, FaBuilding, FaCalendarAlt, FaChartBar, FaCog, FaPlus, FaEye, FaArrowUp, FaArrowDown } from "react-icons/fa";
 import AdminLayout from './AdminLayout';
 import { useAdminData, useStats } from '../../hooks/useAdminData';
 import { useUser } from '../../Context/UserContext';
 import { PageLoader } from './LoadingSpinner';
-import { 
-  FaArrowUp, 
-  FaArrowDown
-} from 'react-icons/fa';
 
 const StatCard = ({ icon, title, values, trend, subtitle }) => (
   <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
@@ -96,15 +92,21 @@ const ListCard = ({ title, link, items, renderItem, emptyMessage = "No hay eleme
 
 const Admin = () => {
   const { 
-    properties, 
-    clients, 
-    payments, 
+    properties = [], 
     isLoading, 
     error 
   } = useAdminData('all');
   
-  const { stats } = useStats();
+  const { stats = {} } = useStats();
   const { user } = useUser();
+
+  // Valores por defecto seguros para stats
+  const safeStats = {
+    propiedadesDisponibles: stats?.propiedadesDisponibles || 0,
+    propiedadesOcupadas: stats?.propiedadesOcupadas || 0,
+    contratosActivos: stats?.contratosActivos || 0,
+    ingresosMensuales: stats?.ingresosMensuales || 0,
+  };
 
   if (isLoading) {
     return (
@@ -138,27 +140,10 @@ const Admin = () => {
       title: 'Propiedades',
       subtitle: 'Gestión inmobiliaria',
       values: [
-        { label: `${stats.propiedadesDisponibles} disponibles`, color: 'text-green-600' },
-        { label: `${stats.propiedadesOcupadas} ocupadas`, color: 'text-blue-600' }
+        { label: `${safeStats.propiedadesDisponibles} disponibles`, color: 'text-green-600' },
+        { label: `${safeStats.propiedadesOcupadas} ocupadas`, color: 'text-blue-600' }
       ],
       trend: 5
-    },
-    {
-      icon: {
-        svg: (
-          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-          </svg>
-        ),
-        bgColor: 'bg-green-100'
-      },
-      title: 'Clientes',
-      subtitle: 'Base de datos',
-      values: [
-        { label: `${stats.propietarios} propietarios`, color: 'text-green-600' },
-        { label: `${stats.inquilinos} inquilinos`, color: 'text-blue-600' }
-      ],
-      trend: 12
     },
     {
       icon: {
@@ -172,25 +157,9 @@ const Admin = () => {
       title: 'Contratos',
       subtitle: 'Documentación legal',
       values: [
-        { label: `${stats.contratosActivos} activos`, color: 'text-green-600' }
+        { label: `${safeStats.contratosActivos} activos`, color: 'text-green-600' }
       ],
       trend: -3
-    },
-    {
-      icon: {
-        svg: (
-          <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-        ),
-        bgColor: 'bg-yellow-100'
-      },
-      title: 'Pagos',
-      subtitle: 'Gestión financiera',
-      values: [
-        { label: `${stats.pagosPendientes} pendientes`, color: 'text-red-600' }
-      ],
-      trend: 8
     }
   ];
 
@@ -199,18 +168,10 @@ const Admin = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Menu de administrador
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900">Menu de administrador</h1>
             <p className="text-gray-600 mt-1">Resumen general de la gestión inmobiliaria</p>
           </div>
           <div className="flex space-x-3">
-            <Link 
-              to="/admin/clientes" 
-              className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-sm"
-            >
-              <FaPlus className="mr-2" size={16} />
-              Nuevo Cliente
-            </Link>
             <Link 
               to="/admin/propiedades" 
               className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-sm"
@@ -222,68 +183,41 @@ const Admin = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
         {statCards.map((card, index) => (
           <StatCard key={index} {...card} />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-8">
         <QuickMetric 
           title="Ingresos Mensuales"
-          value={`$${stats.ingresosMensuales.toLocaleString()}`}
+          value={`$${safeStats.ingresosMensuales.toLocaleString()}`}
           change={15}
-          icon={FaMoneyBillWave}
+          icon={FaHome}
           color="green"
         />
         <QuickMetric 
           title="Ocupación"
-          value={`${properties.length > 0 ? Math.round((stats.propiedadesOcupadas / properties.length) * 100) : 0}%`}
+          value={`${properties.length > 0 ? Math.round((safeStats.propiedadesOcupadas / properties.length) * 100) : 0}%`}
           change={5}
           icon={FaCalendarAlt}
           color="blue"
         />
-        <QuickMetric 
-          title="Total Propiedades"
-          value={properties.length}
-          change={8}
-          icon={FaBuilding}
-          color="purple"
-        />
-        <QuickMetric 
-          title="Total Clientes"
-          value={clients.length}
-          change={12}
-          icon={FaUsers}
-          color="indigo"
-        />
       </div>
 
       <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl shadow-lg p-6 mb-8">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Resumen Financiero Mensual</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <h2 className="text-xl font-bold text-gray-800 mb-6">Resumen General</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-1">Ingresos Totales</h3>
-                <p className="text-2xl font-bold text-green-600">${stats.ingresosMensuales.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-green-600">${safeStats.ingresosMensuales.toLocaleString()}</p>
                 <p className="text-sm text-gray-600 mt-1">Este mes</p>
               </div>
               <div className="p-3 bg-green-100 rounded-full">
-                <FaMoneyBillWave className="text-green-600" size={24} />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Pagos Pendientes</h3>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pagosPendientes}</p>
-                <p className="text-sm text-gray-600 mt-1">Por cobrar</p>
-              </div>
-              <div className="p-3 bg-yellow-100 rounded-full">
-                <FaCalendarAlt className="text-yellow-600" size={24} />
+                <FaHome className="text-green-600" size={24} />
               </div>
             </div>
           </div>
@@ -293,7 +227,7 @@ const Admin = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-1">Tasa de Ocupación</h3>
                 <p className="text-2xl font-bold text-blue-600">
-                  {properties.length > 0 ? Math.round((stats.propiedadesOcupadas / properties.length) * 100) : 0}%
+                  {properties.length > 0 ? Math.round((safeStats.propiedadesOcupadas / properties.length) * 100) : 0}%
                 </p>
                 <p className="text-sm text-gray-600 mt-1">Del total</p>
               </div>
@@ -305,7 +239,7 @@ const Admin = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
         <ListCard
           title="Propiedades Recientes"
           link="/admin/propiedades"
@@ -324,31 +258,6 @@ const Admin = () => {
               }`}>
                 {(property.disponible || property.status === 'disponible') ? 'Disponible' : 'Ocupada'}
               </span>
-            </div>
-          )}
-        />
-
-        <ListCard
-          title="Actividad Reciente"
-          link="/admin/actividad"
-          items={payments}
-          emptyMessage="No hay actividad reciente"
-          renderItem={(payment) => (
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">{payment.concepto || payment.concept || 'Pago'}</h3>
-                <p className="text-sm text-gray-600">{payment.fecha || payment.date || 'Fecha no definida'}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-900">${(payment.monto || payment.amount)?.toLocaleString() || '0'}</p>
-                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                  (payment.estado === 'pagado' || payment.status === 'paid') ? 'bg-green-100 text-green-800' : 
-                  (payment.estado === 'pendiente' || payment.status === 'pending') ? 'bg-yellow-100 text-yellow-800' : 
-                  'bg-red-100 text-red-800'
-                }`}>
-                  {payment.estado || payment.status || 'Pendiente'}
-                </span>
-              </div>
             </div>
           )}
         />

@@ -17,8 +17,6 @@ const storage = new CloudinaryStorage({
 
     if (req.originalUrl.includes('/Propiedad/')) {
       folder = `mkalpin/propiedades/${req.params.id || 'temp'}`;
-    } else if (req.originalUrl.includes('/Cliente/')) {
-      folder = `mkalpin/clientes/${req.params.id || 'temp'}`;
     } else if (req.originalUrl.includes('/Tasacion/')) {
       let tasacionId = req.params?.id;
       if (!tasacionId) {
@@ -110,7 +108,6 @@ const handleMulterError = (error, req, res, next) => {
 module.exports = {
   upload,
   uploadPropertyImages: upload.array('imagenes', 10),
-  uploadClientDocument: upload.single('documento'),
   uploadTasacionImages: upload.array('imagenes', 5),
 
   deleteFile,
