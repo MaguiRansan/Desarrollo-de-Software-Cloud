@@ -53,7 +53,7 @@ const storage = new CloudinaryStorage({
         let tasacionId = req.params?.id;
         if (!tasacionId) {
           if (!req.tasacionUploadTempId) {
-            req.tasacionUploadTempId = `temp-${Date.now()}`;
+            req.tasacionUploadTempId = `${Date.now()}`;
           }
           tasacionId = req.tasacionUploadTempId;
         }
