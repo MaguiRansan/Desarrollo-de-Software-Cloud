@@ -6,6 +6,7 @@ import FilterControls from './FilterControls';
 import PropertyList from './PropertyList';
 import PropertyForm from './PropertyForm';
 import AdminLayout from '../AdminLayout';
+import BackButton from '../../Shared/BackButton/BackButton';
 import { useAdminData } from '../../../hooks/useAdminData';
 import { propertyService } from '../../../services/api';
 
@@ -377,20 +378,17 @@ const PropertyManagement = () => {
         <div>
           <div className="mb-8">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {editingProperty ? 'Editar Propiedad' : 'Agregar Nueva Propiedad'}
-                </h1>
-                <p className="text-gray-600">
-                  {editingProperty ? 'Modifica los datos de la propiedad' : 'Completa la información de la nueva propiedad'}
-                </p>
+              <div className="flex items-start gap-4">
+                <BackButton onClick={handleCancelForm} label="Volver a la lista" ariaLabel="Volver a la lista" />
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                    {editingProperty ? 'Editar Propiedad' : 'Agregar Nueva Propiedad'}
+                  </h1>
+                  <p className="text-gray-600">
+                    {editingProperty ? 'Modifica los datos de la propiedad' : 'Completa la información de la nueva propiedad'}
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={handleCancelForm}
-                className="inline-flex items-center text-gray-600 hover:text-gray-800 font-medium"
-              >
-                ← Volver a la lista
-              </button>
             </div>
           </div>
 
