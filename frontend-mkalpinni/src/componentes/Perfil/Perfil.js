@@ -4,7 +4,7 @@ import axios from 'axios';
 import { API_BASE_URL, API_STATIC_URL } from '../../config/apiConfig';
 import { useUser } from '../../Context/UserContext';
 import logo from "../../logo/logo.png";
-import { ArrowLeft } from 'lucide-react';
+import BackButton from '../Shared/BackButton/BackButton';
 
 const Perfil = () => {
   const { user, logout } = useUser();
@@ -126,13 +126,14 @@ const Perfil = () => {
         <div className="max-w-full w-full px-20 mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img
-                src={logo}
-                alt="Logo"
-                className="h-14 md:h-24 w-auto"
-                onClick={() => navigate(-1)}
-              />
-            </div>
+                <BackButton />
+                <img
+                  src={logo}
+                  alt="Logo"
+                  className="h-14 md:h-24 w-auto"
+                  onClick={() => navigate(-1)}
+                />
+              </div>
             <button
               onClick={() => setShowLogoutModal(true)}
               className="px-6 py-2.5 text-sm font-medium text-white hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded-lg transition-all duration-200 hover:shadow-md bg-red-600"
@@ -143,15 +144,6 @@ const Perfil = () => {
           </div>
         </div>
       </div>
-
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-slate-700 hover:text-slate-900 transition-colors font-medium mt-5 ml-10"
-      >
-        <ArrowLeft className="w-6 h-6" />
-        <span>Volver</span>
-      </button>
-
 
       {showLogoutModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
