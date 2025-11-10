@@ -3,7 +3,6 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config();
 const User = require('../src/models/User');
 const Property = require('../src/models/Property');
-const Client = require('../src/models/Client');
 
 async function seedDatabase() {
   try {
@@ -13,7 +12,6 @@ async function seedDatabase() {
     });
     await User.deleteMany({});
     await Property.deleteMany({});
-    await Client.deleteMany({});
     
 
     const adminUser = new User({
@@ -49,47 +47,6 @@ async function seedDatabase() {
     await propietarioUser.save();
     await inquilinoUser.save();
 
-    const clienteLocador = new Client({
-      nombreCompleto: 'Roberto Carlos Fernández',
-      dni: '25123456',
-      email: 'roberto.fernandez@email.com',
-      telefono: '+5411234567893',
-      domicilio: 'Av. Corrientes 1234, CABA',
-      rol: 'Locador',
-      tipoAlquiler: 'Alquiler Temporario',
-      fechaNacimiento: new Date('1980-05-15'),
-      nacionalidad: 'Argentina',
-      estadoCivil: 'Casado',
-      profesion: 'Ingeniero',
-      empresa: 'TechCorp SA',
-      ingresosMensuales: 250000,
-      cuitCuil: '20-25123456-7',
-      tienePropiedad: true,
-      idUsuarioCreador: adminUser._id
-    });
-
-    const clienteLocatario = new Client({
-      nombreCompleto: 'Ana María López',
-      dni: '30987654',
-      email: 'ana.lopez@email.com',
-      telefono: '+5411234567894',
-      domicilio: 'Calle Falsa 123, CABA',
-      rol: 'Locatario',
-      tipoAlquiler: 'Alquiler Temporario',
-      fechaNacimiento: new Date('1985-08-22'),
-      nacionalidad: 'Argentina',
-      estadoCivil: 'Soltero',
-      profesion: 'Diseñadora Gráfica',
-      empresa: 'Freelancer',
-      ingresosMensuales: 180000,
-      cuitCuil: '27-30987654-1',
-      tienePropiedad: false,
-      idUsuarioCreador: adminUser._id
-    });
-
-    await clienteLocador.save();
-    await clienteLocatario.save();
-
     const propiedades = [
       {
         titulo: 'Hermoso Apartamento en Playa del Carmen',
@@ -109,8 +66,7 @@ async function seedDatabase() {
         estado: 'Disponible',
         latitud: 20.6273,
         longitud: -87.0746,
-        locador: clienteLocador.nombreCompleto,
-        idClienteLocador: clienteLocador._id,
+        locador: 'Roberto Carlos Fernández',
         esAlquilerTemporario: true,
         precioPorNoche: 8500,
         precioPorSemana: 50000,
