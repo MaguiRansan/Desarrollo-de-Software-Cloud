@@ -64,6 +64,12 @@ const userSchema = new mongoose.Schema({
   },
   bloqueadoHasta: {
     type: Date
+  },
+  tokenRecuperacion: {
+    type: String
+  },
+  tokenRecuperacionExpira: {
+    type: Date
   }
 }, {
   timestamps: {

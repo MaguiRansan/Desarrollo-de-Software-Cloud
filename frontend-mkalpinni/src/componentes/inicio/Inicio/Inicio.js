@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate} from "react-router-dom";
-import { Home, MapPin, ChevronRight, ChevronLeft, User, Heart } from 'lucide-react';
+import { Home, MapPin, ChevronRight, ChevronLeft, User } from 'lucide-react';
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import L from 'leaflet';
@@ -10,6 +10,8 @@ import imagen2 from './pexels-sofia-falco-1148410914-32506369.jpg';
 import imagen3 from './pexels-vividcafe-681333.jpg';
 import HomeSearch from './HomeSearch';
 import { propertyService } from '../../../services/api';
+import { API_STATIC_URL } from '../../../config/apiConfig';
+import { API_BASE_URL } from '../../../config/apiConfig';
 
 const CookieBanner = () => {
   const [showBanner, setShowBanner] = useState(false);
@@ -58,9 +60,10 @@ const InmobiliariaLanding = () => {
     nombre: '',
     email: '',
     telefono: '',
-    asunto: '',
     mensaje: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const [activeTab, setActiveTab] = useState('venta');
   const [searchTerm, setSearchTerm] = useState('');
@@ -138,16 +141,50 @@ const InmobiliariaLanding = () => {
     navigate(finalUrl);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Gracias por tu mensaje. Nos pondremos en contacto contigo pronto.");
-    setFormData({
-      nombre: '',
-      email: '',
-      telefono: '',
-      asunto: '',
-      mensaje: '',
-    });
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/Contacto/Enviar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nombre: formData.nombre,
+          email: formData.email,
+          telefono: formData.telefono,
+          mensaje: formData.mensaje,
+          tipoConsulta: 'General',
+          estado: 'Nuevo'
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setShowSuccess(true);
+        setFormData({
+          nombre: '',
+          email: '',
+          telefono: '',
+          mensaje: '',
+        });
+        // Hide success message after 5 seconds
+        setTimeout(() => setShowSuccess(false), 5000);
+      } else {
+        throw new Error(data.message || 'Error al enviar el mensaje');
+      }
+    } catch (error) {
+      console.error('Error al enviar el mensaje:', error);
+      // Show error alert
+      setShowSuccess(false);
+      alert(error.message || 'Hubo un error al enviar tu mensaje. Por favor, inténtalo de nuevo más tarde.');
+    } finally {
+      setIsSubmitting(false);
+    }
+    return false; 
   };
 
   const carouselImages = [
@@ -234,9 +271,14 @@ const InmobiliariaLanding = () => {
     return () => clearInterval(interval);
   }, [isHoveringProperties, propiedadesDestacadas.length]);
 
+  // Initialize map only once when component mounts
   useEffect(() => {
-    if (mapContainerRef.current && !mapRef.current) {
-      const map = L.map(mapContainerRef.current).setView(officeCoordinates, 15);
+    if (!mapRef.current && mapContainerRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        zoomControl: false, // Disable default zoom control
+        dragging: true,
+        scrollWheelZoom: false
+      }).setView(officeCoordinates, 15);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -255,7 +297,7 @@ const InmobiliariaLanding = () => {
         mapRef.current = null;
       }
     };
-  }, [officeCoordinates]);
+  }, []);
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev === carouselItems.length - 1 ? 0 : prev + 1));
@@ -406,11 +448,42 @@ const InmobiliariaLanding = () => {
             <div className="text-center py-20">
               <p className="text-red-600 mb-4">{propertiesError}</p>
               <button 
-                onClick={() => window.location.reload()} 
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-300"
+                type="submit"
+                disabled={isSubmitting}
+                className={`w-full ${isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} text-white font-medium py-4 px-6 rounded-lg transition-colors duration-300 text-lg flex items-center justify-center`}
               >
-                Reintentar
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Enviando...
+                  </>
+                ) : 'Enviar Mensaje'}
               </button>
+              
+              {showSuccess && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full mx-4">
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                        <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">¡Mensaje Enviado!</h3>
+                      <p className="text-gray-600 text-center mb-6">Hemos recibido tu mensaje. Te responderemos a la brevedad.</p>
+                      <button
+                        onClick={() => setShowSuccess(false)}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           
@@ -435,14 +508,7 @@ const InmobiliariaLanding = () => {
                           alt={propiedad.titulo}
                           className="w-full h-96 lg:h-116 object-cover"
                         />
-                        <div className="absolute top-4 right-4">
-                          <button
-                            className="bg-white/80 hover:bg-white p-2 rounded-full backdrop-blur-sm transition-all"
-                            aria-label="Add to favorites"
-                          >
-                            <Heart className="h-5 w-5 text-red-500" />
-                          </button>
-                        </div>
+                        {}
                         <div className="absolute bottom-4 left-4">
                           <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium text-xl">
                             {propiedad.precio}
@@ -545,7 +611,7 @@ const InmobiliariaLanding = () => {
               </h2>
               <div className="w-24 h-1 bg-blue-600 rounded-full"></div>
               <p className="text-lg text-gray-600">
-                En **Mkalpin Negocios Inmobiliarios**, nos especializamos en ofrecer soluciones inmobiliarias integrales
+                En <strong>Mkalpin Negocios Inmobiliarios</strong>, nos especializamos en ofrecer soluciones inmobiliarias integrales
                 tanto para clientes particulares como inversores. Con más de 8 años de experiencia en el mercado,
                 nos hemos consolidado como líderes en el sector, gracias a nuestro compromiso con la excelencia
                 y la satisfacción de nuestros clientes.
@@ -687,20 +753,6 @@ const InmobiliariaLanding = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="asunto" className="block text-xl font-medium text-gray-700 mb-1">Asunto</label>
-                  <input
-                    type="text"
-                    id="asunto"
-                    name="asunto"
-                    value={formData.asunto}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-lg"
-                    placeholder="Asunto de tu mensaje"
-                    required
-                  />
-                </div>
-
-                <div>
                   <label htmlFor="mensaje" className="block text-xl font-medium text-gray-700 mb-1">Mensaje</label>
                   <textarea
                     id="mensaje"
@@ -717,11 +769,42 @@ const InmobiliariaLanding = () => {
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="px-8 py-4 bg-blue-600 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-xl"
+                    disabled={isSubmitting}
+                    className={`px-8 py-4 ${isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:shadow-xl hover:-translate-y-1'} text-white font-medium rounded-lg shadow-lg transform transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-xl flex items-center`}
                   >
-                    Enviar mensaje
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Enviando...
+                      </>
+                    ) : 'Enviar mensaje'}
                   </button>
                 </div>
+                
+                {showSuccess && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full mx-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                          <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                          </svg>
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2">¡Mensaje Enviado!</h3>
+                        <p className="text-gray-600 text-center mb-6">Hemos recibido tu mensaje. Te responderemos a la brevedad.</p>
+                        <button
+                          onClick={() => setShowSuccess(false)}
+                          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300"
+                        >
+                          Cerrar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </form>
             </div>
           </div>

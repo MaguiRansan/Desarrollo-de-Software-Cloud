@@ -15,7 +15,6 @@ cloudinary.config({
   secure: true
 });
 
-// Verificar la conexión con Cloudinary
 cloudinary.api.ping()
   .then(() => console.log('Conexión exitosa con Cloudinary'))
   .catch(err => console.error('Error conectando con Cloudinary:', err.message));
@@ -59,7 +58,6 @@ const storage = new CloudinaryStorage({
         }
         folder = `mkalpin/tasaciones/${tasacionId}`;
       } else {
-        // Cualquier otro archivo va a la carpeta general
         folder = 'mkalpin/general';
       }
 
@@ -106,27 +104,24 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configuración específica para la subida de fotos de perfil
 const uploadProfilePicture = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB para fotos de perfil
+    fileSize: 5 * 1024 * 1024, 
     files: 1
   }
 });
 
-// Configuración general para otras subidas
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 10 * 1024 * 1024, 
     files: 10
   }
 });
 
-// Middleware para depuración
 upload.any = function() {
   return function(req, res, next) {
     console.log('\n--- Multer Middleware ---');
@@ -153,7 +148,7 @@ upload.any = function() {
       storage: storage,
       fileFilter: fileFilter,
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB
+        fileSize: 10 * 1024 * 1024, 
         files: 10
       }
     }).apply(this, arguments)(req, res, function(err) {

@@ -34,30 +34,20 @@ async function seedDatabase() {
       correo: 'sofikalpin@hotmail.com',
       contrasenaHash: 'password123',
       idrol: 1,
-      telefono: '+5411234567893'
+      telefono: '+5411234567891'
     });
 
     const inquilinoUser = new User({
-      nombre: 'Juan Pablo',
+      nombre: 'Juan',
       apellido: 'Pérez',
       correo: 'juan.perez@email.com',
       contrasenaHash: 'password123',
       idrol: 2,
-      telefono: '+5411234567893'
-    });
-
-    const compradorUser = new User({
-      nombre: 'Carlos',
-      apellido: 'Rodríguez',
-      correo: 'carlos.rodriguez@email.com',
-      contrasenaHash: 'password123',
-      idrol: 4,
-      telefono: '+5411234567895'
+      telefono: '+5411234567892'
     });
 
     await propietarioUser.save();
     await inquilinoUser.save();
-    await compradorUser.save();
 
     const clienteLocador = new Client({
       nombreCompleto: 'Roberto Carlos Fernández',
@@ -112,9 +102,10 @@ async function seedDatabase() {
         tipoPropiedad: 'Apartamento',
         transaccionTipo: 'Alquiler',
         precio: 150000,
-        habitaciones: 2,
-        banos: 1,
+        habitaciones: 3,
+        banos: 2,
         superficieM2: 65,
+        terrenoM2: 190,
         estado: 'Disponible',
         latitud: 20.6273,
         longitud: -87.0746,
@@ -130,7 +121,6 @@ async function seedDatabase() {
         reglasPropiedad: ['No fumar', 'No mascotas', 'Respetar horarios de descanso'],
         horarioCheckIn: '15:00',
         horarioCheckOut: '11:00',
-        politicaCancelacion: 'Moderada',
         depositoSeguridad: 15000,
         metodosPago: ['Efectivo', 'Transferencia', 'MercadoPago'],
         idUsuarioCreador: adminUser._id,

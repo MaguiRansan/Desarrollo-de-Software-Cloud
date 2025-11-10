@@ -25,11 +25,12 @@ const AlquilerTemporarioDetalle = () => {
     nombre: '',
     email: '',
     telefono: '',
-    fechaIngreso: '',
+    fechaEntrada: '',
     fechaSalida: '',
     cantidadPersonas: '',
     mensaje: ''
   });
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
@@ -66,9 +67,7 @@ const AlquilerTemporarioDetalle = () => {
               { icon: <FaBuilding />, texto: `${fetchedInmueble.superficieM2 || 'N/A'} m² construidos` },
               { icon: <FaTree />, texto: `${fetchedInmueble.terrenoM2 || 'N/A'} m² de terreno` },
               { icon: <FaBed />, texto: `${fetchedInmueble.habitaciones || 'N/A'} Habitaciones` },
-              { icon: <FaBath />, texto: `${fetchedInmueble.banos || 'N/A'} Baños` },
-              { icon: <FaCar />, texto: `${fetchedInmueble.estacionamientos || 'N/A'} Estacionamientos` },
-              { icon: <FaWifi />, texto: fetchedInmueble.tieneWifi ? "WiFi de alta velocidad" : "Sin WiFi" }
+              { icon: <FaBath />, texto: `${fetchedInmueble.banos || 'N/A'} Baños` }
             ],
             disponibilidad: fetchedInmueble.disponibilidad || { minEstadia: 1, maxEstadia: 365, fechasOcupadas: [] },
             precio: `$${fetchedInmueble.precio} / noche`
@@ -168,10 +167,46 @@ const AlquilerTemporarioDetalle = () => {
     setFormData({ ...formData, [id]: value });
   };
 
-  const handleSubmitForm = (e) => {
+  const handleSubmitForm = async (e) => {
     e.preventDefault();
-    alert("¡Gracias por tu interés! Te contactaremos pronto para confirmar disponibilidad.");
+    
+    // Basic validation
+    if (!formData.nombre || !formData.email || !formData.telefono || !formData.fechaEntrada || !formData.fechaSalida || !formData.cantidadPersonas) {
+      alert('Por favor complete todos los campos obligatorios');
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/Contacto/AlquilerTemporal`, {
+        ...formData,
+        propiedadId: id,
+        propiedadTitulo: inmueble?.titulo || 'Alquiler Temporario'
+      });
+
+      if (response.data.status) {
+        setShowSuccess(true);
+        // Reset form
+        setFormData({
+          nombre: '',
+          email: '',
+          telefono: '',
+          fechaEntrada: '',
+          fechaSalida: '',
+          cantidadPersonas: '',
+          mensaje: ''
+        });
+        // Hide success message after 5 seconds
+        setTimeout(() => setShowSuccess(false), 5000);
+      } else {
+        alert('Hubo un error al enviar tu consulta. Por favor, inténtalo nuevamente.');
+      }
+    } catch (error) {
+      console.error('Error al enviar la consulta:', error);
+      const errorMessage = error.response?.data?.message || 'Error al enviar la consulta. Por favor, inténtalo nuevamente.';
+      alert(errorMessage);
+    }
   };
+
   const Mapa = ({ lat, lng, titulo, direccion }) => {
     useEffect(() => {
       if (activeTab !== "ubicacion") {
@@ -304,18 +339,89 @@ const AlquilerTemporarioDetalle = () => {
               )}
 
               {activeTab === "descripcion" && (
-                <div>
-                  <p className="text-gray-700 leading-relaxed">{inmueble.descripcion}</p>
-                  <div className="mt-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
-                    <h4 className="font-medium text-yellow-800">Información importante</h4>
-                    <ul className="mt-2 text-yellow-700 space-y-1 list-disc pl-5">
-                      <li>Check-in: 15:00hs - Check-out: 11:00hs</li>
-                      <li>No se permiten fiestas o eventos</li>
-                      <li>No se permiten mascotas</li>
-                      <li>Prohibido fumar dentro de la propiedad</li>
-                      <li>Se solicita depósito de garantía reembolsable</li>
-                    </ul>
-                  </div>
+                <div className="space-y-8">
+                  {inmueble.descripcion && (
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Descripción</h3>
+                      <p className="text-gray-700 leading-relaxed">{inmueble.descripcion}</p>
+                    </div>
+                  )}
+                  
+                  {(inmueble.horarioCheckIn || inmueble.horarioCheckOut) && (
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Horarios de estadía</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        {inmueble.horarioCheckIn && (
+                          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-500">Entrada</p>
+                                <p className="text-gray-900 font-medium">{inmueble.horarioCheckIn} hs</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {inmueble.horarioCheckOut && (
+                          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-500">Salida</p>
+                                <p className="text-gray-900 font-medium">{inmueble.horarioCheckOut} hs</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {inmueble.reglasPropiedad && inmueble.reglasPropiedad.length > 0 && (
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Reglas de la propiedad</h3>
+                      <ul className="space-y-2 mt-4 pl-5 list-disc text-gray-700">
+                        {inmueble.reglasPropiedad.map((regla, index) => (
+                          <li key={index} className="pl-2">
+                            {regla}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {inmueble.politicaCancelacion && (
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Política de cancelación</h3>
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-blue-700">
+                              {inmueble.politicaCancelacion === 'Flexible' 
+                                ? 'Cancelación Flexible: Reembolso total si cancelas hasta 24 horas antes del check-in.'
+                                : inmueble.politicaCancelacion === 'Moderada'
+                                ? 'Cancelación Moderada: Reembolso del 50% si cancelas hasta 7 días antes del check-in.'
+                                : 'Cancelación Estricta: Reembolso del 50% si cancelas hasta 30 días antes del check-in.'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -374,8 +480,6 @@ const AlquilerTemporarioDetalle = () => {
                     <div className="space-y-3">
                       <p className="flex justify-between"><span>Estadía mínima:</span> <span className="font-medium">{inmueble.disponibilidad.minEstadia} noches</span></p>
                       <p className="flex justify-between"><span>Estadía máxima:</span> <span className="font-medium">{inmueble.disponibilidad.maxEstadia} noches</span></p>
-                      <p className="flex justify-between"><span>Hora de check-in:</span> <span className="font-medium">15:00hs</span></p>
-                      <p className="flex justify-between"><span>Hora de check-out:</span> <span className="font-medium">11:00hs</span></p>
                     </div>
                   </div>
                   
@@ -448,6 +552,11 @@ const AlquilerTemporarioDetalle = () => {
 
             <div className="mt-8 bg-white p-6 rounded-lg shadow-sm">
               <h3 className="text-xl font-bold text-gray-900 mb-4">¿Te interesa este alquiler temporario?</h3>
+              {showSuccess && (
+                <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                  ¡Gracias por tu interés en este alquiler temporario! Hemos recibido tu consulta y nos pondremos en contacto contigo a la brevedad.
+                </div>
+              )}
               <form onSubmit={handleSubmitForm} className="space-y-4">
                 <input
                   type="text"
@@ -474,6 +583,14 @@ const AlquilerTemporarioDetalle = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-900"
                   placeholder="Teléfono"
+                />
+                <input
+                  type="date"
+                  id="fechaEntrada"
+                  value={formData.fechaEntrada}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  placeholder="Fecha de entrada"
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -528,27 +645,6 @@ const AlquilerTemporarioDetalle = () => {
                 </button>
               </form>
             </div>
-          </div>
-        </div>
-
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Otras Propiedades en Alquiler Temporario</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {inmueble.similares && inmueble.similares.map((similar, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                <img src={similar.imagen} alt={similar.titulo} className="w-full h-48 object-cover" />
-                <div className="p-4">
-                  <h3 className="font-bold text-gray-900 text-lg mb-2">{similar.titulo}</h3>
-                  <p className="text-gray-600 text-sm mb-3">{similar.direccion}</p>
-                  <p className="font-semibold text-gray-900 mb-3">{similar.precio}</p>
-                  <div className="flex space-x-2 text-sm text-gray-700">
-                    {similar.detalles.map((detalle, idx) => (
-                      <span key={idx} className="bg-gray-100 px-3 py-1 rounded-full">{detalle}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>

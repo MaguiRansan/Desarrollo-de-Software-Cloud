@@ -21,6 +21,7 @@ const DetalleInmueble = () => {
         telefono: '',
         mensaje: ''
     });
+    const [showSuccess, setShowSuccess] = useState(false);
     const mapRef = useRef(null);
     const mapContainerRef = useRef(null);
     const customIcon = L.divIcon({
@@ -82,10 +83,44 @@ const DetalleInmueble = () => {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        alert("¡Gracias por tu interés! Te contactaremos pronto.");
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/Contacto/EnviarConsultaPropiedad`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ...formData,
+                    idPropiedad: id,
+                    tituloPropiedad: inmueble?.titulo || 'Propiedad sin título'
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status) {
+                setShowSuccess(true);
+                // Reset form
+                setFormData({
+                    nombre: '',
+                    email: '',
+                    telefono: '',
+                    mensaje: ''
+                });
+                // Hide success message after 5 seconds
+                setTimeout(() => setShowSuccess(false), 5000);
+            } else {
+                throw new Error(data.message || 'Error al enviar la consulta');
+            }
+        } catch (error) {
+            console.error('Error al enviar la consulta:', error);
+            alert('Hubo un error al enviar tu consulta. Por favor, inténtalo nuevamente más tarde.');
+        }
     };
+
     const Mapa = ({ lat, lng, titulo, ubicacion }) => {
         useEffect(() => {
             if (activeTab !== "ubicacion") return;
@@ -322,6 +357,11 @@ const DetalleInmueble = () => {
 
                         <div className="mt-8 bg-white p-4 rounded-lg shadow-sm">
                             <h3 className="text-lg font-semibold text-gray-900 mb-3">¿Te interesa esta propiedad?</h3>
+                            {showSuccess && (
+                                <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                                    ¡Gracias por tu interés en esta propiedad! Hemos recibido tu consulta y nos pondremos en contacto contigo a la brevedad.
+                                </div>
+                            )}
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <input
                                     type="text"
@@ -360,7 +400,7 @@ const DetalleInmueble = () => {
                                 ></textarea>
                                 <button
                                     type="submit"
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-3 rounded-md transition duration-200"
+                                    className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-md transition duration-200"
                                 >
                                     Contactar ahora
                                 </button>
