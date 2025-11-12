@@ -37,12 +37,8 @@ router.get('/Obtener', optionalAuth, async (req, res) => {
 router.get('/Obtener/:id', [validateId, optionalAuth], async (req, res) => {
   try {
     let property = await Property.findOne({ _id: req.params.id, activo: true })
-      .populate('idUsuarioCreador', 'nombre apellido correo')
-      .populate('idClienteLocador')
-      .populate('idClienteLocatario')
-      .populate('idClientePropietario')
-      .populate('idClienteComprador')
-      .lean();
+      .populate('idUsuarioCreador', 'nombre apellido correo')
+      .lean();
 
     if (!property) {
       return res.status(404).json({
