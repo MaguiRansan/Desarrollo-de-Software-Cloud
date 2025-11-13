@@ -1,19 +1,16 @@
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
 import React, { useState } from 'react';
-import { propertyService } from '../../../services/api';
+import { FaPlus, FaTimes, FaSave } from "react-icons/fa";
 
 const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitting = false }) => {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [newUser, setNewUser] = useState('');
   const [userType, setUserType] = useState('');
-  const [localSubmitting, setLocalSubmitting] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     onChange({
       ...property,
-      [name]: name === 'price' || name === 'bedrooms' || name === 'bathrooms' || name === 'squareMeters'
+      [name]: name === 'price' || name === 'bedrooms' || name === 'bathrooms' || name === 'squareMeters' || name === 'landSquareMeters'
         ? value === '' ? '' : Number(value)
         : value,
     });
@@ -45,22 +42,12 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     }
 
     const propertyId = property._id || property.id || property.idPropiedad;
-    console.log('=== PropertyForm.handleSave ===');
-    console.log('Editing:', editing);
-    console.log('Property._id:', property._id);
-    console.log('Property.id:', property.id);
-    console.log('Property.idPropiedad:', property.idPropiedad);
-    console.log('Resolved propertyId:', propertyId);
-    console.log('All property keys:', Object.keys(property));
 
     const { images, _id, id, idPropiedad, ...propertyData } = property;
     const imageFiles = (images || []).filter(file => file instanceof File);
 
-    console.log('Image files to upload:', imageFiles.length);
-
     if (!propertyId && editing) {
       alert('Error: No se encontró el ID de la propiedad. Recarga la página e intenta nuevamente.');
-      console.error('PropertyId is undefined and editing is true');
       return;
     }
 
@@ -69,55 +56,6 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
       return;
     }
 
-    setLocalSubmitting(true);
-    try {
-      let result;
-      
-      if (editing && propertyId) {
-        console.log('Updating property with ID:', propertyId);
-        result = await propertyService.update(propertyId, propertyData);
-        if (!result || result.status === false) {
-          throw new Error(result?.message || 'Error updating property');
-        }
-        console.log('Update successful');
-      } else if (!editing) {
-        console.log('Creating new property');
-        result = await propertyService.create(propertyData);
-        if (!result || result.status === false) {
-          throw new Error(result?.message || 'Error creating property');
-        }
-        console.log('Create successful');
-      } else {
-        throw new Error('Cannot determine if creating or updating');
-      }
-
-      const createdOrUpdatedId = (result.value && (result.value._id || result.value.id)) || propertyId;
-      console.log('ID for image upload:', createdOrUpdatedId);
-
-      if (createdOrUpdatedId && imageFiles.length > 0) {
-        console.log('Uploading', imageFiles.length, 'images');
-        const uploadResp = await propertyService.uploadImages(createdOrUpdatedId, imageFiles);
-        console.log('Upload complete:', uploadResp?.status);
-      }
-
-      let refreshed;
-      if (createdOrUpdatedId) {
-        const getResp = await propertyService.getById(createdOrUpdatedId);
-        if (getResp && getResp.status) {
-          refreshed = getResp.value;
-        }
-      }
-
-      alert(editing ? 'Propiedad actualizada' : 'Propiedad creada');
-      if (typeof onChange === 'function' && refreshed) {
-        onChange(refreshed);
-      }
-    } catch (err) {
-      console.error('Error:', err);
-      alert(`Error: ${err.message}`);
-    } finally {
-      setLocalSubmitting(false);
-    }
   };
 
   const openRegisterModal = (type) => {
@@ -145,7 +83,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
   return (
     <div className="bg-white rounded-xl shadow-lg p-8">
       <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-        {editing ? 'Editar Propiedad' : 'Registrar Nueva Propiedad'}
+        {editing ? 'Editar Propiedad' : 'Registro de Propiedad'}
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -233,6 +171,22 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
         </div>
 
         <div>
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="landSquareMeters">
+            Metros cuadrados del terreno
+          </label>
+          <input
+            type="number"
+            name="landSquareMeters"
+            id="landSquareMeters"
+            value={property.landSquareMeters}
+            onChange={handleInputChange}
+            className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Ingrese los metros cuadrados del terreno"
+            min="0"
+          />
+        </div>
+
+        <div>
           <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="bathrooms">
             Baños
           </label>
@@ -304,7 +258,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             value={property.squareMeters}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Ingrese los metros cuadrados"
+            placeholder="Ingrese los metros cuadrados de la propiedad"
             min="0"
           />
         </div>
@@ -444,14 +398,14 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
       <div className="flex space-x-4">
         <button
           onClick={handleSave}
-          disabled={isSubmitting || localSubmitting}
+          disabled={isSubmitting}
           className={`${
-            isSubmitting || localSubmitting
+            isSubmitting
               ? 'bg-gray-400 cursor-not-allowed' 
               : 'bg-blue-600 hover:bg-blue-700'
           } text-white font-bold py-3 px-6 rounded-lg flex items-center space-x-2 transition duration-300`}
         >
-          {isSubmitting || localSubmitting ? (
+          {isSubmitting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               <span>Guardando...</span>

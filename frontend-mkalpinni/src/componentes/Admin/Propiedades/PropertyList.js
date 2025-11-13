@@ -95,34 +95,36 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
 
   return (
     <div>
-      <div className="mb-6">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Buscar en los resultados por título, dirección o barrio..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full py-3 px-4 pl-12 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300 shadow-sm"
-          />
-          <FaSearch className="absolute left-4 top-3.5 text-gray-400" />
-        </div>
-      </div>
 
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProperties.map((property) => (
             <div
               key={property.id}
-              className={`bg-white rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition duration-300 hover:shadow-2xl ${
-                property.status === 'ocupado' ? 'bg-gray-100' : ''
+              className={`bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-lg ${
+                property.status === 'ocupado' ? 'opacity-80' : ''
+              } ${
+                property.status === 'reservado' ? 'border-l-4 border-yellow-400' : ''
               }`}
             >
               {renderPropertyImage(property)}
               
               <div className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-2xl font-bold text-gray-900">{property.title}</h3>
-                  <span className="text-green-600 font-bold text-xl">${property.price.toLocaleString()}</span>
+                <div className="flex flex-col mb-4">
+                  <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{property.title}</h3>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-green-600 font-bold text-xl">${property.price.toLocaleString()}</span>
+                    {property.status === 'ocupado' && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Ocupado
+                      </span>
+                    )}
+                    {property.status === 'reservado' && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Reservado
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <p className="text-gray-600 mb-4 flex items-center">
@@ -130,19 +132,25 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                   {property.address}
                 </p>
 
-                <div className="flex space-x-4 text-gray-600 mb-6">
-                  <span className="flex items-center">
-                    <FaBed className="mr-2 text-blue-500" />
-                    {property.bedrooms} dormitorios
+                <div className={`grid ${property.landSquareMeters ? 'grid-cols-4' : 'grid-cols-3'} gap-2 text-gray-600 mb-6 text-sm`}>
+                  <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
+                    <FaBed className="text-blue-500 mb-1" />
+                    <span>{property.bedrooms || '0'} {property.bedrooms === 1 ? 'dormitorio' : 'dormitorios'}</span>
                   </span>
-                  <span className="flex items-center">
-                    <FaBath className="mr-2 text-blue-500" />
-                    {property.bathrooms} baños
+                  <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
+                    <FaBath className="text-blue-500 mb-1" />
+                    <span>{property.bathrooms || '0'} {property.bathrooms === 1 ? 'baño' : 'baños'}</span>
                   </span>
-                  <span className="flex items-center">
-                    <FaRulerCombined className="mr-2 text-blue-500" />
-                    {property.squareMeters} m²
+                  <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
+                    <FaRulerCombined className="text-blue-500 mb-1" />
+                    <span>{property.squareMeters || '0'} m²</span>
                   </span>
+                  {property.landSquareMeters !== undefined && property.landSquareMeters !== null && property.landSquareMeters !== '' && (
+                    <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
+                      <FaRuler className="text-blue-500 mb-1" />
+                      <span>{property.landSquareMeters} m² terreno</span>
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center mb-4">
@@ -253,6 +261,12 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                     <FaRulerCombined className="mr-1 text-blue-500" />
                     {property.squareMeters || 0} m²
                   </span>
+                  {property.landSquareMeters !== undefined && property.landSquareMeters !== null && property.landSquareMeters !== '' && (
+                    <span className="flex items-center">
+                      <FaRuler className="mr-1 text-blue-500" />
+                      {property.landSquareMeters} m² terreno
+                    </span>
+                  )}
                   <span className="flex items-center">
                     <FaTag className="mr-1 text-blue-500" />
                     {property.type}
@@ -365,6 +379,9 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                 <p className="text-gray-600">Dormitorios: {selectedProperty.bedrooms}</p>
                 <p className="text-gray-600">Baños: {selectedProperty.bathrooms}</p>
                 <p className="text-gray-600">Metros cuadrados: {selectedProperty.squareMeters} m²</p>
+                {selectedProperty.landSquareMeters !== undefined && selectedProperty.landSquareMeters !== null && selectedProperty.landSquareMeters !== '' && (
+                  <p className="text-gray-600">Metros cuadrados del terreno: {selectedProperty.landSquareMeters} m²</p>
+                )}
               </div>
               <div>
                 <p className="text-gray-600">Barrio: {selectedProperty.neighborhood}</p>
