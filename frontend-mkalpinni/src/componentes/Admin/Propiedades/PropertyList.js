@@ -175,10 +175,10 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                   <p className="flex items-center">
                     Estado: {property.status}
                   </p>
-                  {property.status === 'reservado' && (
+                  {['reservado', 'ocupado'].includes((property.status || '').toLowerCase()) && (
                     <div>
-                      <p className="text-gray-600">Locador: {property.lessor}</p>
-                      <p className="text-gray-600">Locatario: {property.lessee}</p>
+                      <p className="text-gray-600">Locador: {property.lessor || '—'}</p>
+                      <p className="text-gray-600">Locatario: {property.lessee || '—'}</p>
                     </div>
                   )}
                 </div>
@@ -393,10 +393,10 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
               <p className="flex items-center">
                 Estado: {selectedProperty.status}
               </p>
-              {selectedProperty.status === 'reservado' && (
+              {['reservado', 'ocupado'].includes((selectedProperty.status || '').toLowerCase()) && (
                 <div>
-                  <p className="text-gray-600">Locador: {selectedProperty.lessor}</p>
-                  <p className="text-gray-600">Locatario: {selectedProperty.lessee}</p>
+                  <p className="text-gray-600">Locador: {selectedProperty.lessor || '—'}</p>
+                  <p className="text-gray-600">Locatario: {selectedProperty.lessee || '—'}</p>
                 </div>
               )}
             </div>
