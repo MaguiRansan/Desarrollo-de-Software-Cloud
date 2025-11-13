@@ -16,7 +16,52 @@ const storage = new CloudinaryStorage({
     let resource_type = 'auto'; 
 
     if (req.originalUrl.includes('/Propiedad/')) {
-      folder = `mkalpin/propiedades/${req.params.id || 'temp'}`;
+      const propertyFolder = 'mkalpin/propiedades';
+
+      if (req.params.id) {
+        folder = `${propertyFolder}/${req.params.id}`;
+      } else {
+        folder = propertyFolder;
+
+        const uploadedFiles = req.files || (req.file ? [req.file] : []);
+
+        if (!uploadedFiles || uploadedFiles.length === 0) {
+          return {
+            folder,
+            resource_type: resource_type,
+            quality: 'auto:good',
+            width: 1920,
+            height: 1080,
+            crop: 'limit'
+          };
+        }
+
+        const uploadPromises = uploadedFiles.map(async (file) => {
+          const result = await cloudinary.uploader.upload(file.path, {
+            folder,
+            resource_type: resource_type,
+            quality: 'auto:good',
+            width: 1920,
+            height: 1080,
+            crop: 'limit'
+          });
+
+          if (req.body) {
+            req.body.imagenes = req.body.imagenes || [];
+            req.body.imagenes.push({
+              rutaArchivo: result.secure_url,
+              public_id: result.public_id,
+              nombreArchivo: file.originalname
+            });
+          }
+
+          return result;
+        });
+
+        await Promise.all(uploadPromises);
+
+        return null;
+      }
     } else if (req.originalUrl.includes('/Tasacion/')) {
       let tasacionId = req.params?.id;
       if (!tasacionId) {
