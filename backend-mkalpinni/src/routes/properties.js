@@ -4,6 +4,7 @@ const Favorite = require('../models/Favorite');
 const { protect, optionalAuth, authorize } = require('../middleware/auth');
 const { validateProperty, validateId, validateSearch } = require('../middleware/validation');
 const { uploadPropertyImages, handleMulterError, deleteFile } = require('../middleware/upload');
+const { geocodeAddress } = require('../utils/geocoding');
 
 const router = express.Router();
 
@@ -91,144 +92,166 @@ router.get('/Buscar', [validateSearch, optionalAuth], async (req, res) => {
       properties = await Favorite.addFavoriteStatus(properties, req.user._id);
     }
 
-    res.json({
-      status: true,
-      message: `Se encontraron ${properties.length} propiedades`,
-      value: properties
-    });
+    res.json({
+      status: true,
+      message: `Se encontraron ${properties.length} propiedades`,
+      value: properties
+    });
 
-  } catch (error) {
-    console.error('Error en búsqueda:', error);
-    res.status(500).json({
-      status: false,
-      message: 'Error interno del servidor',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno'
-    });
-  }
+  } catch (error) {
+    console.error('Error en búsqueda:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Error interno del servidor',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno'
+    });
+  }
 });
 
 router.post('/Crear', [protect, validateProperty], async (req, res) => {
-  try {
-    const propertyData = {
-      ...req.body,
-      idUsuarioCreador: req.user._id
-    };
+  try {
+    const propertyData = {
+      ...req.body,
+      idUsuarioCreador: req.user._id
+    };
 
-    if (typeof propertyData.servicios === 'string') {
-      try {
-        propertyData.servicios = JSON.parse(propertyData.servicios);
-      } catch {
-        propertyData.servicios = propertyData.servicios.split(',').map(s => s.trim());
-      }
-    }
+    if ((!propertyData.latitud || !propertyData.longitud) && (propertyData.direccion || propertyData.barrio || propertyData.localidad || propertyData.provincia)) {
+      const geocoded = await geocodeAddress(propertyData);
+      if (geocoded) {
+        propertyData.latitud = geocoded.latitud;
+        propertyData.longitud = geocoded.longitud;
+      }
+    }
 
-    if (typeof propertyData.reglasPropiedad === 'string') {
-      try {
-        propertyData.reglasPropiedad = JSON.parse(propertyData.reglasPropiedad);
-      } catch {
-        propertyData.reglasPropiedad = propertyData.reglasPropiedad.split(',').map(r => r.trim());
-      }
-    }
+    if (typeof propertyData.servicios === 'string') {
+      try {
+        propertyData.servicios = JSON.parse(propertyData.servicios);
+      } catch {
+        propertyData.servicios = propertyData.servicios.split(',').map(s => s.trim());
+      }
+    }
 
-    if (typeof propertyData.metodosPago === 'string') {
-      try {
-        propertyData.metodosPago = JSON.parse(propertyData.metodosPago);
-      } catch {
-        propertyData.metodosPago = propertyData.metodosPago.split(',').map(m => m.trim());
-      }
-    }
+    if (typeof propertyData.reglasPropiedad === 'string') {
+      try {
+        propertyData.reglasPropiedad = JSON.parse(propertyData.reglasPropiedad);
+      } catch {
+        propertyData.reglasPropiedad = propertyData.reglasPropiedad.split(',').map(r => r.trim());
+      }
+    }
+
+    if (typeof propertyData.metodosPago === 'string') {
+      try {
+        propertyData.metodosPago = JSON.parse(propertyData.metodosPago);
+      } catch {
+        propertyData.metodosPago = propertyData.metodosPago.split(',').map(m => m.trim());
+      }
+    }
     propertyData.imagenes = []; 
 
-    const property = new Property(propertyData);
-    await property.save();
+    const property = new Property(propertyData);
+    await property.save();
 
-    await property.populate('idUsuarioCreador', 'nombre apellido correo');
+    await property.populate('idUsuarioCreador', 'nombre apellido correo');
 
-    res.status(201).json({
-      status: true,
-      message: 'Propiedad creada exitosamente',
-      value: property
-    });
+    res.status(201).json({
+      status: true,
+      message: 'Propiedad creada exitosamente',
+      value: property
+    });
 
-  } catch (error) {
-    console.error('Error creando propiedad:', error);
-    res.status(500).json({
-      status: false,
-      message: 'Error interno del servidor',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno'
-    });
-  }
+  } catch (error) {
+    console.error('Error creando propiedad:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Error interno del servidor',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno'
+    });
+  }
 });
 
 router.put('/Actualizar/:id', [protect, validateId, validateProperty], async (req, res) => {
-  try {
-    const property = await Property.findOne({ _id: req.params.id, activo: true });
+  try {
+    const property = await Property.findOne({ _id: req.params.id, activo: true });
 
-    if (!property) {
-      return res.status(404).json({
-        status: false,
-        message: 'Propiedad no encontrada'
-      });
-    }
+    if (!property) {
+      return res.status(404).json({
+        status: false,
+        message: 'Propiedad no encontrada'
+      });
+    }
 
-    if (property.idUsuarioCreador.toString() !== req.user._id.toString() && req.user.idrol !== 3) {
-      return res.status(403).json({
-        status: false,
-        message: 'No tienes permisos para editar esta propiedad'
-      });
-    }
+    if (property.idUsuarioCreador.toString() !== req.user._id.toString() && req.user.idrol !== 3) {
+      return res.status(403).json({
+        status: false,
+        message: 'No tienes permisos para editar esta propiedad'
+      });
+    }
 
-    const updateData = { ...req.body };
-    
-    if (typeof updateData.servicios === 'string') {
-      try {
-        updateData.servicios = JSON.parse(updateData.servicios);
-      } catch {
-        updateData.servicios = updateData.servicios.split(',').map(s => s.trim());
-      }
-    }
+    const updateData = { ...req.body };
 
-    if (typeof updateData.reglasPropiedad === 'string') {
-      try {
-        updateData.reglasPropiedad = JSON.parse(updateData.reglasPropiedad);
-      } catch {
-        updateData.reglasPropiedad = updateData.reglasPropiedad.split(',').map(r => r.trim());
-      }
-    }
+    if ((!updateData.latitud || !updateData.longitud) && (updateData.direccion || updateData.barrio || updateData.localidad || updateData.provincia)) {
+      const geocoded = await geocodeAddress({
+        direccion: updateData.direccion ?? property.direccion,
+        barrio: updateData.barrio ?? property.barrio,
+        localidad: updateData.localidad ?? property.localidad,
+        provincia: updateData.provincia ?? property.provincia
+      });
 
-    if (typeof updateData.metodosPago === 'string') {
-      try {
-        updateData.metodosPago = JSON.parse(updateData.metodosPago);
-      } catch {
-        updateData.metodosPago = updateData.metodosPago.split(',').map(m => m.trim());
-      }
-    }
+      if (geocoded) {
+        updateData.latitud = geocoded.latitud;
+        updateData.longitud = geocoded.longitud;
+      }
+    }
 
-    const updatedProperty = await Property.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('idUsuarioCreador', 'nombre apellido correo');
+    if (typeof updateData.servicios === 'string') {
+      try {
+        updateData.servicios = JSON.parse(updateData.servicios);
+      } catch {
+        updateData.servicios = updateData.servicios.split(',').map(s => s.trim());
+      }
+    }
 
-    res.json({
-      status: true,
-      message: 'Propiedad actualizada exitosamente',
-      value: updatedProperty
-    });
+    if (typeof updateData.reglasPropiedad === 'string') {
+      try {
+        updateData.reglasPropiedad = JSON.parse(updateData.reglasPropiedad);
+      } catch {
+        updateData.reglasPropiedad = updateData.reglasPropiedad.split(',').map(r => r.trim());
+      }
+    }
 
-  } catch (error) {
-    console.error('Error actualizando propiedad:', error);
-    res.status(500).json({
-      status: false,
-      message: 'Error interno del servidor',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno'
-    });
-  }
+    if (typeof updateData.metodosPago === 'string') {
+      try {
+        updateData.metodosPago = JSON.parse(updateData.metodosPago);
+      } catch {
+        updateData.metodosPago = updateData.metodosPago.split(',').map(m => m.trim());
+      }
+    }
+
+    const updatedProperty = await Property.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('idUsuarioCreador', 'nombre apellido correo');
+
+    res.json({
+      status: true,
+      message: 'Propiedad actualizada exitosamente',
+      value: updatedProperty
+    });
+
+  } catch (error) {
+    console.error('Error actualizando propiedad:', error);
+    res.status(500).json({
+      status: false,
+      message: 'Error interno del servidor',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno'
+    });
+  }
 });
 
 router.delete('/Eliminar/:id', [protect, validateId], async (req, res) => {
-  try {
-    const property = await Property.findOne({ _id: req.params.id, activo: true });
+  try {
+    const property = await Property.findOne({ _id: req.params.id, activo: true });
 
     if (!property) {
       return res.status(404).json({
