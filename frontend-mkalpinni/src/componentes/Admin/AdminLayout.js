@@ -3,16 +3,13 @@ import { useLocation, Link } from 'react-router-dom';
 import { 
   FaHome, 
   FaBuilding, 
-  FaUsers, 
   FaCalendarAlt, 
-  FaChartBar, 
   FaCog, 
   FaSignOutAlt,
   FaBars,
   FaTimes,
   FaBell,
-  FaUser,
-  FaMoneyBillWave
+  FaUser
 } from 'react-icons/fa';
 import Header from '../inicio/Componentes/Header';
 import Notifications from './Notifications';
@@ -22,12 +19,9 @@ const AdminLayout = ({ children, user = { name: 'Marcelo' } }) => {
   const location = useLocation();
 
   const navigation = [
-    { name: 'Dashboard', href: '/admin', icon: FaHome },
+    { name: 'Menú', href: '/admin', icon: FaHome },
     { name: 'Propiedades', href: '/admin/propiedades', icon: FaBuilding },
-    { name: 'Clientes', href: '/admin/clientes', icon: FaUsers },
     { name: 'Alquiler Temporario', href: '/admin/temporarios', icon: FaCalendarAlt },
-    { name: 'Pagos', href: '/admin/pagos', icon: FaMoneyBillWave },
-    { name: 'Reportes', href: '/admin/reportes', icon: FaChartBar },
     { name: 'Configuración', href: '/admin/configuracion', icon: FaCog },
   ];
 

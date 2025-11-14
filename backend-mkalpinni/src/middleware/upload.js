@@ -195,7 +195,6 @@ const handleMulterError = (error, req, res, next) => {
 module.exports = {
   upload,
   uploadPropertyImages: upload.array('imagenes', 10),
-  uploadClientDocument: upload.single('documento'),
   uploadTasacionImages: upload.array('imagenes', 5),
 
   deleteFile,

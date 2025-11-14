@@ -1,8 +1,7 @@
 const express = require('express');
 const Reservation = require('../models/Reservation');
 const Property = require('../models/Property');
-const Client = require('../models/Client');
-const { protect, authorize } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 const { validateReservation, validateId, handleValidationErrors } = require('../middleware/validation');
 const { body, query } = require('express-validator');
 
@@ -14,7 +13,6 @@ router.get('/Obtener', async (req, res) => {
   try {
     const reservations = await Reservation.find()
       .populate('idPropiedad', 'titulo direccion precio imagenes')
-      .populate('idCliente', 'nombreCompleto email telefono')
       .populate('idUsuarioCreador', 'nombre apellido')
       .sort({ fechaCreacion: -1 });
 
@@ -43,7 +41,6 @@ router.get('/Obtener/:id', validateId, async (req, res) => {
           path: 'imagenes'
         }
       })
-      .populate('idCliente')
       .populate('idUsuarioCreador', 'nombre apellido');
 
     if (!reservation) {
@@ -72,7 +69,6 @@ router.get('/Obtener/:id', validateId, async (req, res) => {
 router.get('/PorPropiedad/:propertyId', validateId, async (req, res) => {
   try {
     const reservations = await Reservation.find({ idPropiedad: req.params.propertyId })
-      .populate('idCliente', 'nombreCompleto email telefono')
       .populate('idUsuarioCreador', 'nombre apellido')
       .sort({ fechaInicio: -1 });
 
@@ -92,34 +88,6 @@ router.get('/PorPropiedad/:propertyId', validateId, async (req, res) => {
   }
 });
 
-router.get('/PorCliente/:clientId', validateId, async (req, res) => {
-  try {
-    const reservations = await Reservation.find({ idCliente: req.params.clientId })
-      .populate({
-        path: 'idPropiedad',
-        populate: {
-          path: 'imagenes'
-        }
-      })
-      .populate('idUsuarioCreador', 'nombre apellido')
-      .sort({ fechaCreacion: -1 });
-
-    res.json({
-      status: true,
-      message: 'Reservas del cliente obtenidas exitosamente',
-      value: reservations
-    });
-
-  } catch (error) {
-    console.error('Error obteniendo reservas por cliente:', error);
-    res.status(500).json({
-      status: false,
-      message: 'Error interno del servidor',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno'
-    });
-  }
-});
-
 router.get('/MisReservas', async (req, res) => {
   try {
     const reservations = await Reservation.find({ idUsuarioCreador: req.user._id })
@@ -129,7 +97,7 @@ router.get('/MisReservas', async (req, res) => {
           path: 'imagenes'
         }
       })
-      .populate('idCliente', 'nombreCompleto email telefono')
+      .populate('idUsuarioCreador', 'nombre apellido')
       .sort({ fechaCreacion: -1 });
 
     res.json({
@@ -150,7 +118,7 @@ router.get('/MisReservas', async (req, res) => {
 
 router.post('/Crear', validateReservation, async (req, res) => {
   try {
-    const { idPropiedad, idCliente, fechaInicio, fechaFin } = req.body;
+    const { idPropiedad, fechaInicio, fechaFin } = req.body;
 
     const property = await Property.findOne({ _id: idPropiedad, activo: true });
     if (!property) {
@@ -164,14 +132,6 @@ router.post('/Crear', validateReservation, async (req, res) => {
       return res.status(400).json({
         status: false,
         message: 'Esta propiedad no está disponible para alquiler temporario'
-      });
-    }
-
-    const client = await Client.findOne({ _id: idCliente, activo: true });
-    if (!client) {
-      return res.status(404).json({
-        status: false,
-        message: 'Cliente no encontrado'
       });
     }
 
@@ -208,7 +168,6 @@ router.post('/Crear', validateReservation, async (req, res) => {
 
     await reservation.populate([
       { path: 'idPropiedad', select: 'titulo direccion' },
-      { path: 'idCliente', select: 'nombreCompleto email' },
       { path: 'idUsuarioCreador', select: 'nombre apellido' }
     ]);
 
@@ -300,7 +259,6 @@ router.put('/Actualizar/:id', [
       { new: true, runValidators: true }
     ).populate([
       { path: 'idPropiedad', select: 'titulo direccion' },
-      { path: 'idCliente', select: 'nombreCompleto email' },
       { path: 'idUsuarioCreador', select: 'nombre apellido' }
     ]);
 

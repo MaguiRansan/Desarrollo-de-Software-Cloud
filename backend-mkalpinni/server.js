@@ -10,7 +10,6 @@ require('dotenv').config();
 
 const authRoutes = require('./src/routes/auth');
 const propertyRoutes = require('./src/routes/properties');
-const clientRoutes = require('./src/routes/clients');
 const reservationRoutes = require('./src/routes/reservations');
 const contactRoutes = require('./src/routes/contact');
 const tasacionRoutes = require('./src/routes/Appraise');
@@ -91,7 +90,6 @@ async function startServer() {
 
     app.use('/API/Usuario', authRoutes);
     app.use('/API/Propiedad', propertyRoutes);
-    app.use('/API/Cliente', clientRoutes);
     app.use('/API/Reserva', reservationRoutes);
     app.use('/API/Contacto', contactRoutes);
     app.use('/API/Tasacion', tasacionRoutes);
