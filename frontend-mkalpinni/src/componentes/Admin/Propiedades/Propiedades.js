@@ -29,7 +29,8 @@ const createEmptyProperty = (operationType = 'venta') => ({
   images: [null],
   lessor: '',
   lessee: '',
-  allowsPets: false
+  allowsPets: false,
+  removedImages: []
 });
 
 const normalizeProperty = (prop = {}) => {
@@ -73,7 +74,8 @@ const normalizeProperty = (prop = {}) => {
     lessor: prop.lessor || prop.locador || '',
     lessee: prop.lessee || prop.locatario || '',
     allowsPets: prop.allowsPets ?? prop.permitenascotas ?? false,
-    activo: prop.activo ?? true
+    activo: prop.activo ?? true,
+    removedImages: []
   };
 };
 
@@ -176,7 +178,8 @@ const PropertyManagement = () => {
     setEditingProperty({ id: normalized.id });
     setFormProperty({
       ...normalized,
-      images: normalized.images && normalized.images.length > 0 ? normalized.images : [null]
+      images: normalized.images && normalized.images.length > 0 ? normalized.images : [null],
+      removedImages: []
     });
     setView('form');
   };
@@ -202,7 +205,7 @@ const PropertyManagement = () => {
     }
   };
 
-  const handleSaveProperty = async (propertyData, imageFiles = []) => {
+  const handleSaveProperty = async (propertyData, imageFiles = [], removedImageIds = []) => {
     setIsSubmitting(true);
     
     try {
@@ -248,17 +251,32 @@ const PropertyManagement = () => {
         throw new Error(response.message || 'Error al guardar la propiedad');
       }
 
-      if (createdOrUpdatedId && imageFiles && imageFiles.length > 0) {
-        console.log('Uploading', imageFiles.length, 'images to property:', createdOrUpdatedId);
+      const targetPropertyId = createdOrUpdatedId || editingProperty?.id;
+
+      const deletionErrors = [];
+      if (targetPropertyId && removedImageIds && removedImageIds.length > 0) {
+        for (const imageId of removedImageIds) {
+          if (!imageId) continue;
+          try {
+            await propertyService.deleteImage(targetPropertyId, imageId);
+          } catch (deleteErr) {
+            console.error('Error eliminando imagen', imageId, deleteErr);
+            deletionErrors.push(imageId);
+          }
+        }
+      }
+
+      if (targetPropertyId && imageFiles && imageFiles.length > 0) {
+        console.log('Uploading', imageFiles.length, 'images to property:', targetPropertyId);
         try {
-          const uploadResp = await propertyService.uploadImages(createdOrUpdatedId, imageFiles);
+          const uploadResp = await propertyService.uploadImages(targetPropertyId, imageFiles);
           if (uploadResp && uploadResp.status) {
             console.log('Images uploaded successfully');
   
             if (uploadResp.value) {
               setProperties(prevProperties =>
                 prevProperties.map(prop =>
-                  prop.id === createdOrUpdatedId 
+                  prop.id === targetPropertyId 
                     ? { 
                         ...prop, 
                         images: uploadResp.value.imagenes || uploadResp.value.images || [] 
@@ -293,7 +311,9 @@ const PropertyManagement = () => {
         _id: createdOrUpdatedId,
         idPropiedad: createdOrUpdatedId,
         terrenoM2: propertyData.landSquareMeters,
-        imagenes: refreshedProperty?.images ?? []
+        imagenes: (formProperty.images || [])
+          .filter(img => !(img instanceof File))
+          .filter(Boolean)
       });
 
       const propertyToStore = refreshedProperty || fallbackNormalized;
@@ -315,7 +335,11 @@ const PropertyManagement = () => {
       setView('list');
       setEditingProperty(null);
       setFormProperty(createEmptyProperty(selectedOperation));
-      
+
+      if (deletionErrors.length > 0) {
+        showNotification(`Se guardó la propiedad, pero no se pudieron eliminar ${deletionErrors.length} imágenes.`, 'error');
+      }
+
     } catch (error) {
       console.error('Error guardando propiedad:', error);
       showNotification(`Error al ${editingProperty ? 'actualizar' : 'crear'} la propiedad: ${error.message}`, 'error');

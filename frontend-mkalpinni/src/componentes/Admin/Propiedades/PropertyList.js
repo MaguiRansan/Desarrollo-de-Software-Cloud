@@ -175,10 +175,10 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                   <p className="flex items-center">
                     Estado: {property.status}
                   </p>
-                  {['reservado', 'ocupado'].includes((property.status || '').toLowerCase()) && (
-                    <div>
-                      <p className="text-gray-600">Locador: {property.lessor || '—'}</p>
-                      <p className="text-gray-600">Locatario: {property.lessee || '—'}</p>
+                  {['reservado', 'ocupado'].includes((property.status || '').toLowerCase()) && (property.lessor || property.lessee) && (
+                    <div className="space-y-1">
+                      {property.lessor && <p className="text-gray-600">Locador: {property.lessor}</p>}
+                      {property.lessee && <p className="text-gray-600">Locatario: {property.lessee}</p>}
                     </div>
                   )}
                 </div>
@@ -393,10 +393,10 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
               <p className="flex items-center">
                 Estado: {selectedProperty.status}
               </p>
-              {['reservado', 'ocupado'].includes((selectedProperty.status || '').toLowerCase()) && (
-                <div>
-                  <p className="text-gray-600">Locador: {selectedProperty.lessor || '—'}</p>
-                  <p className="text-gray-600">Locatario: {selectedProperty.lessee || '—'}</p>
+              {['reservado', 'ocupado'].includes((selectedProperty.status || '').toLowerCase()) && (selectedProperty.lessor || selectedProperty.lessee) && (
+                <div className="space-y-1">
+                  {selectedProperty.lessor && <p className="text-gray-600">Locador: {selectedProperty.lessor}</p>}
+                  {selectedProperty.lessee && <p className="text-gray-600">Locatario: {selectedProperty.lessee}</p>}
                 </div>
               )}
             </div>

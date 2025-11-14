@@ -229,6 +229,13 @@ export const propertyService = {
     return await api.post(`/Propiedad/SubirImagenes/${id}`, formData);
   },
 
+  deleteImage: async (propertyId, imageId) => {
+    if (!propertyId || !imageId) {
+      throw new Error('Property id and image id are required to delete an image');
+    }
+    return await api.delete(`/Propiedad/EliminarImagen/${propertyId}/${imageId}`);
+  },
+
   createWithImages: async (propertyData, imageFiles = []) => {
     const createResp = await api.post('/Propiedad/Crear', propertyData);
     if (createResp.status && createResp.value && imageFiles.length > 0) {

@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
-import { FaPlus, FaTimes, FaSave } from "react-icons/fa";
+import React from 'react';
+import { FaTimes, FaSave } from "react-icons/fa";
 
 const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitting = false }) => {
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [newUser, setNewUser] = useState('');
-  const [userType, setUserType] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -27,8 +24,22 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
   };
 
   const removeImageField = (index) => {
+    const imageToRemove = property.images[index];
     const newImages = property.images.filter((_, i) => i !== index);
-    onChange({ ...property, images: newImages });
+
+    const removedImages = [...(property.removedImages || [])];
+    if (imageToRemove && typeof imageToRemove === 'object') {
+      const imageId = imageToRemove._id || imageToRemove.id || imageToRemove.idImagen;
+      if (imageId && !removedImages.includes(imageId)) {
+        removedImages.push(imageId);
+      }
+    }
+
+    if (newImages.length === 0) {
+      newImages.push(null);
+    }
+
+    onChange({ ...property, images: newImages, removedImages });
   };
 
   const handleSave = async () => {
@@ -36,14 +47,9 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
       alert('Por favor complete los campos requeridos');
       return;
     }
-    if ((property.status === 'reservado' || property.status === 'ocupado') && (!property.lessor || !property.lessee)) {
-      alert('Por favor ingrese el nombre del locador y locatario.');
-      return;
-    }
-
     const propertyId = property._id || property.id || property.idPropiedad;
 
-    const { images, _id, id, idPropiedad, ...propertyData } = property;
+    const { images, _id, id, idPropiedad, removedImages = [], ...propertyData } = property;
     const imageFiles = (images || []).filter(file => file instanceof File);
 
     if (!propertyId && editing) {
@@ -52,32 +58,10 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     }
 
     if (typeof onSave === 'function') {
-      onSave(propertyData, imageFiles);
+      onSave(propertyData, imageFiles, removedImages);
       return;
     }
 
-  };
-
-  const openRegisterModal = (type) => {
-    setUserType(type);
-    setIsRegisterModalOpen(true);
-  };
-
-  const closeRegisterModal = () => {
-    setIsRegisterModalOpen(false);
-    setNewUser('');
-  };
-
-  const handleRegisterUser = () => {
-    if (newUser) {
-      onChange({
-        ...property,
-        [userType]: newUser,
-      });
-      closeRegisterModal();
-    } else {
-      alert('Por favor ingrese un nombre válido.');
-    }
   };
 
   return (
@@ -296,60 +280,6 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           </select>
         </div>
 
-        {(property.status === 'reservado' || property.status === 'ocupado') && (
-          <>
-            <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="lessor">
-                Cliente 1 (Propietario) *
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  name="lessor"
-                  id="lessor"
-                  value={property.lessor}
-                  onChange={handleInputChange}
-                  className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Nombre del propietario"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => openRegisterModal('lessor')}
-                  className="bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg flex items-center justify-center"
-                >
-                  <FaPlus />
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="lessee">
-                Cliente 2 *
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  name="lessee"
-                  id="lessee"
-                  value={property.lessee}
-                  onChange={handleInputChange}
-                  className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Nombre del cliente 2"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => openRegisterModal('lessee')}
-                  className="bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg flex items-center justify-center"
-                >
-                  <FaPlus />
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-
         <div className="col-span-full">
           <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
             Descripción
@@ -425,43 +355,6 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           <span>Cancelar</span>
         </button>
       </div>
-
-      {isRegisterModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-md p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Registrar {userType === 'lessor' ? 'Locador' : 'Locatario'}
-            </h2>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="newUser">
-                Nombre
-              </label>
-              <input
-                type="text"
-                id="newUser"
-                value={newUser}
-                onChange={(e) => setNewUser(e.target.value)}
-                className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300 shadow-sm"
-                placeholder={`Nombre del ${userType === 'lessor' ? 'locador' : 'locatario'}`}
-              />
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={handleRegisterUser}
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300"
-              >
-                <span>Guardar</span>
-              </button>
-              <button
-                onClick={closeRegisterModal}
-                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300"
-              >
-                <span>Cancelar</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
