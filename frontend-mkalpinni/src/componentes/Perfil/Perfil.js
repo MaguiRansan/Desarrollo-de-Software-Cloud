@@ -20,7 +20,16 @@ const Perfil = () => {
     try { return new Date(d).toLocaleString(); } catch { return String(d); }
   };
   const cargarFotoExistente = useCallback(async () => {
+    if (!user?.fotoRuta) return;
+    
     try {
+      // Si la ruta ya es una URL completa (de Cloudinary), la usamos directamente
+      if (user.fotoRuta.startsWith('http')) {
+        setPhotoUrl(`${user.fotoRuta}?v=${Date.now()}`);
+        return;
+      }
+      
+      // Para compatibilidad con rutas antiguas
       const response = await axios.get(
         `${API_BASE_URL}/Usuario/ObtenerFoto/${user.correo}`,
         { responseType: 'blob', params: { v: Date.now() } }
@@ -32,7 +41,7 @@ const Perfil = () => {
         console.error('Error al cargar la foto existente:', error);
       }
     }
-  }, [user?.correo]);
+  }, [user?.correo, user?.fotoRuta]);
 
   useEffect(() => {
     if (user?.correo) {
@@ -63,30 +72,58 @@ const Perfil = () => {
 
     try {
       const token = sessionStorage.getItem('authToken');
+      const formData = new FormData();
+      formData.append('fotoPerfil', dataURItoBlob(photo), 'profile.jpg');
+      
       const response = await axios.post(
         `${API_BASE_URL}/Usuario/ActualizarFoto`,
-        { foto: photo },
-        { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        formData,
+        { 
+          headers: { 
+            'Authorization': `Bearer ${token}`, 
+            'Content-Type': 'multipart/form-data' 
+          } 
+        }
       );
 
       if (response.data.status) {
-        const ruta = response.data.ruta;
-        if (ruta) {
-          setPhotoUrl(`${API_STATIC_URL}${ruta}?v=${Date.now()}`);
-        } else {
-          setPhotoUrl(`${photo}`);
+        // Actualizar la URL de la foto con la que devuelve el servidor
+        if (response.data.fotoUrl) {
+          setPhotoUrl(`${response.data.fotoUrl}?v=${Date.now()}`);
+        } else if (response.data.user?.fotoRuta) {
+          setPhotoUrl(`${response.data.user.fotoRuta}?v=${Date.now()}`);
         }
+        
+        // Actualizar el contexto del usuario si es necesario
+        if (response.data.user) {
+          // Aquí deberías tener una función para actualizar el usuario en el contexto
+          // Por ejemplo: updateUser(response.data.user);
+        }
+        
         setPhoto(null);
-        try { await cargarFotoExistente(); } catch {}
       } else {
-        setError('No se pudo actualizar la foto');
+        setError(response.data.message || 'No se pudo actualizar la foto');
       }
     } catch (error) {
       console.error('Error al actualizar la foto:', error);
-      setError('Error al conectar con el servidor');
+      setError(error.response?.data?.message || 'Error al conectar con el servidor');
     } finally {
       setIsUpdating(false);
     }
+  };
+  
+  // Función auxiliar para convertir data URL a Blob
+  const dataURItoBlob = (dataURI) => {
+    const byteString = atob(dataURI.split(',')[1]);
+    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    
+    return new Blob([ab], { type: mimeString });
   };
 
   const handleLogout = () => {
@@ -182,16 +219,26 @@ const Perfil = () => {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="relative h-48 bg-slate-200">
                 <div className="absolute -bottom-16 left-8 p-1.5 bg-white rounded-2xl shadow-lg">
-                  <div className="h-32 w-32 rounded-xl overflow-hidden bg-slate-100">
-                    {photoUrl ? (
-                      <img src={photoUrl} alt="Profile" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-                        <span className="text-4xl font-bold text-slate-400">
-                          {(user.nombre || '')?.charAt(0) || '?'}
-                        </span>
-                      </div>
-                    )}
+                  <div className="relative group">
+                    <img 
+                      src={photoUrl || photo || "ruta/a/imagen/por/defecto.jpg"} 
+                      alt="Foto de perfil" 
+                      className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                      <label className="cursor-pointer p-2 bg-white bg-opacity-75 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*" 
+                          onChange={handlePhotoChange}
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
