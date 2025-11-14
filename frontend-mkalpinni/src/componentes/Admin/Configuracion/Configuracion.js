@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar, FaBell, FaLock, FaDatabase, FaEnvelope } from "react-icons/fa";
+import { FaCog, FaUser, FaBell, FaLock, FaDatabase, FaSave } from "react-icons/fa";
 import AdminLayout from '../AdminLayout';
 
 const Configuracion = () => {
@@ -14,29 +13,46 @@ const Configuracion = () => {
     { id: 'sistema', name: 'Sistema', icon: FaDatabase },
   ];
 
+  const renderInput = (label, type = 'text', defaultValue = '', options) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      {options ? (
+        <select className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          {options.map((opt, i) => <option key={i}>{opt}</option>)}
+        </select>
+      ) : (
+        <input
+          type={type}
+          defaultValue={defaultValue}
+          className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      )}
+    </div>
+  );
+
   return (
     <AdminLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Configuración del Sistema</h1>
-        <p className="text-gray-600">Administra las configuraciones generales y preferencias del sistema</p>
+      <div className="mb-10">
+        <h1 className="text-3xl font-bold text-gray-900 mb-1">⚙️ Configuración del Sistema</h1>
+        <p className="text-gray-600">Administra las configuraciones generales y preferencias del sistema </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6">
+      <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+        {/* Navegación de pestañas */}
+        <div className="border-b border-gray-200 bg-gray-50">
+          <nav className="flex flex-wrap gap-4 px-6 py-3">
             {tabs.map((tab) => {
               const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all 
+                    ${isActive ? 'bg-blue-100 text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}
+                  `}
                 >
-                  <Icon className="mr-2" size={16} />
+                  <Icon size={16} />
                   {tab.name}
                 </button>
               );
@@ -44,257 +60,117 @@ const Configuracion = () => {
           </nav>
         </div>
 
-        <div className="p-6">
+        {/* Contenido dinámico */}
+        <div className="p-8">
           {activeTab === 'general' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Configuración General</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre de la Empresa
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="MKalpin Negocios Inmobiliarios"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Teléfono Principal
-                    </label>
-                    <input
-                      type="tel"
-                      defaultValue="+598 99 123 456"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email Principal
-                    </label>
-                    <input
-                      type="email"
-                      defaultValue="info@mkalpin.com"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dirección
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="Montevideo, Uruguay"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Información General</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {renderInput('Nombre de la Empresa', 'text', 'MKalpin Negocios Inmobiliarios')}
+                {renderInput('Teléfono Principal', 'tel', '+598 99 123 456')}
+                {renderInput('Email Principal', 'email', 'info@mkalpin.com')}
+                {renderInput('Dirección', 'text', 'Montevideo, Uruguay')}
               </div>
-            </div>
+            </section>
           )}
 
           {activeTab === 'usuario' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Información del Usuario</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre Completo
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="Marcelo Kalpin"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      defaultValue="marcelo@mkalpin.com"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Rol
-                    </label>
-                    <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                      <option>Administrador</option>
-                      <option>Manager</option>
-                      <option>Usuario</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Teléfono
-                    </label>
-                    <input
-                      type="tel"
-                      defaultValue="+598 99 123 456"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Información del Usuario</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {renderInput('Nombre Completo', 'text', 'Marcelo Kalpin')}
+                {renderInput('Email', 'email', 'marcelo@mkalpin.com')}
+                {renderInput('Rol', 'select', '', ['Administrador', 'Manager', 'Usuario'])}
+                {renderInput('Teléfono', 'tel', '+598 99 123 456')}
               </div>
-            </div>
+            </section>
           )}
 
           {activeTab === 'notificaciones' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Preferencias de Notificaciones</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Preferencias de Notificaciones</h3>
+              <div className="space-y-5">
+                {[
+                  { title: 'Nuevos clientes', desc: 'Recibir alertas cuando se registre un nuevo cliente.' },
+                  { title: 'Nuevas propiedades', desc: 'Notificación al agregar una nueva propiedad.' },
+                  { title: 'Pagos vencidos', desc: 'Alertas sobre pagos vencidos o próximos a vencer.' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                     <div>
-                      <h4 className="font-medium text-gray-900">Nuevos clientes</h4>
-                      <p className="text-sm text-gray-600">Recibir notificaciones cuando se registre un nuevo cliente</p>
+                      <h4 className="font-medium text-gray-900">{item.title}</h4>
+                      <p className="text-sm text-gray-600">{item.desc}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" defaultChecked className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-11 h-6 bg-gray-300 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:left-[2px] after:top-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-gray-900">Nuevas propiedades</h4>
-                      <p className="text-sm text-gray-600">Recibir notificaciones cuando se agregue una nueva propiedad</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" defaultChecked className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-gray-900">Pagos vencidos</h4>
-                      <p className="text-sm text-gray-600">Recibir alertas de pagos vencidos o próximos a vencer</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" defaultChecked className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                </div>
+                ))}
               </div>
-            </div>
+            </section>
           )}
 
           {activeTab === 'seguridad' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Configuración de Seguridad</h3>
-                <div className="space-y-6">
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Seguridad</h3>
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {renderInput('Contraseña Actual', 'password')}
+                  {renderInput('Nueva Contraseña', 'password')}
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Cambiar Contraseña</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Contraseña Actual
-                        </label>
-                        <input
-                          type="password"
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Nueva Contraseña
-                        </label>
-                        <input
-                          type="password"
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                    </div>
+                    <p className="font-medium text-gray-900">Autenticación de Dos Factores (2FA)</p>
+                    <p className="text-sm text-gray-600">Aumenta la seguridad de tu cuenta activando 2FA.</p>
                   </div>
-                  
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Autenticación de Dos Factores</h4>
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="text-sm text-gray-600">Aumenta la seguridad de tu cuenta activando 2FA</p>
-                      </div>
-                      <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                        Activar 2FA
-                      </button>
-                    </div>
-                  </div>
+                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    Activar 2FA
+                  </button>
                 </div>
               </div>
-            </div>
+            </section>
           )}
 
           {activeTab === 'sistema' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Configuración del Sistema</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Zona Horaria
-                    </label>
-                    <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                      <option>UTC-3 (Montevideo)</option>
-                      <option>UTC-3 (Buenos Aires)</option>
-                      <option>UTC-5 (Lima)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Moneda por Defecto
-                    </label>
-                    <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                      <option>USD - Dólar Americano</option>
-                      <option>UYU - Peso Uruguayo</option>
-                      <option>ARS - Peso Argentino</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Idioma
-                    </label>
-                    <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                      <option>Español</option>
-                      <option>English</option>
-                      <option>Português</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Formato de Fecha
-                    </label>
-                    <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                      <option>DD/MM/YYYY</option>
-                      <option>MM/DD/YYYY</option>
-                      <option>YYYY-MM-DD</option>
-                    </select>
-                  </div>
-                </div>
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Ajustes del Sistema</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {renderInput('Zona Horaria', 'select', '', [
+                  'UTC-3 (Montevideo)',
+                  'UTC-3 (Buenos Aires)',
+                  'UTC-5 (Lima)',
+                ])}
+                {renderInput('Moneda por Defecto', 'select', '', [
+                  'USD - Dólar Americano',
+                  'UYU - Peso Uruguayo',
+                  'ARS - Peso Argentino',
+                ])}
+                {renderInput('Idioma', 'select', '', ['Español', 'English', 'Português'])}
+                {renderInput('Formato de Fecha', 'select', '', [
+                  'DD/MM/YYYY',
+                  'MM/DD/YYYY',
+                  'YYYY-MM-DD',
+                ])}
               </div>
-              
-              <div className="border-t pt-6">
+
+              <div className="mt-8 border-t pt-6">
                 <h4 className="font-medium text-gray-900 mb-4">Respaldo de Datos</h4>
-                <div className="flex space-x-4">
-                  <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center">
+                <div className="flex flex-wrap gap-4">
+                  <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center">
                     <FaDatabase className="mr-2" />
                     Crear Respaldo
                   </button>
-                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                     Restaurar Respaldo
                   </button>
                 </div>
               </div>
-            </div>
+            </section>
           )}
 
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <button className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center">
+          {/* Botón Guardar */}
+          <div className="mt-10 pt-6 border-t border-gray-200 flex justify-end">
+            <button className="bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700 flex items-center shadow-sm">
               <FaSave className="mr-2" />
               Guardar Cambios
             </button>
