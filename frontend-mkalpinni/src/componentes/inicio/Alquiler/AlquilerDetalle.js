@@ -35,6 +35,15 @@ const AlquilerDetalle = () => {
         iconAnchor: [18, 36]
     });
 
+    const mapRef = useRef(null);
+    const mapContainerRef = useRef(null);
+    const customIcon = L.divIcon({
+        className: 'custom-marker-detail',
+        html: `<div class="bg-blue-600 text-white p-2 rounded-full shadow-lg border-2 border-white"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 36]
+    });
+
     useEffect(() => {
         const fetchPropiedadData = async () => {
             try {
