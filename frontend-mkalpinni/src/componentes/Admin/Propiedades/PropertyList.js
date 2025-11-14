@@ -175,12 +175,6 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                   <p className="flex items-center">
                     Estado: {property.status}
                   </p>
-                  {['reservado', 'ocupado'].includes((property.status || '').toLowerCase()) && (property.lessor || property.lessee) && (
-                    <div className="space-y-1">
-                      {property.lessor && <p className="text-gray-600">Locador: {property.lessor}</p>}
-                      {property.lessee && <p className="text-gray-600">Locatario: {property.lessee}</p>}
-                    </div>
-                  )}
                 </div>
 
                 <div className="flex space-x-2">
@@ -393,12 +387,6 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
               <p className="flex items-center">
                 Estado: {selectedProperty.status}
               </p>
-              {['reservado', 'ocupado'].includes((selectedProperty.status || '').toLowerCase()) && (selectedProperty.lessor || selectedProperty.lessee) && (
-                <div className="space-y-1">
-                  {selectedProperty.lessor && <p className="text-gray-600">Locador: {selectedProperty.lessor}</p>}
-                  {selectedProperty.lessee && <p className="text-gray-600">Locatario: {selectedProperty.lessee}</p>}
-                </div>
-              )}
             </div>
             <div className="text-gray-600 mb-6">
               <p className="text-gray-600">Descripción: {selectedProperty.description}</p>
