@@ -7,11 +7,9 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
+const { upload } = require('../middleware/upload');
 
 const router = express.Router();
-
-// Configure multer for profile picture upload
-const uploadProfilePicture = upload.single('fotoPerfil');
 const seedPath = path.join(__dirname, '..', '..', 'scripts', 'seedDatabase.js');
 
 async function syncSeedWithUserProfile(correo, updates) {
@@ -349,10 +347,8 @@ router.put('/CambiarContrasena', [
   }
 });
 
-router.post('/ActualizarFoto', 
-  protect,
-  uploadProfilePicture,
-  async (req, res) => {
+// Actualizar foto de perfil
+router.post('/ActualizarFoto', protect, upload.single('fotoPerfil'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
