@@ -35,14 +35,33 @@ const AlquilerDetalle = () => {
         iconAnchor: [18, 36]
     });
 
-    const mapRef = useRef(null);
-    const mapContainerRef = useRef(null);
-    const customIcon = L.divIcon({
-        className: 'custom-marker-detail',
-        html: `<div class="bg-blue-600 text-white p-2 rounded-full shadow-lg border-2 border-white"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>`,
-        iconSize: [36, 36],
-        iconAnchor: [18, 36]
-    });
+    const parseCoordinate = (value) => {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'number') {
+            return Number.isFinite(value) ? value : null;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().replace(',', '.');
+            if (normalized === '') return null;
+            const parsed = parseFloat(normalized);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+        return null;
+    };
+
+    const buildDisplayAddress = (prop) => {
+        if (!prop) return '';
+
+        const parts = [
+            prop.direccion,
+            prop.barrio,
+            prop.localidad,
+            prop.provincia
+        ].map(part => (typeof part === 'string' ? part.trim() : ''));
+
+        const uniqueParts = parts.filter((part, index, array) => part && array.indexOf(part) === index);
+        return uniqueParts.length > 0 ? uniqueParts.join(', ') : '';
+    };
 
     useEffect(() => {
         const fetchPropiedadData = async () => {
@@ -64,9 +83,11 @@ const AlquilerDetalle = () => {
                     return;
                 }
                 
-                const rawPropiedad = propiedadData.value;
-                rawPropiedad.latitud = parseFloat(rawPropiedad.latitud) || null;
-                rawPropiedad.longitud = parseFloat(rawPropiedad.longitud) || null;
+                const rawPropiedad = {
+                    ...propiedadData.value,
+                    latitud: parseCoordinate(propiedadData.value.latitud),
+                    longitud: parseCoordinate(propiedadData.value.longitud)
+                };
 
                 const imagenesArray = rawPropiedad.imagenes || [];
                 const fetchedImages = imagenesArray.map(img => {
@@ -215,10 +236,10 @@ const AlquilerDetalle = () => {
         precio: propiedad.transaccionTipo === "Alquiler"
             ? `$${propiedad.precio?.toLocaleString('es-AR')}/mes`
             : `$${propiedad.precio?.toLocaleString('es-AR')}`,
-        direccion: `${propiedad.ubicacion || ''}${propiedad.barrio ? `, ${propiedad.barrio}` : ''}`,
+        direccion: buildDisplayAddress(propiedad),
         coordenadas: {
-            lat: parseFloat(propiedad.latitud) || null,
-            lng: parseFloat(propiedad.longitud) || null
+            lat: parseCoordinate(propiedad.latitud),
+            lng: parseCoordinate(propiedad.longitud)
         },
         descripcion: propiedad.descripcion || "No hay descripción disponible para esta propiedad.",
         caracteristicas: [
@@ -332,7 +353,7 @@ const AlquilerDetalle = () => {
                                 <div>
                                     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                                         <h3 className="font-medium text-gray-900 mb-2">Ubicación de la propiedad</h3>
-                                        <p className="text-gray-700 mb-4">{inmuebleDisplay.direccion}</p>
+                                        <p className="text-gray-700 mb-4">{inmuebleDisplay.direccion || 'Dirección no disponible.'}</p>
                                         <Mapa 
                                             lat={inmuebleDisplay.coordenadas.lat} 
                                             lng={inmuebleDisplay.coordenadas.lng}
