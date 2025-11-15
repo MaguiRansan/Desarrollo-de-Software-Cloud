@@ -132,7 +132,7 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                   {property.address}
                 </p>
 
-                <div className={`grid ${property.landSquareMeters ? 'grid-cols-4' : 'grid-cols-3'} gap-2 text-gray-600 mb-6 text-sm`}>
+                <div className="grid grid-cols-3 gap-2 text-gray-600 mb-6 text-sm">
                   <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
                     <FaBed className="text-blue-500 mb-1" />
                     <span>{property.bedrooms || '0'} {property.bedrooms === 1 ? 'dormitorio' : 'dormitorios'}</span>

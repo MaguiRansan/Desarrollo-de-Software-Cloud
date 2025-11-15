@@ -1,33 +1,110 @@
 import React from 'react';
 import { FaTimes, FaSave } from "react-icons/fa";
 
-const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitting = false }) => {
+const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isSubmitting = false }) => {
+  const [formData, setFormData] = React.useState({
+    title: '',
+    address: '',
+    price: '',
+    description: '',
+    neighborhood: '',
+    locality: '',
+    province: '',
+    type: '',
+    operationType: 'venta',
+    status: 'disponible',
+    bedrooms: '',
+    bathrooms: '',
+    squareMeters: '',
+    landSquareMeters: '',
+    lessor: '',
+    lessee: '',
+    allowsPets: false,
+    images: [null],
+    removedImages: []
+  });
+
+  // Update local state when the prop changes
+  React.useEffect(() => {
+    if (prop) {
+      setFormData({
+        title: prop.title || '',
+        address: prop.address || '',
+        price: prop.price || '',
+        description: prop.description || '',
+        neighborhood: prop.neighborhood || '',
+        locality: prop.locality || '',
+        province: prop.province || '',
+        type: prop.type || '',
+        operationType: prop.operationType || 'venta',
+        status: prop.status || 'disponible',
+        bedrooms: prop.bedrooms || '',
+        bathrooms: prop.bathrooms || '',
+        squareMeters: prop.squareMeters || '',
+        landSquareMeters: prop.landSquareMeters || '',
+        lessor: prop.lessor || '',
+        lessee: prop.lessee || '',
+        allowsPets: prop.allowsPets || false,
+        images: Array.isArray(prop.images) && prop.images.length > 0 ? prop.images : [null],
+        removedImages: prop.removedImages || []
+      });
+    }
+  }, [prop]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    onChange({
-      ...property,
-      [name]: name === 'price' || name === 'bedrooms' || name === 'bathrooms' || name === 'squareMeters' || name === 'landSquareMeters'
-        ? value === '' ? '' : Number(value)
-        : value,
-    });
+    const { name, value, type, checked } = e.target;
+    
+    const newValue = type === 'checkbox' ? checked : 
+                   (name === 'price' || name === 'bedrooms' || name === 'bathrooms' || 
+                    name === 'squareMeters' || name === 'landSquareMeters') ? 
+                   (value === '' ? '' : Number(value)) : value;
+    
+    const updatedFormData = {
+      ...formData,
+      [name]: newValue
+    };
+    
+    setFormData(updatedFormData);
+    
+    if (onChange) {
+      onChange(updatedFormData);
+    }
   };
 
   const handleImageChange = (e, index) => {
-    const newImages = [...property.images];
+    const newImages = [...formData.images];
     newImages[index] = e.target.files[0];
-    onChange({ ...property, images: newImages });
+    
+    const updatedFormData = {
+      ...formData,
+      images: newImages
+    };
+    
+    setFormData(updatedFormData);
+    
+    if (onChange) {
+      onChange(updatedFormData);
+    }
   };
 
   const addImageField = () => {
-    onChange({ ...property, images: [...property.images, null] });
+    const updatedFormData = {
+      ...formData,
+      images: [...formData.images, null]
+    };
+    
+    setFormData(updatedFormData);
+    
+    if (onChange) {
+      onChange(updatedFormData);
+    }
   };
 
   const removeImageField = (index) => {
-    const imageToRemove = property.images[index];
-    const newImages = property.images.filter((_, i) => i !== index);
-
-    const removedImages = [...(property.removedImages || [])];
+    const imageToRemove = formData.images[index];
+    const newImages = formData.images.filter((_, i) => i !== index);
+    const removedImages = [...(formData.removedImages || [])];
+    
     if (imageToRemove && typeof imageToRemove === 'object') {
       const imageId = imageToRemove._id || imageToRemove.id || imageToRemove.idImagen;
       if (imageId && !removedImages.includes(imageId)) {
@@ -35,31 +112,37 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
       }
     }
 
-    if (newImages.length === 0) {
-      newImages.push(null);
+    const updatedFormData = {
+      ...formData,
+      images: newImages.length > 0 ? newImages : [null],
+      removedImages
+    };
+    
+    setFormData(updatedFormData);
+    
+    if (onChange) {
+      onChange(updatedFormData);
     }
-
-    onChange({ ...property, images: newImages, removedImages });
   };
 
   const handleSave = async () => {
-    if (!property.title || !property.address || !property.price) {
+    if (!formData.title || !formData.address || !formData.price) {
       alert('Por favor complete los campos requeridos');
       return;
     }
-    const propertyId = property._id || property.id || property.idPropiedad;
+    
+    const propertyId = prop?._id || prop?.id || prop?.idPropiedad;
+    const imageFiles = (formData.images || []).filter(file => file instanceof File);
+    
+    const { images, removedImages = [], ...propertyData } = formData;
 
-    const { images, _id, id, idPropiedad, removedImages = [], ...propertyData } = property;
-    const imageFiles = (images || []).filter(file => file instanceof File);
-
-    if (!propertyId && editing) {
+    if (editing && !propertyId) {
       alert('Error: No se encontró el ID de la propiedad. Recarga la página e intenta nuevamente.');
       return;
     }
 
     if (typeof onSave === 'function') {
       onSave(propertyData, imageFiles, removedImages);
-      return;
     }
 
   };
@@ -79,7 +162,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="text"
             name="title"
             id="title"
-            value={property.title}
+            value={formData.title}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese título de la propiedad"
@@ -95,7 +178,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="text"
             name="address"
             id="address"
-            value={property.address}
+            value={formData.address}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese dirección"
@@ -111,7 +194,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="number"
             name="price"
             id="price"
-            value={property.price}
+            value={formData.price}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese precio"
@@ -127,7 +210,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           <select
             name="type"
             id="type"
-            value={property.type}
+            value={formData.type}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -146,7 +229,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="number"
             name="bedrooms"
             id="bedrooms"
-            value={property.bedrooms}
+            value={formData.bedrooms}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Número de dormitorios"
@@ -162,7 +245,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="number"
             name="landSquareMeters"
             id="landSquareMeters"
-            value={property.landSquareMeters}
+            value={formData.landSquareMeters}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese los metros cuadrados del terreno"
@@ -178,7 +261,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="number"
             name="bathrooms"
             id="bathrooms"
-            value={property.bathrooms}
+            value={formData.bathrooms}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Número de baños"
@@ -194,7 +277,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="text"
             name="neighborhood"
             id="neighborhood"
-            value={property.neighborhood}
+            value={formData.neighborhood}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese el barrio"
@@ -209,7 +292,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="text"
             name="locality"
             id="locality"
-            value={property.locality}
+            value={formData.locality}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese la localidad"
@@ -224,7 +307,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="text"
             name="province"
             id="province"
-            value={property.province}
+            value={formData.province}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese la provincia"
@@ -239,7 +322,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="number"
             name="squareMeters"
             id="squareMeters"
-            value={property.squareMeters}
+            value={formData.squareMeters}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese los metros cuadrados de la propiedad"
@@ -254,7 +337,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           <select
             name="operationType"
             id="operationType"
-            value={property.operationType}
+            value={formData.operationType}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -270,7 +353,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           <select
             name="status"
             id="status"
-            value={property.status}
+            value={formData.status}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -287,7 +370,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           <textarea
             name="description"
             id="description"
-            value={property.description}
+            value={formData.description}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese la descripción de la propiedad"
@@ -299,7 +382,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           <label className="block text-gray-700 text-sm font-bold mb-2">
             Imágenes *
           </label>
-          {property.images.map((image, index) => (
+          {formData.images.map((image, index) => (
             <div key={index} className="flex items-center gap-2 mb-2">
               <input
                 type="file"
