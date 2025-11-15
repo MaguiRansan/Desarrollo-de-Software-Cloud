@@ -116,11 +116,21 @@ const mapPropertyData = (prop) => ({
   superficieM2: prop.superficieM2,
   superficie: prop.superficieM2,
   squareMeters: prop.superficieM2,
-  
+  terrenoM2: prop.terrenoM2,
+  landSquare: prop.terrenoM2,
+  landSquareMeters: prop.terrenoM2,
+
   estado: prop.estado,
   status: prop.estado?.toLowerCase(),
   disponible: prop.estado === 'Disponible',
   
+  locador: prop.locador,
+  lessor: prop.locador,
+  locatario: prop.locatario,
+  lessee: prop.locatario,
+  propietario: prop.propietario,
+  owner: prop.propietario,
+
   imagenes: prop.imagenes || [],
   images: prop.imagenes || [],
   
@@ -217,6 +227,13 @@ export const propertyService = {
     });
 
     return await api.post(`/Propiedad/SubirImagenes/${id}`, formData);
+  },
+
+  deleteImage: async (propertyId, imageId) => {
+    if (!propertyId || !imageId) {
+      throw new Error('Property id and image id are required to delete an image');
+    }
+    return await api.delete(`/Propiedad/EliminarImagen/${propertyId}/${imageId}`);
   },
 
   createWithImages: async (propertyData, imageFiles = []) => {

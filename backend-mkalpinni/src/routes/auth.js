@@ -2,6 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const { protect, generateToken } = require('../middleware/auth');
 const { validateRegister, validateLogin, handleValidationErrors } = require('../middleware/validation');
+const { upload, uploadProfilePicture } = require('../middleware/upload');
 const { body } = require('express-validator');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
@@ -9,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 
 const router = express.Router();
+
 const seedPath = path.join(__dirname, '..', '..', 'scripts', 'seedDatabase.js');
 
 async function syncSeedWithUserProfile(correo, updates) {
@@ -145,6 +147,86 @@ router.get('/Perfil', protect, (req, res) => {
   });
 });
 
+// Upload profile picture
+router.post('/SubirFotoPerfil', [
+  protect,
+  (req, res, next) => {
+    console.log('Iniciando subida de foto de perfil');
+    uploadProfilePicture.single('fotoPerfil')(req, res, function(err) {
+      if (err) {
+        console.error('Error en la subida de la imagen:', err);
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ 
+            status: false, 
+            message: 'La imagen es demasiado grande. Tamaño máximo: 5MB' 
+          });
+        }
+        if (err.message === 'Tipo de archivo no permitido.') {
+          return res.status(400).json({ 
+            status: false, 
+            message: 'Tipo de archivo no permitido. Solo se permiten imágenes (JPEG, JPG, PNG, GIF, WEBP)' 
+          });
+        }
+        return res.status(500).json({ 
+          status: false, 
+          message: 'Error al subir la imagen',
+          error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      console.log('Archivo recibido:', req.file);
+      
+      if (!req.file) {
+        return res.status(400).json({
+          status: false,
+          message: 'No se ha seleccionado ninguna imagen'
+        });
+      }
+
+      const user = await User.findById(req.user._id);
+      if (!user) {
+        return res.status(404).json({
+          status: false,
+          message: 'Usuario no encontrado'
+        });
+      }
+
+      // Delete old profile picture if exists
+      if (user.fotoRuta) {
+        try {
+          const publicId = user.fotoRuta.split('/').pop().split('.')[0];
+          await cloudinary.uploader.destroy(`mkalpin/usuarios/${user._id}/${publicId}`);
+        } catch (error) {
+          console.error('Error al eliminar la imagen anterior:', error);
+        }
+      }
+
+      // Save the new image URL
+      user.fotoRuta = req.file.path;
+      await user.save();
+
+      res.json({
+        status: true,
+        message: 'Foto de perfil actualizada exitosamente',
+        value: {
+          fotoRuta: user.fotoRuta
+        }
+      });
+    } catch (error) {
+      console.error('Error al actualizar la foto de perfil:', error);
+      res.status(500).json({
+        status: false,
+        message: 'Error al actualizar la foto de perfil',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+]);
+
 router.put('/Actualizar', [
   protect,
   body('nombre')
@@ -265,48 +347,66 @@ router.put('/CambiarContrasena', [
     });
   }
 });
+const cloudinary = require('cloudinary').v2;
 
-router.post('/ActualizarFoto', [
+router.post('/ActualizarFoto', 
   protect,
-  body('foto').isString().withMessage('La foto es requerida en formato base64')
-], async (req, res) => {
-  try {
-    const { foto } = req.body;
-    const match = /^data:(image\/(png|jpeg|jpg));base64,(.+)$/.exec(foto || '');
-    if (!match) {
-      return res.status(400).json({ status: false, message: 'Formato de imagen inválido' });
-    }
-    const mime = match[1];
-    const ext = mime.includes('png') ? 'png' : 'jpg';
-    const base64Data = match[3];
-
-    const uploadsDir = path.join(__dirname, '..', '..', 'uploads', 'usuarios');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    const fileName = `${req.user._id}.${ext}`;
-    const filePath = path.join(uploadsDir, fileName);
-    fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
-
-    const relativePath = path.posix.join('usuarios', fileName);
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { fotoRuta: relativePath },
-      { new: true }
-    );
-
-    return res.json({
-      status: true,
-      message: 'Foto actualizada exitosamente',
-      value: user.toPublicJSON(),
-      ruta: `/uploads/${relativePath}`
+  (req, res, next) => {
+    uploadProfilePicture(req, res, function(err) {
+      if (err) {
+        return res.status(400).json({
+          status: false,
+          message: 'Error al subir la imagen: ' + (err.message || 'Error desconocido')
+        });
+      }
+      next();
     });
-  } catch (error) {
-    console.error('Error actualizando foto de perfil:', error);
-    return res.status(500).json({ status: false, message: 'Error interno del servidor' });
+  },
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          status: false,
+          message: 'No se ha proporcionado ninguna imagen o el archivo no es válido.'
+        });
+      }
+
+      const user = await User.findById(req.user._id);
+      if (!user) {
+        return res.status(404).json({
+          status: false,
+          message: 'Usuario no encontrado'
+        });
+      }
+
+      if (user.fotoRuta) {
+        try {
+          const publicId = user.fotoRuta.split('/').pop().split('.')[0];
+          await cloudinary.uploader.destroy(`mkalpin/usuarios/${user._id}/${publicId}`);
+        } catch (error) {
+          console.error('Error al eliminar la imagen anterior:', error);
+        }
+      }
+
+      user.fotoRuta = req.file.path;
+      await user.save();
+
+      return res.json({
+        status: true,
+        message: 'Foto de perfil actualizada correctamente',
+        fotoUrl: user.fotoRuta,
+        user: user.toPublicJSON()
+      });
+    } catch (error) {
+      console.error('Error al actualizar la foto de perfil:', error);
+      return res.status(500).json({ 
+        status: false, 
+        message: 'Error al actualizar la foto de perfil',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
   }
-});
+);
 
 // Obtener foto por correo
 router.get('/ObtenerFoto/:correo', async (req, res) => {

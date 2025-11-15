@@ -145,6 +145,12 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                     <FaRulerCombined className="text-blue-500 mb-1" />
                     <span>{property.squareMeters || '0'} m²</span>
                   </span>
+                  {property.landSquareMeters !== undefined && property.landSquareMeters !== null && property.landSquareMeters !== '' && (
+                    <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
+                      <FaRuler className="text-blue-500 mb-1" />
+                      <span>{property.landSquareMeters} m² terreno</span>
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center mb-4">
@@ -169,12 +175,6 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                   <p className="flex items-center">
                     Estado: {property.status}
                   </p>
-                  {property.status === 'reservado' && (
-                    <div>
-                      <p className="text-gray-600">Locador: {property.lessor}</p>
-                      <p className="text-gray-600">Locatario: {property.lessee}</p>
-                    </div>
-                  )}
                 </div>
 
                 <div className="flex space-x-2">
@@ -255,6 +255,12 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                     <FaRulerCombined className="mr-1 text-blue-500" />
                     {property.squareMeters || 0} m²
                   </span>
+                  {property.landSquareMeters !== undefined && property.landSquareMeters !== null && property.landSquareMeters !== '' && (
+                    <span className="flex items-center">
+                      <FaRuler className="mr-1 text-blue-500" />
+                      {property.landSquareMeters} m² terreno
+                    </span>
+                  )}
                   <span className="flex items-center">
                     <FaTag className="mr-1 text-blue-500" />
                     {property.type}
@@ -367,6 +373,9 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
                 <p className="text-gray-600">Dormitorios: {selectedProperty.bedrooms}</p>
                 <p className="text-gray-600">Baños: {selectedProperty.bathrooms}</p>
                 <p className="text-gray-600">Metros cuadrados: {selectedProperty.squareMeters} m²</p>
+                {selectedProperty.landSquareMeters !== undefined && selectedProperty.landSquareMeters !== null && selectedProperty.landSquareMeters !== '' && (
+                  <p className="text-gray-600">Metros cuadrados del terreno: {selectedProperty.landSquareMeters} m²</p>
+                )}
               </div>
               <div>
                 <p className="text-gray-600">Barrio: {selectedProperty.neighborhood}</p>
@@ -378,12 +387,6 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
               <p className="flex items-center">
                 Estado: {selectedProperty.status}
               </p>
-              {selectedProperty.status === 'reservado' && (
-                <div>
-                  <p className="text-gray-600">Locador: {selectedProperty.lessor}</p>
-                  <p className="text-gray-600">Locatario: {selectedProperty.lessee}</p>
-                </div>
-              )}
             </div>
             <div className="text-gray-600 mb-6">
               <p className="text-gray-600">Descripción: {selectedProperty.description}</p>

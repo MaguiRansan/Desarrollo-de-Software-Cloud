@@ -8,6 +8,77 @@ import AdminLayout from '../AdminLayout';
 import { useAdminData } from '../../../hooks/useAdminData';
 import { propertyService } from '../../../services/api';
 
+const createEmptyProperty = (operationType = 'venta') => ({
+  _id: undefined,
+  id: undefined,
+  idPropiedad: undefined,
+  title: '',
+  description: '',
+  address: '',
+  neighborhood: '',
+  locality: '',
+  province: '',
+  type: 'Casa',
+  operationType,
+  price: '',
+  bedrooms: '',
+  bathrooms: '',
+  squareMeters: '',
+  landSquareMeters: '',
+  status: 'disponible',
+  images: [null],
+  lessor: '',
+  lessee: '',
+  allowsPets: false,
+  removedImages: []
+});
+
+const normalizeProperty = (prop = {}) => {
+  const id = prop.id || prop._id || prop.idPropiedad;
+  const operationType = prop.operationType
+    ? prop.operationType
+    : prop.transaccionTipo
+      ? prop.transaccionTipo.toLowerCase()
+      : 'venta';
+  const status = prop.status
+    ? prop.status
+    : prop.estado
+      ? prop.estado.toLowerCase()
+      : 'disponible';
+
+  const normalizedImages = Array.isArray(prop.images) && prop.images.length > 0
+    ? prop.images
+    : Array.isArray(prop.imagenes) && prop.imagenes.length > 0
+      ? prop.imagenes
+      : [];
+
+  return {
+    _id: prop._id || id,
+    id,
+    idPropiedad: prop.idPropiedad || prop._id || prop.id,
+    title: prop.title || prop.titulo || '',
+    description: prop.description || prop.descripcion || '',
+    address: prop.address || prop.direccion || '',
+    neighborhood: prop.neighborhood || prop.barrio || '',
+    locality: prop.locality || prop.localidad || '',
+    province: prop.province || prop.provincia || '',
+    type: prop.type || prop.tipoPropiedad || 'Casa',
+    operationType,
+    price: prop.price ?? prop.precio ?? '',
+    bedrooms: prop.bedrooms ?? prop.habitaciones ?? '',
+    bathrooms: prop.bathrooms ?? prop.banos ?? '',
+    squareMeters: prop.squareMeters ?? prop.superficieM2 ?? '',
+    landSquareMeters: prop.landSquareMeters ?? prop.terrenoM2 ?? '',
+    status,
+    images: normalizedImages,
+    lessor: prop.lessor || prop.locador || '',
+    lessee: prop.lessee || prop.locatario || '',
+    allowsPets: prop.allowsPets ?? prop.permitenascotas ?? false,
+    activo: prop.activo ?? true,
+    removedImages: []
+  };
+};
+
 const PropertyManagement = () => {
   const { properties: apiProperties, isLoading, error } = useAdminData('properties');
   
@@ -21,51 +92,11 @@ const PropertyManagement = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('title');
-  const [newProperty, setNewProperty] = useState({
-    _id: undefined,
-    id: undefined,
-    title: '',
-    description: '',
-    address: '',
-    neighborhood: '',
-    locality: '',
-    province: '',
-    type: 'Casa',
-    operationType: 'venta',
-    price: '',
-    bedrooms: '',
-    bathrooms: '',
-    squareMeters: '',
-    status: 'disponible',
-    images: [],
-    lessor: '',
-    lessee: '',
-    allowsPets: false
-  });
+  const [formProperty, setFormProperty] = useState(() => createEmptyProperty(selectedOperation));
 
   useEffect(() => {
     if (apiProperties && apiProperties.length > 0) {
-
-      const normalizedProperties = apiProperties.map(prop => ({
-        ...prop,
-        images: prop.imagenes || prop.images || [],
-        title: prop.titulo || prop.title,
-        description: prop.descripcion || prop.description,
-        address: prop.direccion || prop.address,
-        neighborhood: prop.barrio || prop.neighborhood,
-        locality: prop.localidad || prop.locality,
-        province: prop.provincia || prop.province,
-        type: prop.tipoPropiedad || prop.type,
-        operationType: prop.transaccionTipo === 'Venta' ? 'venta' : prop.transaccionTipo === 'Alquiler' ? 'alquiler' : prop.operationType,
-        price: prop.precio || prop.price,
-        bedrooms: prop.habitaciones || prop.bedrooms,
-        bathrooms: prop.banos || prop.bathrooms,
-        squareMeters: prop.superficieM2 || prop.squareMeters,
-        status: prop.estado === 'Disponible' ? 'disponible' : prop.estado === 'Ocupado' ? 'ocupado' : prop.status,
-        lessor: prop.locador || prop.lessor,
-        lessee: prop.locatario || prop.lessee,
-        allowsPets: prop.permitenascotas || prop.allowsPets
-      }));
+      const normalizedProperties = apiProperties.map(normalizeProperty);
       setProperties(normalizedProperties);
     }
   }, [apiProperties]);
@@ -142,8 +173,24 @@ const PropertyManagement = () => {
   };
 
   const handleEditProperty = (property) => {
-    setEditingProperty({ ...property });
-    setView('form');
+    try {
+      console.log('Editing property:', property);
+      const normalized = normalizeProperty(property);
+      console.log('Normalized property:', normalized);
+      setEditingProperty(normalized);
+      setFormProperty({
+        ...normalized,
+        images: Array.isArray(normalized.images) && normalized.images.length > 0 
+          ? normalized.images 
+          : [null],
+        removedImages: []
+      });
+      
+      setView('form');
+    } catch (error) {
+      console.error('Error in handleEditProperty:', error);
+      showNotification('Error al cargar la propiedad para editar', 'error');
+    }
   };
 
   const handleDeleteProperty = async (propertyId) => {
@@ -167,10 +214,11 @@ const PropertyManagement = () => {
     }
   };
 
-  const handleSaveProperty = async (propertyData, imageFiles = []) => {
+  const handleSaveProperty = async (propertyData, imageFiles = [], removedImageIds = []) => {
     setIsSubmitting(true);
     
     try {
+      const isEdit = !!editingProperty;
       const backendData = {
         titulo: propertyData.title,
         descripcion: propertyData.description,
@@ -184,6 +232,7 @@ const PropertyManagement = () => {
         habitaciones: Number(propertyData.bedrooms) || 0,
         banos: Number(propertyData.bathrooms) || 0,
         superficieM2: Number(propertyData.squareMeters) || 0,
+        terrenoM2: Number(propertyData.landSquareMeters) || 0,
         estado: propertyData.status === 'disponible' ? 'Disponible' : 
                 propertyData.status === 'ocupado' ? 'Ocupado' : 'Reservado',
         locador: propertyData.lessor || '',
@@ -194,23 +243,21 @@ const PropertyManagement = () => {
 
       let response;
       let createdOrUpdatedId;
+      let refreshedProperty = null;
 
-      if (editingProperty) {
+      if (isEdit && editingProperty.id) {
+        console.log('Updating property:', editingProperty.id, backendData);
         response = await propertyService.update(editingProperty.id, backendData);
         if (response.status) {
           createdOrUpdatedId = editingProperty.id;
-          setProperties(prevProperties => 
-            prevProperties.map(prop => 
-              prop.id === editingProperty.id ? { ...prop, ...propertyData } : prop
-            )
-          );
+          showNotification('Propiedad actualizada correctamente');
         }
       } else {
+        console.log('Creating new property:', backendData);
         response = await propertyService.create(backendData);
         if (response.status && response.value) {
           createdOrUpdatedId = response.value._id || response.value.id;
-          const newProp = { ...propertyData, id: createdOrUpdatedId };
-          setProperties(prevProperties => [...prevProperties, newProp]);
+          showNotification('Propiedad creada correctamente');
         }
       }
 
@@ -218,17 +265,32 @@ const PropertyManagement = () => {
         throw new Error(response.message || 'Error al guardar la propiedad');
       }
 
-      if (createdOrUpdatedId && imageFiles && imageFiles.length > 0) {
-        console.log('Uploading', imageFiles.length, 'images to property:', createdOrUpdatedId);
+      const targetPropertyId = createdOrUpdatedId || editingProperty?.id;
+
+      const deletionErrors = [];
+      if (targetPropertyId && removedImageIds && removedImageIds.length > 0) {
+        for (const imageId of removedImageIds) {
+          if (!imageId) continue;
+          try {
+            await propertyService.deleteImage(targetPropertyId, imageId);
+          } catch (deleteErr) {
+            console.error('Error eliminando imagen', imageId, deleteErr);
+            deletionErrors.push(imageId);
+          }
+        }
+      }
+
+      if (targetPropertyId && imageFiles && imageFiles.length > 0) {
+        console.log('Uploading', imageFiles.length, 'images to property:', targetPropertyId);
         try {
-          const uploadResp = await propertyService.uploadImages(createdOrUpdatedId, imageFiles);
+          const uploadResp = await propertyService.uploadImages(targetPropertyId, imageFiles);
           if (uploadResp && uploadResp.status) {
             console.log('Images uploaded successfully');
   
             if (uploadResp.value) {
               setProperties(prevProperties =>
                 prevProperties.map(prop =>
-                  prop.id === createdOrUpdatedId 
+                  prop.id === targetPropertyId 
                     ? { 
                         ...prop, 
                         images: uploadResp.value.imagenes || uploadResp.value.images || [] 
@@ -246,10 +308,52 @@ const PropertyManagement = () => {
         }
       }
 
+      if (createdOrUpdatedId) {
+        try {
+          const detailResp = await propertyService.getById(createdOrUpdatedId);
+          if (detailResp.status && detailResp.value) {
+            refreshedProperty = normalizeProperty(detailResp.value);
+          }
+        } catch (fetchError) {
+          console.warn('No se pudo refrescar la propiedad desde el backend:', fetchError);
+        }
+      }
+
+      const fallbackNormalized = normalizeProperty({
+        ...propertyData,
+        id: createdOrUpdatedId,
+        _id: createdOrUpdatedId,
+        idPropiedad: createdOrUpdatedId,
+        terrenoM2: propertyData.landSquareMeters,
+        imagenes: (formProperty.images || [])
+          .filter(img => !(img instanceof File))
+          .filter(Boolean)
+      });
+
+      const propertyToStore = refreshedProperty || fallbackNormalized;
+
+      if (editingProperty && editingProperty.id) {
+        setProperties(prevProperties => 
+          prevProperties.map(prop => 
+            prop.id === editingProperty.id ? propertyToStore : prop
+          )
+        );
+      } else {
+        setProperties(prevProperties => {
+          const withoutPlaceholder = prevProperties.filter(prop => prop.id !== propertyToStore.id);
+          return [...withoutPlaceholder, propertyToStore];
+        });
+      }
+
       showNotification(editingProperty ? 'Propiedad actualizada exitosamente' : 'Propiedad creada exitosamente');
       setView('list');
       setEditingProperty(null);
-      
+      setFormProperty(createEmptyProperty(selectedOperation));
+
+      if (deletionErrors.length > 0) {
+        showNotification(`Se guardó la propiedad, pero no se pudieron eliminar ${deletionErrors.length} imágenes.`, 'error');
+      }
+
     } catch (error) {
       console.error('Error guardando propiedad:', error);
       showNotification(`Error al ${editingProperty ? 'actualizar' : 'crear'} la propiedad: ${error.message}`, 'error');
@@ -260,11 +364,9 @@ const PropertyManagement = () => {
 
   const handleCancelForm = () => {
     try {
+      setFormProperty(createEmptyProperty(selectedOperation));
+      setEditingProperty(null);
       setView('list');
-      // Small delay to ensure the form is unmounted before clearing the editing property
-      setTimeout(() => {
-        setEditingProperty(null);
-      }, 100);
     } catch (error) {
       console.error('Error in handleCancelForm:', error);
     }
@@ -327,11 +429,11 @@ const PropertyManagement = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <PropertyForm
             key={editingProperty ? `edit-${editingProperty.id || 'new'}` : 'new'}
-            property={editingProperty || newProperty}
+            property={editingProperty || formProperty}
             editing={!!editingProperty}
             onSave={handleSaveProperty}
             onCancel={handleCancelForm}
-            onChange={setNewProperty}
+            onChange={setFormProperty}
             isSubmitting={isSubmitting}
           />
         </div>

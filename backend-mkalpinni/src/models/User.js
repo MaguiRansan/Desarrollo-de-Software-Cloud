@@ -76,6 +76,13 @@ const userSchema = new mongoose.Schema({
     createdAt: 'fechaCreacion',
     updatedAt: 'fechaActualizacion'
   }
+}, {
+  tokenRecuperacion: {
+    type: String
+  },
+  tokenRecuperacionExpira: {
+    type: Date
+  },
 });
 
 userSchema.index({ idrol: 1 });
