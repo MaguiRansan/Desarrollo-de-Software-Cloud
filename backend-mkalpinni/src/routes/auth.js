@@ -8,8 +8,6 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
-const { upload } = require('../middleware/upload');
-
 const router = express.Router();
 const seedPath = path.join(__dirname, '..', '..', 'scripts', 'seedDatabase.js');
 
