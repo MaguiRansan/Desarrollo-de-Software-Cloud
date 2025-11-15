@@ -5,13 +5,11 @@ import {
   FaBuilding, 
   FaCalendarAlt, 
   FaCog, 
-  FaSignOutAlt,
   FaBars,
   FaTimes,
   FaBell,
-  FaUser
-} from 'react-icons/fa';
-import Header from '../inicio/Componentes/Header';
+  FaUser} from 'react-icons/fa';
+import AdminHeader from './AdminHeader';
 import Notifications from './Notifications';
 
 const AdminLayout = ({ children, user = { name: 'Marcelo' } }) => {
@@ -34,22 +32,23 @@ const AdminLayout = ({ children, user = { name: 'Marcelo' } }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
+      <AdminHeader />
       
       <div className="flex flex-1 flex-col lg:flex-row">
         <div className={`${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 flex-none`}>
+        } fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 flex-none lg:mt-0`}>
           
-          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 bg-gradient-to-r from-green-600 to-green-700">
+          <div className="flex items-center justify-between h-20 px-4 bg-gradient-to-r from-green-600 to-green-700 sticky top-0">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
                   <span className="text-green-600 font-bold text-sm">MK</span>
                 </div>
               </div>
               <div className="ml-3">
-                <h2 className="text-sm font-medium text-white">Panel Admin</h2>
+                <h2 className="text-sm font-medium text-white">Administrador</h2>
+                <p className="text-xs text-green-100">del panel</p>
               </div>
             </div>
             <button
@@ -97,13 +96,6 @@ const AdminLayout = ({ children, user = { name: 'Marcelo' } }) => {
               );
             })}
           </nav>
-
-          <div className="absolute bottom-0 w-full p-4 border-t border-gray-200">
-            <button className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200">
-              <FaSignOutAlt className="flex-shrink-0 -ml-1 mr-3 h-5 w-5 text-gray-400" />
-              Cerrar Sesión
-            </button>
-          </div>
         </div>
 
         {sidebarOpen && (

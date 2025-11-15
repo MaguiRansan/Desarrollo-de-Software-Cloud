@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaCalendarAlt, FaChartBar, FaCog, FaPlus, FaEye, FaArrowUp, FaArrowDown } from "react-icons/fa";
+import { FaHome, FaBuilding, FaCalendarAlt, FaPlus, FaEye, FaArrowUp, FaArrowDown } from "react-icons/fa";
 import AdminLayout from './AdminLayout';
 import { useAdminData, useStats } from '../../hooks/useAdminData';
 import { useUser } from '../../Context/UserContext';
@@ -34,28 +34,6 @@ const StatCard = ({ icon, title, values, trend, subtitle }) => (
         <div className={`flex items-center ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
           {trend > 0 ? <FaArrowUp className="mr-1" /> : <FaArrowDown className="mr-1" />}
           <span className="text-sm font-medium">{Math.abs(trend)}%</span>
-        </div>
-      )}
-    </div>
-  </div>
-);
-
-const QuickMetric = ({ title, value, change, icon: Icon, color = "blue" }) => (
-  <div className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-l-blue-500">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-600">{title}</p>
-        <p className={`text-2xl font-bold text-${color}-600`}>{value}</p>
-        {change && (
-          <p className={`text-sm flex items-center ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {change > 0 ? <FaArrowUp className="mr-1" /> : <FaArrowDown className="mr-1" />}
-            {Math.abs(change)}% vs mes anterior
-          </p>
-        )}
-      </div>
-      {Icon && (
-        <div className={`p-3 rounded-full bg-${color}-100`}>
-          <Icon className={`text-${color}-600`} size={24} />
         </div>
       )}
     </div>
@@ -100,12 +78,9 @@ const Admin = () => {
   const { stats = {} } = useStats();
   const { user } = useUser();
 
-  // Valores por defecto seguros para stats
   const safeStats = {
     propiedadesDisponibles: stats?.propiedadesDisponibles || 0,
     propiedadesOcupadas: stats?.propiedadesOcupadas || 0,
-    contratosActivos: stats?.contratosActivos || 0,
-    ingresosMensuales: stats?.ingresosMensuales || 0,
   };
 
   if (isLoading) {
@@ -140,26 +115,10 @@ const Admin = () => {
       title: 'Propiedades',
       subtitle: 'Gestión inmobiliaria',
       values: [
-        { label: `${safeStats.propiedadesDisponibles} disponibles`, color: 'text-green-600' },
-        { label: `${safeStats.propiedadesOcupadas} ocupadas`, color: 'text-blue-600' }
+        { label: `${safeStats.propiedadesDisponibles} Disponibles`, color: 'text-green-600' },
+        { label: `${safeStats.propiedadesOcupadas} Ocupadas`, color: 'text-blue-600' }
       ],
       trend: 5
-    },
-    {
-      icon: {
-        svg: (
-          <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-          </svg>
-        ),
-        bgColor: 'bg-purple-100'
-      },
-      title: 'Contratos',
-      subtitle: 'Documentación legal',
-      values: [
-        { label: `${safeStats.contratosActivos} activos`, color: 'text-green-600' }
-      ],
-      trend: -3
     }
   ];
 
@@ -183,60 +142,10 @@ const Admin = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 gap-6 mb-8">
         {statCards.map((card, index) => (
           <StatCard key={index} {...card} />
         ))}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-8">
-        <QuickMetric 
-          title="Ingresos Mensuales"
-          value={`$${safeStats.ingresosMensuales.toLocaleString()}`}
-          change={15}
-          icon={FaHome}
-          color="green"
-        />
-        <QuickMetric 
-          title="Ocupación"
-          value={`${properties.length > 0 ? Math.round((safeStats.propiedadesOcupadas / properties.length) * 100) : 0}%`}
-          change={5}
-          icon={FaCalendarAlt}
-          color="blue"
-        />
-      </div>
-
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl shadow-lg p-6 mb-8">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Resumen General</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Ingresos Totales</h3>
-                <p className="text-2xl font-bold text-green-600">${safeStats.ingresosMensuales.toLocaleString()}</p>
-                <p className="text-sm text-gray-600 mt-1">Este mes</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <FaHome className="text-green-600" size={24} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Tasa de Ocupación</h3>
-                <p className="text-2xl font-bold text-blue-600">
-                  {properties.length > 0 ? Math.round((safeStats.propiedadesOcupadas / properties.length) * 100) : 0}%
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Del total</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <FaBuilding className="text-blue-600" size={24} />
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
