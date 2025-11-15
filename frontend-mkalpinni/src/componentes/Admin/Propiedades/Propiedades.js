@@ -83,7 +83,7 @@ const PropertyManagement = () => {
   const { properties: apiProperties, isLoading, error } = useAdminData('properties');
   
   const [properties, setProperties] = useState([]);
-  const [view, setView] = useState('selection'); // 'selection', 'list', or 'form'
+  const [view, setView] = useState('selection'); 
   const [selectedOperation, setSelectedOperation] = useState('venta');
   const [editingProperty, setEditingProperty] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -118,7 +118,7 @@ const PropertyManagement = () => {
 
   const filterProperties = (properties, filters, searchTerm) => {
     return properties.filter((property) => {
-      // Convert property price to number for comparison
+      
       const propertyPrice = typeof property.price === 'string' 
         ? parseFloat(property.price.replace(/[^0-9.-]+/g,"")) 
         : Number(property.price) || 0;
