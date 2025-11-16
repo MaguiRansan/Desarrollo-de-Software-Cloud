@@ -7,6 +7,60 @@ const imagenPropiedadSchema = new mongoose.Schema({
   fechaCreacion: { type: Date, default: Date.now }
 });
 
+const availabilitySchema = new mongoose.Schema({
+  startDate: { 
+    type: Date, 
+    required: [true, 'La fecha de inicio es requerida'] 
+  },
+  endDate: { 
+    type: Date, 
+    required: [true, 'La fecha de fin es requerida'],
+    validate: {
+      validator: function(endDate) {
+        return endDate > this.startDate;
+      },
+      message: 'La fecha de fin debe ser posterior a la fecha de inicio'
+    }
+  },
+  status: { 
+    type: String, 
+    enum: {
+      values: ['disponible', 'reservado_temp', 'ocupado_temp'],
+      message: 'Estado de disponibilidad no válido'
+    },
+    default: 'disponible',
+    required: [true, 'El estado de disponibilidad es requerido']
+  },
+  clientName: { 
+    type: String, 
+    trim: true,
+    default: '' 
+  },
+  deposit: { 
+    type: Number, 
+    min: [0, 'El depósito no puede ser negativo'],
+    default: 0 
+  },
+  guests: { 
+    type: Number, 
+    min: [1, 'Debe haber al menos un huésped'],
+    default: 1 
+  },
+  notes: { 
+    type: String, 
+    trim: true,
+    default: '' 
+  },
+  id: { 
+    type: String, 
+    required: [true, 'El ID es requerido']
+  }
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
 const propertySchema = new mongoose.Schema({
   titulo: {
     type: String,
@@ -98,14 +152,6 @@ const propertySchema = new mongoose.Schema({
     min: [-180, 'La longitud debe estar entre -180 y 180'],
     max: [180, 'La longitud debe estar entre -180 y 180']
   },
-  locador: { type: String, trim: true },
-  locatario: { type: String, trim: true },
-  propietario: { type: String, trim: true },
-  comprador: { type: String, trim: true },
-  idClienteLocador: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
-  idClienteLocatario: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
-  idClientePropietario: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
-  idClienteComprador: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
   esAlquilerTemporario: { type: Boolean, default: false, index: true },
   precioPorNoche: { type: Number, min: [0, 'El precio por noche debe ser mayor a 0'] },
   precioPorSemana: { type: Number, min: [0, 'El precio por semana debe ser mayor a 0'] },
@@ -116,10 +162,28 @@ const propertySchema = new mongoose.Schema({
   reglasPropiedad: { type: [String], default: [] },
   horarioCheckIn: { type: String, match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato de hora inválido (HH:MM)'] },
   horarioCheckOut: { type: String, match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato de hora inválido (HH:MM)'] },
-  politicaCancelacion: { type: String, enum: ['Flexible', 'Moderada', 'Estricta'], default: 'Moderada' },
-  depositoSeguridad: { type: Number, min: [0, 'El depósito de seguridad debe ser mayor a 0'] },
-  metodosPago: { type: [String], default: ['Efectivo', 'Transferencia'] },
+  politicaCancelacion: { 
+    type: String, 
+    enum: ['Flexible', 'Moderada', 'Estricta'], 
+    default: 'Moderada' 
+  },
+  currency: {
+    type: String,
+    enum: ['USD', 'ARS', 'EUR', 'BRL'],
+    default: 'USD',
+    required: [true, 'La moneda es requerida']
+  },
+  disponibilidad: [availabilitySchema],
+  seasonalPrices: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SeasonalPrice'
+  }],
   imagenes: [imagenPropiedadSchema],
+  disponible: {
+    type: Boolean,
+    default: true,
+    index: true
+  },
   idUsuarioCreador: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

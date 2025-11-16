@@ -87,6 +87,7 @@ const validateReservation = [
   body('cantidadPersonas').optional().isInt({ min: 1, max: 20 }).withMessage('La cantidad de personas debe estar entre 1 y 20'),
   body('nombreHuesped').optional().trim().isLength({ max: 255 }).withMessage('El nombre del huésped no puede exceder 255 caracteres'),
   body('emailHuesped').optional().isEmail().normalizeEmail().withMessage('Email del huésped inválido'),
+  body('estado').optional().isIn(['Disponible', 'Reservado', 'Ocupado']).withMessage('Estado de reserva inválido'),
   handleValidationErrors
 ];
 

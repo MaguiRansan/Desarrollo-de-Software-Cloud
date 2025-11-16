@@ -2,6 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const { protect, generateToken } = require('../middleware/auth');
 const { validateRegister, validateLogin, handleValidationErrors } = require('../middleware/validation');
+const { upload } = require('../middleware/upload');
 const { body } = require('express-validator');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
