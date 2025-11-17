@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { FaTimes, FaSave, FaExclamationTriangle } from "react-icons/fa";
+import { FaTimes, FaSave, FaExclamationTriangle, FaStar } from "react-icons/fa";
 
 const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitting = false }) => {
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [imageFiles, setImageFiles] = useState([]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -14,34 +15,105 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     });
   };
 
-  const handleImageChange = (e, index) => {
-    const newImages = [...property.images];
-    newImages[index] = e.target.files[0];
-    onChange({ ...property, images: newImages });
+  const handleImageFileChange = (e) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const newFiles = Array.from(e.target.files);
+    setImageFiles(prev => [...prev, ...newFiles]);
+    
+    // Crear URLs para vista previa de las nuevas imágenes
+    const newImagePreviews = newFiles
+      .filter(file => file instanceof File) // Asegurarse de que sea un archivo válido
+      .map(file => ({
+        file,
+        preview: URL.createObjectURL(file),
+        isNew: true
+      }));
+    
+    if (newImagePreviews.length === 0) return;
+    
+    // Mantener las imágenes existentes (que ya son URLs o objetos con URL)
+    const existingImages = Array.isArray(property.images) 
+      ? property.images
+          .filter(img => img !== null && img !== undefined) // Filtrar nulos/undefined
+          .map(img => ({
+            ...(typeof img === 'string' ? { url: img } : img),
+            isNew: false
+          }))
+      : [];
+    
+    // Combinar imágenes existentes con las nuevas
+    onChange({ 
+      ...property, 
+      images: [...existingImages, ...newImagePreviews] 
+    });
+    
+    e.target.value = null;
   };
 
-  const addImageField = () => {
-    onChange({ ...property, images: [...property.images, null] });
-  };
+  const handleRemoveImage = (indexToRemove) => {
+    if (!property.images || indexToRemove < 0 || indexToRemove >= property.images.length) return;
+    
+    // Liberar la URL del objeto para evitar fugas de memoria
+    const imageToRemove = property.images[indexToRemove];
+    
+    if (imageToRemove && imageToRemove.preview) {
+      URL.revokeObjectURL(imageToRemove.preview);
+    }
 
-  const removeImageField = (index) => {
-    const imageToRemove = property.images[index];
-    const newImages = property.images.filter((_, i) => i !== index);
-
+    const newImages = property.images.filter((_, index) => index !== indexToRemove);
+    const newImageFiles = imageFiles.filter((_, index) => index !== indexToRemove);
+    
+    // Manejar imágenes eliminadas para el backend
     const removedImages = [...(property.removedImages || [])];
-    if (imageToRemove && typeof imageToRemove === 'object') {
-      const imageId = imageToRemove._id || imageToRemove.id || imageToRemove.idImagen;
+    
+    if (imageToRemove && !imageToRemove.isNew) {
+      const imageId = imageToRemove._id || imageToRemove.id || imageToRemove.idImagen || imageToRemove.url;
       if (imageId && !removedImages.includes(imageId)) {
         removedImages.push(imageId);
       }
     }
 
+    setImageFiles(newImageFiles);
+    
+    // Asegurarse de que siempre haya al menos un campo de imagen si no hay imágenes
     if (newImages.length === 0) {
-      newImages.push(null);
+      onChange({ ...property, images: [], removedImages });
+    } else {
+      onChange({ ...property, images: newImages, removedImages });
     }
-
-    onChange({ ...property, images: newImages, removedImages });
   };
+
+  const handleSetMainImage = (indexToPromote) => {
+    if (indexToPromote === 0) return;
+
+    const newImages = [...property.images];
+    const [promotedImage] = newImages.splice(indexToPromote, 1);
+    newImages.unshift(promotedImage);
+    
+    const newImageFiles = [...imageFiles];
+    if (newImageFiles.length > indexToPromote) {
+      const [promotedFile] = newImageFiles.splice(indexToPromote, 1);
+      newImageFiles.unshift(promotedFile);
+      setImageFiles(newImageFiles);
+    }
+    
+    onChange({ ...property, images: newImages });
+  };
+  
+  // Limpiar las URLs de objeto cuando el componente se desmonte
+  React.useEffect(() => {
+    return () => {
+      // Limpiar todas las URLs de objeto creadas
+      if (property.images && Array.isArray(property.images)) {
+        property.images.forEach(image => {
+          if (image && image.preview) {
+            URL.revokeObjectURL(image.preview);
+          }
+        });
+      }
+    };
+  }, [property.images]);
 
   const handleSave = async () => {
     if (!property.title || !property.address || !property.price) {
@@ -296,33 +368,87 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           />
         </div>
 
-        <div className="col-span-full">
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            Imágenes *
+        <div className="col-span-full mb-6 p-4 border border-gray-200 rounded-lg">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="image-upload">
+            Imágenes de la propiedad
           </label>
-          {property.images.map((image, index) => (
-            <div key={index} className="flex items-center gap-2 mb-2">
-              <input
-                type="file"
-                onChange={(e) => handleImageChange(e, index)}
-                className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={() => removeImageField(index)}
-                className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg"
-              >
-                Eliminar
-              </button>
+          <input 
+            type="file" 
+            id="image-upload" 
+            multiple 
+            onChange={handleImageFileChange} 
+            className="shadow border rounded-lg w-full py-3 px-4 text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+            required={!property.images || property.images.length === 0} 
+          />
+          
+          {(property.images && property.images.length > 0) && (
+            <div className="mt-4 flex flex-wrap gap-3">
+              {property.images
+                .filter(img => img !== null && img !== undefined) // Filtrar imágenes nulas o indefinidas
+                .map((img, index) => {
+                  // Asegurarse de que img sea un objeto con las propiedades necesarias
+                  const imageData = typeof img === 'string' 
+                    ? { url: img, preview: null, isNew: false }
+                    : { preview: null, url: null, isNew: false, ...img };
+                  
+                  return (
+                    <div key={index} className="relative group">
+                      <div className={`
+                        relative 
+                        h-24 w-24 
+                        object-cover rounded-lg shadow-md border 
+                        ${index === 0 ? 'border-4 border-yellow-500' : 'border-gray-200'}
+                      `}>
+                        <img
+                          src={imageData.preview || imageData.url || 'https://via.placeholder.com/150'}
+                          alt={`Preview ${index + 1}`}
+                          className="h-full w-full object-cover rounded-md"
+                          onError={(e) => {
+                            // En caso de error al cargar la imagen, mostrar una imagen de respaldo
+                            e.target.onerror = null;
+                            e.target.src = 'https://via.placeholder.com/150';
+                          }}
+                        />
+                        
+                        {index === 0 && (
+                          <div className="absolute top-0 left-0 bg-yellow-500 text-xs text-white px-2 py-0.5 rounded-br-lg font-semibold">
+                            PRINCIPAL
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {index !== 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleSetMainImage(index);
+                            }}
+                            className="bg-yellow-400 hover:bg-yellow-500 text-white rounded-full p-1 shadow-lg"
+                            title="Hacer principal"
+                          >
+                            <FaStar className="h-3 w-3" />
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleRemoveImage(index);
+                          }}
+                          className="bg-red-600 hover:bg-red-700 text-white rounded-full p-1 shadow-lg"
+                          title="Eliminar foto"
+                        >
+                          <FaTimes className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
-          ))}
-          <button
-            type="button"
-            onClick={addImageField}
-            className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
-          >
-            Añadir otra imagen
-          </button>
+          )}
         </div>
       </div>
 

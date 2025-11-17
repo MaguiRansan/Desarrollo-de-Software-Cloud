@@ -741,7 +741,7 @@ router.get('/:id/availability', [validateId, optionalAuth], async (req, res) => 
     });
   }
 });
-router.put('/Propiedad/Actualizar/:id', [protect, validateId, validateProperty], async (req, res) => {
+router.put('/Actualizar/:id', [protect, validateId, validateProperty], async (req, res) => {
   try {
     const property = await Property.findOne({ _id: req.params.id, activo: true });
 
