@@ -351,6 +351,10 @@ const PropertyManagement = () => {
   const handleCancelForm = () => {
     try {
       setView('list');
+      // Redirigir a la lista correspondiente según el tipo de operación
+      const path = selectedOperation === 'venta' ? '/admin/propiedades' : '/admin/propiedades/alquiler';
+      window.location.href = path;
+      
       // Small delay to ensure the form is unmounted before clearing the editing property
       setTimeout(() => {
         setEditingProperty(null);

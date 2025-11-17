@@ -149,21 +149,25 @@ const Temporarios = () => {
       setIsLoading(true);
       
       const propertyToSave = {
-        titulo: propertyData.titulo || '',
+        // Campos obligatorios según la validación del backend
+        titulo: propertyData.titulo || 'Sin título',
+        direccion: propertyData.direccion || 'Dirección no especificada',
+        precio: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
+        tipoPropiedad: propertyData.tipoPropiedad || 'Casa',
+        transaccionTipo: 'Alquiler', // Cambiado a 'Alquiler' que es uno de los valores permitidos
+        
+        // Resto de los campos
         descripcion: propertyData.descripcion || '',
-        direccion: propertyData.direccion || '',
         barrio: propertyData.barrio || '',
         localidad: propertyData.localidad || '',
         provincia: propertyData.provincia || '',
-        tipoPropiedad: propertyData.tipoPropiedad || 'Casa',
-        transaccionTipo: 'Alquiler Temporario', 
         
         habitaciones: propertyData.habitaciones ? parseInt(propertyData.habitaciones) : 0,
         banos: propertyData.banos ? parseInt(propertyData.banos) : 0,
         superficieM2: propertyData.superficieM2 ? parseFloat(propertyData.superficieM2) : 0,
         capacidadPersonas: propertyData.capacidadPersonas ? parseInt(propertyData.capacidadPersonas) : 1,
         
-        precio: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
+        // Mantener los precios específicos
         precioPorNoche: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
         precioPorSemana: propertyData.precioPorSemana ? parseFloat(propertyData.precioPorSemana) : 0,
         precioPorMes: propertyData.precioPorMes ? parseFloat(propertyData.precioPorMes) : 0,
@@ -188,49 +192,88 @@ const Temporarios = () => {
         propertyToSave.preciosTemporada = propertyData.seasonalPrices;
       }
       
+      // Limpiar campos vacíos, nulos o indefinidos
       Object.keys(propertyToSave).forEach(key => {
         if (propertyToSave[key] === '' || propertyToSave[key] === null || propertyToSave[key] === undefined) {
           delete propertyToSave[key];
         }
       });
 
+      // Asegurarse de que la disponibilidad tenga un ID
+      if (propertyToSave.disponibilidad && propertyToSave.disponibilidad.length > 0) {
+        propertyToSave.disponibilidad = propertyToSave.disponibilidad.map(item => ({
+          ...item,
+          id: item.id || `temp-${Math.random().toString(36).substr(2, 9)}`
+        }));
+      }
+
       console.log('Datos a enviar a /API/Propiedad/Crear:', JSON.stringify(propertyToSave, null, 2));
       
-      const response = await propertyService.create(propertyToSave);
-      console.log('Respuesta del servidor:', response);
+      try {
+        const response = await propertyService.create(propertyToSave);
+        console.log('Respuesta del servidor:', response);
 
-      if (response.status && response.value) {
-        const propertyId = response.value._id || response.value.id;
-        
-        if (imageFiles && imageFiles.length > 0) {
-          const uploadResponse = await propertyService.uploadImages(propertyId, imageFiles);
+        if (response.status && response.value) {
+          const propertyId = response.value._id || response.value.id;
           
-          if (!uploadResponse.status) {
-            throw new Error('Error al subir las imágenes');
-          }
-          
-          if (uploadResponse.value && uploadResponse.value.length > 0) {
-            const updatedProperty = {
-              ...response.value,
-              imagenes: uploadResponse.value
-            };
-            setProperties(prev => [...prev, updatedProperty]);
+          if (imageFiles && imageFiles.length > 0) {
+            console.log('Subiendo imágenes...');
+            const uploadResponse = await propertyService.uploadImages(propertyId, imageFiles);
+            console.log('Respuesta de subida de imágenes:', uploadResponse);
+            
+            if (!uploadResponse.status) {
+              throw new Error(uploadResponse.message || 'Error al subir las imágenes');
+            }
+            
+            if (uploadResponse.value && uploadResponse.value.length > 0) {
+              const updatedProperty = {
+                ...response.value,
+                imagenes: uploadResponse.value
+              };
+              setProperties(prev => [...prev, updatedProperty]);
+            } else {
+              setProperties(prev => [...prev, response.value]);
+            }
           } else {
+            console.log('No hay imágenes para subir');
             setProperties(prev => [...prev, response.value]);
           }
-        } else {
-          setProperties(prev => [...prev, response.value]);
-        }
 
-        toast.success('Propiedad guardada exitosamente');
-        setIsFormOpen(false);
-        setPropertyToEdit(null);
-      } else {
-        throw new Error(response.message || 'Error al guardar la propiedad');
+          toast.success('Propiedad guardada exitosamente');
+          setIsFormOpen(false);
+          setPropertyToEdit(null);
+        } else {
+          throw new Error(response.message || 'Error al guardar la propiedad');
+        }
+      } catch (error) {
+        console.error('Error en la petición:', {
+          message: error.message,
+          response: error.response,
+          stack: error.stack
+        });
+        throw error; // Re-lanzamos el error para que se maneje en el catch externo
       }
     } catch (error) {
-      console.error('Error al guardar la propiedad:', error);
-      toast.error(`Error al guardar la propiedad: ${error.message}`);
+      console.error('Error al guardar la propiedad:', {
+        message: error.message,
+        response: error.response?.data || 'No hay datos de respuesta',
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data
+        }
+      });
+      
+      let errorMessage = 'Error al guardar la propiedad';
+      if (error.response?.data?.message) {
+        errorMessage += `: ${error.response.data.message}`;
+      } else if (error.message) {
+        errorMessage += `: ${error.message}`;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

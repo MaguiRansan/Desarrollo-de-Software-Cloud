@@ -1,7 +1,8 @@
-import React from 'react';
-import { FaTimes, FaSave } from "react-icons/fa";
+import React, { useState } from 'react';
+import { FaTimes, FaSave, FaExclamationTriangle } from "react-icons/fa";
 
 const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitting = false }) => {
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -348,13 +349,48 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           )}
         </button>
         <button
-          onClick={onCancel}
+          type="button"
+          onClick={() => setShowCancelModal(true)}
           className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg flex items-center space-x-2 transition duration-300"
         >
           <FaTimes />
           <span>Cancelar</span>
         </button>
       </div>
+
+      {/* Modal de confirmación de cancelación */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 transition-opacity duration-300">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 transform transition-all duration-300 scale-100">
+            <div className="flex items-center text-yellow-600 mb-4">
+              <FaExclamationTriangle className="w-6 h-6 mr-3" />
+              <h3 className="text-lg font-bold text-gray-800">Confirmar Cancelación</h3>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Estás a punto de cancelar el registro. <strong className="font-extrabold text-black-600">Perderás todos los datos ingresados</strong> en el formulario. ¿Estás seguro?
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowCancelModal(false)}
+                className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-150"
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCancelModal(false);
+                  onCancel();
+                }}
+                className="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-150"
+              >
+                Sí, Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

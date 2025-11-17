@@ -58,6 +58,15 @@ const initialPropertyState = {
 };
 
 const BASE_SERVICES = ['WiFi', 'Limpieza general', 'Estacionamiento', 'Kit de Bienvenida', 'Ropa de Cama', 'Servicio de conserjeria', 'Cocina Equipada', 'Seguridad 24hs', 'Smart TV', 'Aire acondicionado', 'Sin Piscina'];
+
+const getSavedCustomServices = () => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('customServices');
+    return saved ? JSON.parse(saved) : [];
+  }
+  return [];
+};
+
 const availableReglas = ['No fumar', 'No mascotas', 'Respetar horarios de descanso', 'Solo Familias'];
 
 
@@ -94,7 +103,7 @@ const ConfirmationModal = ({ show, onConfirm, onClose }) => {
 };
 
 
-const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
+const AddPropertyForm = ({ onAddProperty, onCancel, isSubmitting = false }) => {
   const [property, setProperty] = useState(initialPropertyState);
   const [imageFiles, setImageFiles] = useState([]); 
   const [seasonalPrices, setSeasonalPrices] = useState([]); 
@@ -102,8 +111,14 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
   const [seasonalPriceError, setSeasonalPriceError] = useState(null); 
   
   const [newServiceInput, setNewServiceInput] = useState('');
-  const [showCancelModal, setShowCancelModal] = useState(false); 
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [customServices, setCustomServices] = useState(getSavedCustomServices());
 
+  const saveCustomServices = (services) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('customServices', JSON.stringify(services));
+    }
+  };
 
   const isDateRangeAvailable = (seasonalStart, seasonalEnd) => {
     const { startDate: availableStart, endDate: availableEnd } = availability;
@@ -161,12 +176,29 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
     e.preventDefault();
     const newService = newServiceInput.trim();
 
-    if (newService && !property.servicios.includes(newService)) {
-      setProperty(prev => ({ 
-        ...prev, 
-        servicios: [...prev.servicios, newService] 
-      }));
-      setNewServiceInput('');
+    if (newService) {
+      // Verificar si el servicio ya existe (ignorando mayúsculas/minúsculas)
+      const allServices = [...BASE_SERVICES, ...customServices];
+      const serviceExists = allServices.some(
+        s => s.toLowerCase() === newService.toLowerCase()
+      );
+      
+      if (!serviceExists) {
+        // Agregar a servicios personalizados
+        const updatedCustomServices = [...customServices, newService];
+        setCustomServices(updatedCustomServices);
+        saveCustomServices(updatedCustomServices);
+        
+        // Agregar a los servicios seleccionados
+        setProperty(prev => ({ 
+          ...prev, 
+          servicios: [...(prev.servicios || []), newService] 
+        }));
+        
+        setNewServiceInput('');
+      } else {
+        alert('Este servicio ya existe en la lista');
+      }
     }
   };
 
@@ -296,69 +328,100 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
     const hasSeasonalPrice = seasonalPrices.length > 0;
 
     if (!hasBasePrice && hasSeasonalPrice) {
-        alert('Debe ingresar un Precio Base (Noche, Semana o Mes) para poder aplicar un porcentaje de ajuste por temporada.');
-        return;
+      alert('Debe ingresar un Precio Base (Noche, Semana o Mes) para poder aplicar un porcentaje de ajuste por temporada.');
+      return;
     }
     
     if (seasonalPrices.length > 0 && (!availability.startDate || !availability.endDate)) {
-         alert('Debe definir el Rango de Disponibilidad Inicial antes de establecer precios por temporada.');
-         return;
+      alert('Debe definir el Rango de Disponibilidad Inicial antes de establecer precios por temporada.');
+      return;
     }
     
     for (const sp of seasonalPrices) {
-        if (!isDateRangeAvailable(sp.startDate, sp.endDate)) {
-            alert('¡Error de validación de fecha! La fecha de inicio no puede ser posterior a la de fin en una temporada.');
-            return;
-        }
+      if (!isDateRangeAvailable(sp.startDate, sp.endDate)) {
+        alert('¡Error de validación de fecha! La fecha de inicio no puede ser posterior a la de fin en una temporada.');
+        return;
+      }
     }
 
-    const finalProperty = {
-      ...property,
-      
-      precio: property.precio === '' ? null : parseFloat(property.precio),
-      precioPorNoche: property.precioPorNoche === '' ? null : parseFloat(property.precioPorNoche),
-      precioPorSemana: property.precioPorSemana === '' ? null : parseFloat(property.precioPorSemana),
-      precioPorMes: property.precioPorMes === '' ? null : parseFloat(property.precioPorMes),
-      capacidadPersonas: property.capacidadPersonas === '' ? 0 : parseInt(property.capacidadPersonas),
-      habitaciones: property.habitaciones === '' ? 0 : parseInt(property.habitaciones),
-      banos: property.banos === '' ? 0 : parseInt(property.banos),
-      superficieM2: property.superficieM2 === '' ? 0 : parseInt(property.superficieM2),
-      terrenoM2: property.terrenoM2 === '' ? 0 : parseInt(property.terrenoM2),
-      depositoSeguridad: property.depositoSeguridad === '' ? null : parseFloat(property.depositoSeguridad),
-
-      ubicacion: property.localidad, 
-      esAlquilerTemporario: property.transaccionTipo === 'Alquiler Temporario',
-      
-      availability: availability.startDate && availability.endDate && availability.availableGuests ? [{
+    try {
+      const finalProperty = {
+        titulo: property.titulo || 'Sin título',
+        descripcion: property.descripcion || 'Sin descripción',
+        direccion: property.direccion || 'Sin dirección',
+        barrio: property.barrio || 'Sin barrio',
+        localidad: property.localidad || 'Sin localidad',
+        provincia: property.provincia || 'Sin provincia',
+        tipoPropiedad: property.tipoPropiedad || 'Casa',
+        transaccionTipo: 'Alquiler',
+        
+        habitaciones: property.habitaciones ? parseInt(property.habitaciones) : 0,
+        banos: property.banos ? parseInt(property.banos) : 0,
+        superficieM2: property.superficieM2 ? parseFloat(property.superficieM2) : 0,
+        capacidadPersonas: property.capacidadPersonas ? parseInt(property.capacidadPersonas) : 1,
+        
+        precio: property.precioPorNoche ? parseFloat(property.precioPorNoche) : 0,
+        precioPorNoche: property.precioPorNoche ? parseFloat(property.precioPorNoche) : 0,
+        precioPorSemana: property.precioPorSemana ? parseFloat(property.precioPorSemana) : 0,
+        precioPorMes: property.precioPorMes ? parseFloat(property.precioPorMes) : 0,
+        
+        horarioCheckIn: property.horarioCheckIn || '15:00',
+        horarioCheckOut: property.horarioCheckOut || '11:00',
+        depositoSeguridad: property.depositoSeguridad ? parseFloat(property.depositoSeguridad) : 0,
+        
+        servicios: Array.isArray(property.servicios) ? property.servicios : [],
+        reglasPropiedad: Array.isArray(property.reglasPropiedad) ? property.reglasPropiedad : [],
+        
+        estado: 'Disponible',
+        activo: true,
+        esAlquilerTemporario: true,
+        
+        latitud: property.latitud || 0,
+        longitud: property.longitud || 0,
+        
+        availability: availability.startDate && availability.endDate ? [{
+          id: `temp-${Math.random().toString(36).substr(2, 9)}`, // ID único temporal
           startDate: availability.startDate,
           endDate: availability.endDate,
-          availableGuests: parseInt(availability.availableGuests),
-      }] : [],
-      
-      seasonalPrices: seasonalPrices.filter(sp => 
+          availableGuests: parseInt(availability.availableGuests) || 1,
+          status: 'disponible', // Asegurar que tenga un estado válido
+          clientName: '', // Campo requerido por el esquema
+          deposit: 0, // Valor por defecto para el depósito
+          guests: 1 // Valor por defecto para huéspedes
+        }] : [],
+        
+        seasonalPrices: seasonalPrices.filter(sp => 
           sp.startDate && sp.endDate && sp.percentage
-      ).map(sp => ({
-          ...sp,
-          percentage: sp.percentage === '' ? 0 : parseFloat(sp.percentage),
-      })),
+        ).map(sp => ({
+          startDate: sp.startDate,
+          endDate: sp.endDate,
+          percentage: sp.percentage ? parseFloat(sp.percentage) : 0,
+        })),
+        
+        imagenes: property.imagenes || [],
+      };
+
+      console.log('Datos a enviar:', JSON.stringify(finalProperty, null, 2));
+      onAddProperty(finalProperty, imageFiles);
       
-      imagenes: property.imagenes,
-    };
-
-    onAddProperty(finalProperty, imageFiles);
-
-    setProperty(initialPropertyState);
-    setImageFiles([]);
-    setSeasonalPrices([]);
-    setAvailability(initialAvailability);
-    setSeasonalPriceError(null);
+      setProperty(initialPropertyState);
+      setImageFiles([]);
+      setSeasonalPrices([]);
+      setAvailability(initialAvailability);
+      setSeasonalPriceError(null);
+      setNewServiceInput('');
+      
+    } catch (error) {
+      console.error('Error al procesar el formulario:', error);
+      alert('Ocurrió un error al procesar el formulario. Por favor, intente nuevamente.');
+    }
     setNewServiceInput('');
   };
 
   const handleShowCancelModal = () => {
     setShowCancelModal(true);
   };
-  
+
   const handleConfirmCancel = () => {
     property.imagenes.forEach(url => URL.revokeObjectURL(url));
     
@@ -369,15 +432,18 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
     setSeasonalPriceError(null);
     setNewServiceInput('');
     
-    setShowCancelModal(false); 
+    setShowCancelModal(false);
+    onCancel && onCancel();
   };
 
   const handleCloseCancelModal = () => {
-    setShowCancelModal(false); 
+    setShowCancelModal(false);
   };
 
   const selectedCurrencySymbol = AVAILABLE_CURRENCIES.find(c => c.code === property.currency)?.symbol || '$';
-  const customServices = property.servicios.filter(s => !BASE_SERVICES.includes(s));
+  const currentCustomServices = property.servicios.filter(s => 
+    !BASE_SERVICES.includes(s) && !customServices.includes(s)
+  );
   
   const minDateRestriction = availability.startDate || '';
   const maxDateRestriction = availability.endDate || '';
@@ -387,9 +453,9 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
     <div className="bg-white rounded-xl shadow-lg p-8">
         
       <ConfirmationModal 
-          show={showCancelModal}
-          onConfirm={handleConfirmCancel}
-          onClose={handleCloseCancelModal}
+        show={showCancelModal} 
+        onConfirm={handleConfirmCancel}
+        onClose={() => setShowCancelModal(false)} 
       />
 
       <h2 className="text-2xl font-semibold text-gray-900 mb-6 flex items-center space-x-2">
@@ -613,10 +679,17 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
                 <div className="p-3 border rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
                     <p className="font-semibold text-xs mb-2 text-gray-700 border-b pb-1">Seleccionar Servicios:</p>
                     <div className="grid grid-cols-2 gap-2">
-                        {BASE_SERVICES.map((service) => (
+                        {[...BASE_SERVICES, ...customServices].map((service) => (
                             <label key={service} className="flex items-center text-gray-700 text-sm">
-                            <input type="checkbox" name="servicios" value={service} checked={property.servicios.includes(service)} onChange={handleInputChange} className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" />
-                            {service}
+                                <input 
+                                    type="checkbox" 
+                                    name="servicios" 
+                                    value={service} 
+                                    checked={property.servicios.includes(service)} 
+                                    onChange={handleInputChange} 
+                                    className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" 
+                                />
+                                {service}
                             </label>
                         ))}
                     </div>
@@ -631,19 +704,24 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
                             value={newServiceInput}
                             onChange={(e) => setNewServiceInput(e.target.value)}
                             className="shadow border rounded-lg w-full py-2 px-3 text-gray-700 text-sm"
+                            onKeyPress={(e) => e.key === 'Enter' && handleAddNewService(e)}
                         />
-                        <button type="submit" className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg text-sm transition duration-150 flex items-center justify-center space-x-1 w-20">
+                        <button 
+                            type="button" 
+                            onClick={handleAddNewService}
+                            className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg text-sm transition duration-150 flex items-center justify-center space-x-1 w-20"
+                        >
                             <FaPlus className="w-3 h-3"/>
                             <span>Añadir</span>
                         </button>
                     </div>
                 </form>
 
-                {customServices.length > 0 && (
+                {currentCustomServices.length > 0 && (
                     <div className="mt-3 p-3 border-t border-gray-200">
-                        <p className="font-semibold text-xs mb-2 text-gray-700">Servicios Adicionales:</p>
+                        <p className="font-semibold text-xs mb-2 text-gray-700">Servicios Adicionales de esta propiedad:</p>
                         <div className="flex flex-wrap gap-2">
-                            {customServices.map(service => (
+                            {currentCustomServices.map(service => (
                                 <div key={service} className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full flex items-center shadow-sm">
                                     {service}
                                     <button
