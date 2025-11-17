@@ -46,11 +46,27 @@ const normalizeProperty = (prop = {}) => {
       ? prop.estado.toLowerCase()
       : 'disponible';
 
-  const normalizedImages = Array.isArray(prop.images) && prop.images.length > 0
-    ? prop.images
-    : Array.isArray(prop.imagenes) && prop.imagenes.length > 0
-      ? prop.imagenes
-      : [];
+  // Normalizar las imágenes
+  let normalizedImages = [];
+  if (Array.isArray(prop.images) && prop.images.length > 0) {
+    normalizedImages = prop.images
+      .filter(img => img !== null && img !== undefined)
+      .map(img => {
+        if (typeof img === 'string') {
+          return { url: img, isNew: false };
+        }
+        return { ...img, isNew: img.isNew || false };
+      });
+  } else if (Array.isArray(prop.imagenes) && prop.imagenes.length > 0) {
+    normalizedImages = prop.imagenes
+      .filter(img => img !== null && img !== undefined)
+      .map(img => {
+        if (typeof img === 'string') {
+          return { url: img, isNew: false };
+        }
+        return { ...img, isNew: img.isNew || false };
+      });
+  }
 
   return {
     _id: prop._id || id,

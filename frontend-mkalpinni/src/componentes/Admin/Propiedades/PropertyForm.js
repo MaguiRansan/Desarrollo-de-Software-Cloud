@@ -23,7 +23,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     
     // Crear URLs para vista previa de las nuevas imágenes
     const newImagePreviews = newFiles
-      .filter(file => file instanceof File) // Asegurarse de que sea un archivo válido
+      .filter(file => file instanceof File)
       .map(file => ({
         file,
         preview: URL.createObjectURL(file),
@@ -35,11 +35,13 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     // Mantener las imágenes existentes (que ya son URLs o objetos con URL)
     const existingImages = Array.isArray(property.images) 
       ? property.images
-          .filter(img => img !== null && img !== undefined) // Filtrar nulos/undefined
-          .map(img => ({
-            ...(typeof img === 'string' ? { url: img } : img),
-            isNew: false
-          }))
+          .filter(img => img !== null && img !== undefined)
+          .map(img => {
+            if (typeof img === 'string') {
+              return { url: img, isNew: false };
+            }
+            return { ...img, isNew: img.isNew || false };
+          })
       : [];
     
     // Combinar imágenes existentes con las nuevas
@@ -122,8 +124,24 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     }
     const propertyId = property._id || property.id || property.idPropiedad;
 
-    const { images, _id, id, idPropiedad, removedImages = [], ...propertyData } = property;
-    const imageFiles = (images || []).filter(file => file instanceof File);
+    // Separar imágenes existentes de las nuevas
+    const existingImages = (property.images || [])
+      .filter(img => !img.isNew && img.url)
+      .map(img => ({
+        id: img.id,
+        url: img.url,
+        isMain: img.isMain || false
+      }));
+
+    // Obtener archivos de imágenes nuevas
+    const newImageFiles = (property.images || [])
+      .filter(img => img.isNew && img.file)
+      .map(img => img.file);
+
+    // Obtener IDs de imágenes eliminadas
+    const removedImageIds = property.removedImages || [];
+
+    const { images, _id, id, idPropiedad, ...propertyData } = property;
 
     if (!propertyId && editing) {
       alert('Error: No se encontró el ID de la propiedad. Recarga la página e intenta nuevamente.');
@@ -131,7 +149,15 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     }
 
     if (typeof onSave === 'function') {
-      onSave(propertyData, imageFiles, removedImages);
+      onSave(
+        { 
+          ...propertyData,
+          // Incluir solo las imágenes existentes (las nuevas se subirán por separado)
+          images: existingImages
+        },
+        newImageFiles, // Archivos de imágenes nuevas
+        removedImageIds // IDs de imágenes eliminadas
+      );
       return;
     }
 
@@ -384,13 +410,13 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           {(property.images && property.images.length > 0) && (
             <div className="mt-4 flex flex-wrap gap-3">
               {property.images
-                .filter(img => img !== null && img !== undefined) // Filtrar imágenes nulas o indefinidas
+                .filter(img => img !== null && img !== undefined)
                 .map((img, index) => {
-                  // Asegurarse de que img sea un objeto con las propiedades necesarias
-                  const imageData = typeof img === 'string' 
-                    ? { url: img, preview: null, isNew: false }
-                    : { preview: null, url: null, isNew: false, ...img };
+                  // Manejar diferentes formatos de imagen
+                  const imageUrl = img.url || img.preview || (typeof img === 'string' ? img : null);
                   
+                  if (!imageUrl) return null;
+
                   return (
                     <div key={index} className="relative group">
                       <div className={`
@@ -398,51 +424,43 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
                         h-24 w-24 
                         object-cover rounded-lg shadow-md border 
                         ${index === 0 ? 'border-4 border-yellow-500' : 'border-gray-200'}
-                      `}>
+                        overflow-hidden`}>
                         <img
-                          src={imageData.preview || imageData.url || 'https://via.placeholder.com/150'}
-                          alt={`Preview ${index + 1}`}
-                          className="h-full w-full object-cover rounded-md"
+                          src={imageUrl}
+                          alt={`Imagen de la propiedad ${index + 1}`}
+                          className="w-full h-full object-cover"
                           onError={(e) => {
-                            // En caso de error al cargar la imagen, mostrar una imagen de respaldo
-                            e.target.onerror = null;
-                            e.target.src = 'https://via.placeholder.com/150';
+                            e.target.src = '/placeholder-property.jpg';
                           }}
                         />
-                        
-                        {index === 0 && (
-                          <div className="absolute top-0 left-0 bg-yellow-500 text-xs text-white px-2 py-0.5 rounded-br-lg font-semibold">
-                            PRINCIPAL
-                          </div>
-                        )}
                       </div>
-                      
-                      <div className="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {index !== 0 && (
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                        <div className="opacity-0 group-hover:opacity-100 flex space-x-1">
+                          {index !== 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSetMainImage(index);
+                              }}
+                              className="p-1 bg-white bg-opacity-80 rounded-full text-yellow-600 hover:bg-yellow-100"
+                              title="Establecer como principal"
+                            >
+                              <FaStar size={14} />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={(e) => {
-                              e.preventDefault();
-                              handleSetMainImage(index);
+                              e.stopPropagation();
+                              handleRemoveImage(index);
                             }}
-                            className="bg-yellow-400 hover:bg-yellow-500 text-white rounded-full p-1 shadow-lg"
-                            title="Hacer principal"
+                            className="p-1 bg-white bg-opacity-80 rounded-full text-red-600 hover:bg-red-100"
+                            title="Eliminar imagen"
                           >
-                            <FaStar className="h-3 w-3" />
+                            <FaTimes size={14} />
                           </button>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleRemoveImage(index);
-                          }}
-                          className="bg-red-600 hover:bg-red-700 text-white rounded-full p-1 shadow-lg"
-                          title="Eliminar foto"
-                        >
-                          <FaTimes className="h-3 w-3" />
-                        </button>
+                        </div>
                       </div>
                     </div>
                   );
