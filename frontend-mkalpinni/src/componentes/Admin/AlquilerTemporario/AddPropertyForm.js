@@ -69,6 +69,14 @@ const getSavedCustomServices = () => {
 
 const availableReglas = ['No fumar', 'No mascotas', 'Respetar horarios de descanso', 'Solo Familias'];
 
+const getSavedCustomRules = () => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('customRules');
+    return saved ? JSON.parse(saved) : [];
+  }
+  return [];
+};
+
 
 const ConfirmationModal = ({ show, onConfirm, onClose }) => {
     if (!show) return null;
@@ -113,10 +121,18 @@ const AddPropertyForm = ({ onAddProperty, onCancel, isSubmitting = false }) => {
   const [newServiceInput, setNewServiceInput] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [customServices, setCustomServices] = useState(getSavedCustomServices());
+  const [customRules, setCustomRules] = useState(getSavedCustomRules());
+  const [newRuleInput, setNewRuleInput] = useState('');
 
   const saveCustomServices = (services) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('customServices', JSON.stringify(services));
+    }
+  };
+
+  const saveCustomRules = (rules) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('customRules', JSON.stringify(rules));
     }
   };
 
@@ -206,6 +222,40 @@ const AddPropertyForm = ({ onAddProperty, onCancel, isSubmitting = false }) => {
     setProperty(prev => ({
         ...prev,
         servicios: prev.servicios.filter(s => s !== serviceToRemove)
+    }));
+  };
+
+  const handleAddNewRule = (e) => {
+    e.preventDefault();
+    const newRule = newRuleInput.trim();
+
+    if (newRule) {
+      const allRules = [...availableReglas, ...customRules];
+      const ruleExists = allRules.some(
+        r => r.toLowerCase() === newRule.toLowerCase()
+      );
+      
+      if (!ruleExists) {
+        const updatedCustomRules = [...customRules, newRule];
+        setCustomRules(updatedCustomRules);
+        saveCustomRules(updatedCustomRules);
+        
+        setProperty(prev => ({ 
+          ...prev, 
+          reglasPropiedad: [...(prev.reglasPropiedad || []), newRule] 
+        }));
+        
+        setNewRuleInput('');
+      } else {
+        alert('Esta regla ya existe en la lista');
+      }
+    }
+  };
+
+  const handleRemoveRule = (ruleToRemove) => {
+    setProperty(prev => ({
+      ...prev,
+      reglasPropiedad: prev.reglasPropiedad.filter(r => r !== ruleToRemove)
     }));
   };
 
@@ -443,6 +493,10 @@ const AddPropertyForm = ({ onAddProperty, onCancel, isSubmitting = false }) => {
   const selectedCurrencySymbol = AVAILABLE_CURRENCIES.find(c => c.code === property.currency)?.symbol || '$';
   const currentCustomServices = property.servicios.filter(s => 
     !BASE_SERVICES.includes(s) && !customServices.includes(s)
+  );
+  
+  const currentCustomRules = property.reglasPropiedad.filter(r => 
+    !availableReglas.includes(r) && !customRules.includes(r)
   );
   
   const minDateRestriction = availability.startDate || '';
@@ -739,16 +793,70 @@ const AddPropertyForm = ({ onAddProperty, onCancel, isSubmitting = false }) => {
                 )}
             </div>
 
-            <div>
-                <label className="block text-gray-700 text-sm font-bold mb-3">Reglas de la Propiedad</label>
-                <div className="p-3 border rounded-lg bg-gray-50 max-h-60 overflow-y-auto">
-                    {availableReglas.map((regla) => (
-                        <label key={regla} className="flex items-center text-gray-700 text-sm">
-                            <input type="checkbox" name="reglasPropiedad" value={regla} checked={property.reglasPropiedad.includes(regla)} onChange={handleInputChange} className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" />
-                            {regla}
-                        </label>
-                    ))}
+            <div className="p-4 border rounded-lg">
+                <label className="block text-gray-700 text-sm font-bold mb-3 flex items-center space-x-2"><FaExclamationTriangle /><span>Reglas de la Propiedad</span></label>
+                
+                <div className="p-3 border rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
+                    <p className="font-semibold text-xs mb-2 text-gray-700 border-b pb-1">Seleccionar Reglas:</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        {[...availableReglas, ...customRules].map((regla) => (
+                            <label key={regla} className="flex items-center text-gray-700 text-sm">
+                                <input 
+                                    type="checkbox" 
+                                    name="reglasPropiedad" 
+                                    value={regla} 
+                                    checked={property.reglasPropiedad.includes(regla)} 
+                                    onChange={handleInputChange} 
+                                    className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" 
+                                />
+                                {regla}
+                            </label>
+                        ))}
+                    </div>
                 </div>
+
+                <form onSubmit={handleAddNewRule} className="mt-4 flex flex-col gap-2">
+                    <label className='text-xs text-gray-600 block'>Agregar Regla Personalizada:</label>
+                    <div className="flex gap-2">
+                        <input 
+                            type="text"
+                            placeholder="Ej: No se permiten fiestas"
+                            value={newRuleInput}
+                            onChange={(e) => setNewRuleInput(e.target.value)}
+                            className="shadow border rounded-lg w-full py-2 px-3 text-gray-700 text-sm"
+                            onKeyPress={(e) => e.key === 'Enter' && handleAddNewRule(e)}
+                        />
+                        <button 
+                            type="button" 
+                            onClick={handleAddNewRule}
+                            className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg text-sm transition duration-150 flex items-center justify-center space-x-1 w-20"
+                        >
+                            <FaPlus className="w-3 h-3"/>
+                            <span>Añadir</span>
+                        </button>
+                    </div>
+                </form>
+
+                {currentCustomRules.length > 0 && (
+                    <div className="mt-3 p-3 border-t border-gray-200">
+                        <p className="font-semibold text-xs mb-2 text-gray-700">Reglas Adicionales de esta propiedad:</p>
+                        <div className="flex flex-wrap gap-2">
+                            {currentCustomRules.map(rule => (
+                                <div key={rule} className="text-xs bg-amber-100 text-amber-700 px-3 py-1 rounded-full flex items-center shadow-sm">
+                                    {rule}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveRule(rule)}
+                                        className="ml-2 text-amber-500 hover:text-amber-700 transition duration-150"
+                                        title="Quitar regla"
+                                    >
+                                        <FaTimes className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
 

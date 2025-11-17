@@ -19,7 +19,6 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     if (!e.target.files || e.target.files.length === 0) return;
     
     const newFiles = Array.from(e.target.files);
-    setImageFiles(prev => [...prev, ...newFiles]);
     
     // Crear URLs para vista previa de las nuevas imágenes
     const newImagePreviews = newFiles
@@ -27,7 +26,8 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
       .map(file => ({
         file,
         preview: URL.createObjectURL(file),
-        isNew: true
+        isNew: true,
+        isMain: false // Por defecto, no es la imagen principal
       }));
     
     if (newImagePreviews.length === 0) return;
@@ -38,18 +38,37 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           .filter(img => img !== null && img !== undefined)
           .map(img => {
             if (typeof img === 'string') {
-              return { url: img, isNew: false };
+              return { 
+                url: img, 
+                isNew: false,
+                isMain: false
+              };
             }
-            return { ...img, isNew: img.isNew || false };
+            return { 
+              ...img, 
+              isNew: img.isNew || false,
+              isMain: img.isMain || false
+            };
           })
       : [];
     
+    // Si no hay imágenes, la primera será la principal
+    if (existingImages.length === 0 && newImagePreviews.length > 0) {
+      newImagePreviews[0].isMain = true;
+    }
+    
     // Combinar imágenes existentes con las nuevas
+    const updatedImages = [...existingImages, ...newImagePreviews];
+    
+    // Actualizar el estado
     onChange({ 
-      ...property, 
-      images: [...existingImages, ...newImagePreviews] 
+      ...property,
+      images: updatedImages,
+      // Mantener cualquier imagen eliminada previamente
+      removedImages: property.removedImages || []
     });
     
+    // Limpiar el input de archivo para permitir cargar la misma imagen otra vez si es necesario
     e.target.value = null;
   };
 
