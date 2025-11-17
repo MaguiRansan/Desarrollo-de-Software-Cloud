@@ -20,19 +20,18 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     
     const newFiles = Array.from(e.target.files);
     
-    // Crear URLs para vista previa de las nuevas imágenes
     const newImagePreviews = newFiles
       .filter(file => file instanceof File)
       .map(file => ({
         file,
         preview: URL.createObjectURL(file),
         isNew: true,
-        isMain: false // Por defecto, no es la imagen principal
+        isMain: false 
       }));
     
     if (newImagePreviews.length === 0) return;
     
-    // Mantener las imágenes existentes (que ya son URLs o objetos con URL)
+ 
     const existingImages = Array.isArray(property.images) 
       ? property.images
           .filter(img => img !== null && img !== undefined)
@@ -52,30 +51,24 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           })
       : [];
     
-    // Si no hay imágenes, la primera será la principal
     if (existingImages.length === 0 && newImagePreviews.length > 0) {
       newImagePreviews[0].isMain = true;
     }
     
-    // Combinar imágenes existentes con las nuevas
     const updatedImages = [...existingImages, ...newImagePreviews];
     
-    // Actualizar el estado
     onChange({ 
       ...property,
       images: updatedImages,
-      // Mantener cualquier imagen eliminada previamente
       removedImages: property.removedImages || []
     });
     
-    // Limpiar el input de archivo para permitir cargar la misma imagen otra vez si es necesario
     e.target.value = null;
   };
 
   const handleRemoveImage = (indexToRemove) => {
     if (!property.images || indexToRemove < 0 || indexToRemove >= property.images.length) return;
     
-    // Liberar la URL del objeto para evitar fugas de memoria
     const imageToRemove = property.images[indexToRemove];
     
     if (imageToRemove && imageToRemove.preview) {
@@ -85,7 +78,6 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     const newImages = property.images.filter((_, index) => index !== indexToRemove);
     const newImageFiles = imageFiles.filter((_, index) => index !== indexToRemove);
     
-    // Manejar imágenes eliminadas para el backend
     const removedImages = [...(property.removedImages || [])];
     
     if (imageToRemove && !imageToRemove.isNew) {
@@ -97,7 +89,6 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
 
     setImageFiles(newImageFiles);
     
-    // Asegurarse de que siempre haya al menos un campo de imagen si no hay imágenes
     if (newImages.length === 0) {
       onChange({ ...property, images: [], removedImages });
     } else {
@@ -122,10 +113,10 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     onChange({ ...property, images: newImages });
   };
   
-  // Limpiar las URLs de objeto cuando el componente se desmonte
+
   React.useEffect(() => {
     return () => {
-      // Limpiar todas las URLs de objeto creadas
+     
       if (property.images && Array.isArray(property.images)) {
         property.images.forEach(image => {
           if (image && image.preview) {
@@ -143,7 +134,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
     }
     const propertyId = property._id || property.id || property.idPropiedad;
 
-    // Separar imágenes existentes de las nuevas
+  
     const existingImages = (property.images || [])
       .filter(img => !img.isNew && img.url)
       .map(img => ({
@@ -152,12 +143,12 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
         isMain: img.isMain || false
       }));
 
-    // Obtener archivos de imágenes nuevas
+   
     const newImageFiles = (property.images || [])
       .filter(img => img.isNew && img.file)
       .map(img => img.file);
 
-    // Obtener IDs de imágenes eliminadas
+    
     const removedImageIds = property.removedImages || [];
 
     const { images, _id, id, idPropiedad, ...propertyData } = property;
@@ -171,11 +162,11 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
       onSave(
         { 
           ...propertyData,
-          // Incluir solo las imágenes existentes (las nuevas se subirán por separado)
+        
           images: existingImages
         },
-        newImageFiles, // Archivos de imágenes nuevas
-        removedImageIds // IDs de imágenes eliminadas
+        newImageFiles,
+        removedImageIds 
       );
       return;
     }
@@ -431,7 +422,6 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
               {property.images
                 .filter(img => img !== null && img !== undefined)
                 .map((img, index) => {
-                  // Manejar diferentes formatos de imagen
                   const imageUrl = img.url || img.preview || (typeof img === 'string' ? img : null);
                   
                   if (!imageUrl) return null;

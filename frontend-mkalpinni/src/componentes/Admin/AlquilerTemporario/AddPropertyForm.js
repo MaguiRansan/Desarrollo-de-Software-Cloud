@@ -193,19 +193,16 @@ const AddPropertyForm = ({ onAddProperty, onCancel, isSubmitting = false }) => {
     const newService = newServiceInput.trim();
 
     if (newService) {
-      // Verificar si el servicio ya existe (ignorando mayúsculas/minúsculas)
       const allServices = [...BASE_SERVICES, ...customServices];
       const serviceExists = allServices.some(
         s => s.toLowerCase() === newService.toLowerCase()
       );
       
       if (!serviceExists) {
-        // Agregar a servicios personalizados
         const updatedCustomServices = [...customServices, newService];
         setCustomServices(updatedCustomServices);
         saveCustomServices(updatedCustomServices);
         
-        // Agregar a los servicios seleccionados
         setProperty(prev => ({ 
           ...prev, 
           servicios: [...(prev.servicios || []), newService] 
@@ -430,14 +427,14 @@ const AddPropertyForm = ({ onAddProperty, onCancel, isSubmitting = false }) => {
         longitud: property.longitud || 0,
         
         availability: availability.startDate && availability.endDate ? [{
-          id: `temp-${Math.random().toString(36).substr(2, 9)}`, // ID único temporal
+          id: `temp-${Math.random().toString(36).substr(2, 9)}`, 
           startDate: availability.startDate,
           endDate: availability.endDate,
           availableGuests: parseInt(availability.availableGuests) || 1,
-          status: 'disponible', // Asegurar que tenga un estado válido
-          clientName: '', // Campo requerido por el esquema
-          deposit: 0, // Valor por defecto para el depósito
-          guests: 1 // Valor por defecto para huéspedes
+          status: 'disponible', 
+          clientName: '', 
+          deposit: 0, 
+          guests: 1 
         }] : [],
         
         seasonalPrices: seasonalPrices.filter(sp => 

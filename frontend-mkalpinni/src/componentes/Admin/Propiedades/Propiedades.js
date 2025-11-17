@@ -46,7 +46,6 @@ const normalizeProperty = (prop = {}) => {
       ? prop.estado.toLowerCase()
       : 'disponible';
 
-  // Normalizar las imágenes
   let normalizedImages = [];
   if (Array.isArray(prop.images) && prop.images.length > 0) {
     normalizedImages = prop.images
@@ -99,7 +98,7 @@ const PropertyManagement = () => {
   const { properties: apiProperties, isLoading, error } = useAdminData('properties');
   
   const [properties, setProperties] = useState([]);
-  const [view, setView] = useState('selection'); // 'selection', 'list', or 'form'
+  const [view, setView] = useState('selection'); 
   const [selectedOperation, setSelectedOperation] = useState('venta');
   const [editingProperty, setEditingProperty] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -134,7 +133,6 @@ const PropertyManagement = () => {
 
   const filterProperties = (properties, filters, searchTerm) => {
     return properties.filter((property) => {
-      // Convert property price to number for comparison
       const propertyPrice = typeof property.price === 'string' 
         ? parseFloat(property.price.replace(/[^0-9.-]+/g,"")) 
         : Number(property.price) || 0;
@@ -367,11 +365,9 @@ const PropertyManagement = () => {
   const handleCancelForm = () => {
     try {
       setView('list');
-      // Redirigir a la lista correspondiente según el tipo de operación
       const path = selectedOperation === 'venta' ? '/admin/propiedades' : '/admin/propiedades/alquiler';
       window.location.href = path;
       
-      // Small delay to ensure the form is unmounted before clearing the editing property
       setTimeout(() => {
         setEditingProperty(null);
         setFormProperty(createEmptyProperty(selectedOperation));
