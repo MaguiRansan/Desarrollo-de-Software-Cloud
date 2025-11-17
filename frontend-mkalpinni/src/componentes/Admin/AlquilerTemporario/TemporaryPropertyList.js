@@ -4,7 +4,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { format, isWithinInterval, parseISO, isBefore } from 'date-fns';
+import { format, parseISO, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import { API_BASE_URL } from '../../../config/apiConfig';
@@ -13,7 +13,7 @@ const mapStatus = (statusFromForm) => {
   if (!statusFromForm) return 'disponible';
   const lowerStatus = statusFromForm.toLowerCase();
   if (lowerStatus === 'disponible') return 'disponible';
-  if (lowerStatus === 'reservado') return 'reservado_temp';
+  if (lowerStatus === 'no disponible') return 'no disponible';
   return lowerStatus;
 };
 
@@ -43,9 +43,11 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
   const [selectedDates, setSelectedDates] = useState({
     startDate: null,
     endDate: null,
+    status: 'disponible'
   });
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [datePickerKey, setDatePickerKey] = useState(0);
 
   useEffect(() => {
     const loadPropertyAvailability = async () => {
@@ -61,7 +63,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
           return;
         }
 
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('authToken');
         const response = await fetch(`${API_BASE_URL}/Propiedad/Disponibilidad/${propertyId}`, {
           method: 'GET',
           headers: {
@@ -84,10 +86,18 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
         const data = await response.json();
         
         if (data.status && data.value) {
+          const availability = data.value.availability || data.value.disponibilidad || [];
+          
+          const normalizedAvailability = availability.map(range => ({
+            ...range,
+            status: range.status ? String(range.status).toLowerCase() : 'disponible'
+          }));
+          
           setAvailabilityData({
             estado: data.value.estado || 'disponible',
-            availability: data.value.availability || []
+            availability: normalizedAvailability
           });
+          setDatePickerKey(prev => prev + 1);
         } else {
           throw new Error(data.message || 'La respuesta del servidor no fue válida');
         }
@@ -122,7 +132,8 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     setReservationDeposit(''); 
     setReservationGuests(''); 
     setCurrentImageIndex(0);
-    setSelectedDates({ startDate: null, endDate: null }); 
+    setSelectedDates({ startDate: null, endDate: null });
+    setDatePickerKey(0);
   };
 
   const closeModal = () => {
@@ -180,6 +191,102 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     toast.info("Ajuste de temporada añadido localmente. Recuerda guardar la propiedad.");
   };
 
+  const handleDeleteRange = async (rangeId) => {
+    if (!selectedProperty) return;
+    
+    const rangeToDelete = (selectedProperty.availability || []).find(
+      range => (range.id === rangeId || range._id?.toString() === rangeId)
+    );
+    
+    if (!rangeToDelete) return;
+    
+    const isAvailable = rangeToDelete.status?.toLowerCase() === 'disponible';
+    
+    let confirmMessage = `¿Está seguro de que desea eliminar este rango de fechas?\n\n` +
+      `Del ${format(new Date(rangeToDelete.startDate), 'dd/MM/yyyy')} al ${format(new Date(rangeToDelete.endDate), 'dd/MM/yyyy')}\n\n`;
+    
+    if (!isAvailable) {
+      confirmMessage += `• 'Aceptar' para marcar como disponible\n`;
+    }
+    confirmMessage += `• 'Cancelar' para no hacer cambios`;
+    
+    const userConfirmed = window.confirm(confirmMessage);
+    
+    if (!userConfirmed) return;
+
+    try {
+      const token = sessionStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No estás autenticado. Por favor, inicia sesión nuevamente.');
+      }
+
+      const deleteResponse = await fetch(`${API_BASE_URL}/Propiedad/Disponibilidad/${selectedProperty.id || selectedProperty._id}/${rangeId}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!deleteResponse.ok) {
+        const errorData = await deleteResponse.json().catch(() => ({}));
+        
+        if (deleteResponse.status === 401) {
+          sessionStorage.removeItem('authToken');
+          sessionStorage.removeItem('userData');
+          throw new Error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+        }
+        
+        throw new Error(errorData.message || 'Error al eliminar el rango de fechas');
+      }
+      
+      if (!isAvailable) {
+        const markAvailableResponse = await fetch(`${API_BASE_URL}/Propiedad/Disponibilidad/${selectedProperty.id || selectedProperty._id}`, {
+          method: 'PUT',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            startDate: rangeToDelete.startDate,
+            endDate: rangeToDelete.endDate,
+            status: 'disponible',
+            clientName: '',
+            deposit: 0,
+            guests: 1
+          })
+        });
+        
+        if (!markAvailableResponse.ok) {
+          const errorData = await markAvailableResponse.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Error al marcar las fechas como disponibles');
+        }
+      }
+
+      const updatedAvailability = (selectedProperty.availability || []).filter(
+        range => range.id !== rangeId && range._id?.toString() !== rangeId
+      );
+
+      setSelectedProperty(prev => ({
+        ...prev,
+        availability: updatedAvailability,
+        disponibilidad: updatedAvailability
+      }));
+
+      setAvailabilityData(prev => ({
+        ...prev,
+        availability: updatedAvailability
+      }));
+
+      toast.success('Rango de fechas eliminado correctamente');
+    } catch (error) {
+      console.error('Error al eliminar el rango:', error);
+      toast.error(error.message || 'Error al eliminar el rango de fechas');
+    }
+  };
+
   const handleDeleteSeason = (seasonId) => {
     if (!selectedProperty || !window.confirm('¿Estás seguro de que deseas eliminar este ajuste de temporada?')) {
       return;
@@ -199,45 +306,78 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
   };
 
 
-  const isDateBooked = (date) => {
-    const checkDate = date instanceof Date ? date : new Date(date);
+  const isDateOccupied = (date) => {
+    if (!date) return false;
+    const checkDate = date; 
     
-    return availabilityData.availability && availabilityData.availability.some(range => {
+    if (!availabilityData.availability || !Array.isArray(availabilityData.availability)) {
+      return false;
+    }
+    
+    return availabilityData.availability.some(range => {
       if (!range || !range.startDate || !range.endDate) return false;
       
       try {
         const startDate = new Date(range.startDate);
         const endDate = new Date(range.endDate);
         
-        startDate.setHours(0, 0, 0, 0);
-        endDate.setHours(23, 59, 59, 999);
+        const isInRange = checkDate >= startDate && checkDate <= endDate;
+        const statusLower = String(range.status || '').toLowerCase();
+        const isOccupiedStatus = statusLower === 'ocupado_temp' || statusLower === 'ocupado';
         
-        const isInRange = isWithinInterval(checkDate, { start: startDate, end: endDate });
-        const isBookedStatus = range.status && ['reservado_temp', 'ocupado_temp'].includes(range.status);
-        
-        return isInRange && isBookedStatus;
+        return isInRange && isOccupiedStatus;
       } catch (error) {
-        console.error('Error checking if date is booked:', error, range);
+        console.error('Error checking if date is occupied:', error, range);
+        return false;
+      }
+    });
+  };
+
+  const isDateReserved = (date) => {
+    if (!date) return false;
+    const checkDate = date;
+    
+    if (!availabilityData.availability || !Array.isArray(availabilityData.availability)) {
+      return false;
+    }
+    
+    return availabilityData.availability.some(range => {
+      if (!range || !range.startDate || !range.endDate) return false;
+      
+      try {
+        const startDate = new Date(range.startDate);
+        const endDate = new Date(range.endDate);
+        
+        const isInRange = checkDate >= startDate && checkDate <= endDate;
+        const statusLower = String(range.status || '').toLowerCase();
+        const isReservedStatus = statusLower === 'reservado_temp' || statusLower === 'reservado';
+        
+        return isInRange && isReservedStatus;
+      } catch (error) {
+        console.error('Error checking if date is reserved:', error, range);
         return false;
       }
     });
   };
   
   const isDateAvailable = (date) => {
-    const checkDate = date instanceof Date ? date : new Date(date);
+    if (!date) return false;
+    const checkDate = date;
     
-    return availabilityData.availability && availabilityData.availability.some(range => {
+    if (!availabilityData.availability || !Array.isArray(availabilityData.availability)) {
+      return false;
+    }
+    
+    return availabilityData.availability.some(range => {
       if (!range || !range.startDate || !range.endDate) return false;
       
       try {
         const startDate = new Date(range.startDate);
         const endDate = new Date(range.endDate);
 
-        startDate.setHours(0, 0, 0, 0);
-        endDate.setHours(23, 59, 59, 999);
-        
-        const isInRange = isWithinInterval(checkDate, { start: startDate, end: endDate });
-        const isAvailableStatus = range.status === 'disponible';
+        const isInRange = checkDate >= startDate && checkDate <= endDate;
+        const statusLower = String(range.status || '').toLowerCase();
+        const isAvailableStatus = statusLower === 'disponible';
         
         return isInRange && isAvailableStatus;
       } catch (error) {
@@ -245,6 +385,10 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
         return false;
       }
     });
+  };
+
+  const isDateBooked = (date) => {
+    return isDateOccupied(date) || isDateReserved(date);
   };
 
   const isRangeBooked = (start, end) => {
@@ -278,13 +422,51 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     }
     return true;
   };
+  const isRangeOccupied = (start, end) => {
+    if (!start || !end) return false;
+    let currentDate = new Date(start);
+    const finalEndDate = new Date(end);
+
+    while (isBefore(currentDate, finalEndDate) || currentDate.getTime() === finalEndDate.getTime()) {
+      if (isDateOccupied(currentDate)) { // Usa el helper que ya existe
+        return true;
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return false;
+  };
+
+  const isRangeBookableOrOccupiable = (start, end) => {
+    if (!start || !end) return false;
+    let currentDate = new Date(start);
+    const finalEndDate = new Date(end);
+    
+    if (!availabilityData.availability || availabilityData.availability.length === 0) {
+      return false;
+    }
+
+    while (isBefore(currentDate, finalEndDate) || currentDate.getTime() === finalEndDate.getTime()) {
+      const isAvailable = isDateAvailable(currentDate);
+      const isReserved = isDateReserved(currentDate);
+      
+      if (!isAvailable && !isReserved) {
+        return false; 
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return true;
+  };
   
   const sendAvailabilityUpdate = async (status, startDate, endDate, clientName, deposit, guests) => {
     if (!selectedProperty) return;
 
     try {
       const propertyId = selectedProperty._id || selectedProperty.id;
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('authToken');
+
+      if (!token) {
+        throw new Error('No estás autenticado. Por favor, inicia sesión nuevamente.');
+      }
 
       const response = await fetch(`${API_BASE_URL}/Propiedad/Disponibilidad/${propertyId}`, {
         method: 'PUT', 
@@ -304,28 +486,47 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
+        
+        if (response.status === 401) {
+          sessionStorage.removeItem('authToken');
+          sessionStorage.removeItem('userData');
+          throw new Error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+        }
+        
         throw new Error(errorData.message || 'Error al actualizar la disponibilidad');
       }
 
       const data = await response.json();
       
       if (data.status) {
+        const availability = data.value.availability || data.value.disponibilidad || [];
+        console.log('Availability actualizada:', availability);
+        console.log('Estado actualizado:', data.value.estado);
+        
+        const normalizedAvailability = availability.map(range => ({
+          ...range,
+          status: range.status ? String(range.status).toLowerCase() : 'disponible'
+        }));
+        
         setAvailabilityData({
-          estado: data.value.estado,
-          availability: data.value.availability || []
+          estado: data.value.estado || 'disponible',
+          availability: normalizedAvailability
         });
         
         setSelectedProperty(prev => ({
           ...prev,
-          estado: data.value.estado,
-          availability: data.value.availability
+          estado: data.value.estado || 'disponible',
+          availability: normalizedAvailability,
+          disponibilidad: normalizedAvailability
         }));
 
         setClientName('');
         setSelectedDates({ startDate: null, endDate: null });
         setReservationDeposit('');
         setReservationGuests('');
+        
+        setDatePickerKey(prev => prev + 1);
         
         return true; 
       } else {
@@ -334,10 +535,9 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     } catch (error) {
       console.error(`Error en sendAvailabilityUpdate (status: ${status}):`, error);
       toast.error(error.message);
-      return false; 
+      return false;
     }
   };
-
 
   const handleReserveProperty = async () => {
     if (!selectedDates.startDate || !selectedDates.endDate) {
@@ -367,7 +567,11 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     );
 
     if (success) {
-      toast.success('Propiedad reservada exitosamente');
+      setClientName('');
+      setReservationDeposit('');
+      setReservationGuests('');
+      setSelectedDates({ startDate: null, endDate: null });
+      toast.success('Propiedad reservada correctamente');
     }
   };
 
@@ -380,15 +584,14 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       toast.error('Por favor complete el Nombre del Cliente y el Número de Huéspedes.');
       return;
     }
-    if (isRangeBooked(selectedDates.startDate, selectedDates.endDate)) {
-      toast.error('Error: El rango seleccionado se superpone con fechas que ya están reservadas u ocupadas.');
+    if (isRangeOccupied(selectedDates.startDate, selectedDates.endDate)) {
+      toast.error('Error: El rango seleccionado se superpone con fechas que ya están ocupadas.');
       return;
     }
-    if (!isRangeFullyAvailable(selectedDates.startDate, selectedDates.endDate)) {
-      toast.error('Error: Solo puede reservar u ocupar fechas que estén explícitamente marcadas como "Disponibles".');
+    if (!isRangeBookableOrOccupiable(selectedDates.startDate, selectedDates.endDate)) {
+      toast.error('Error: Solo puede ocupar fechas que estén explícitamente marcadas como "Disponibles" o "Reservadas".');
       return;
     }
-
     const success = await sendAvailabilityUpdate(
       'ocupado_temp',
       selectedDates.startDate,
@@ -399,54 +602,166 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     );
 
     if (success) {
-      toast.success('Ocupación registrada exitosamente');
+      setClientName('');
+      setReservationDeposit('');
+      setReservationGuests('');
+      setSelectedDates({ startDate: null, endDate: null });
+      toast.success('Propiedad marcada como ocupada correctamente');
     }
   };
-  
+
   const handleSetAvailable = async () => {
     if (!selectedDates.startDate || !selectedDates.endDate) {
-      toast.error('Por favor seleccione un rango de fechas para marcar como disponible.');
+      toast.error('Por favor seleccione un rango de fechas.');
       return;
     }
-
-    if (isRangeBooked(selectedDates.startDate, selectedDates.endDate)) {
-      toast.error('Error: El rango seleccionado se superpone con fechas que ya están reservadas u ocupadas.');
-      return;
-    }
-
+    
     const success = await sendAvailabilityUpdate(
       'disponible',
       selectedDates.startDate,
       selectedDates.endDate,
-      '', 0, 0 
+      '',
+      0,
+      1
     );
 
     if (success) {
-      toast.success('Rango de fechas marcado como disponible');
+      setClientName('');
+      setReservationDeposit('');
+      setReservationGuests('');
+      setSelectedDates({ startDate: null, endDate: null });
+      toast.success('Rango de fechas marcado como disponible correctamente');
+    }
+  };  
+  const handleDeleteDate = async (date) => {
+    if (!selectedProperty || !date) return;
+    
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    
+    const isBooked = isDateOccupied(date) || isDateReserved(date);
+    const confirmMessage = isBooked 
+      ? `¿Está seguro de que desea marcar el día ${format(date, 'dd/MM/yyyy')} como disponible?`
+      : `¿Está seguro de que desea marcar el día ${format(date, 'dd/MM/yyyy')} como no disponible?`;
+
+    if (window.confirm(confirmMessage)) {
+      try {
+        const token = sessionStorage.getItem('authToken');
+        if (!token) {
+          throw new Error('No estás autenticado. Por favor, inicia sesión nuevamente.');
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/Propiedad/Disponibilidad/${selectedProperty.id || selectedProperty._id}/date/${formattedDate}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Error al actualizar la fecha');
+        }
+        
+        const data = await response.json();
+        
+        if (data.status && data.value) {
+          const availability = data.value.availability || data.value.disponibilidad || [];
+          
+          const normalizedAvailability = availability.map(range => ({
+            ...range,
+            status: range.status ? String(range.status).toLowerCase() : 'disponible'
+          }));
+
+          setAvailabilityData(prev => ({
+            ...prev,
+            availability: normalizedAvailability
+          }));
+
+          setSelectedProperty(prev => ({
+            ...prev,
+            availability: normalizedAvailability,
+            disponibilidad: normalizedAvailability
+          }));
+          
+          setDatePickerKey(prev => prev + 1);
+          
+          toast.success('Fecha actualizada correctamente');
+        } else {
+          throw new Error(data.message || 'La respuesta del servidor no fue válida');
+        }
+        
+      } catch (error) {
+        console.error('Error al actualizar la fecha:', error);
+        toast.error(error.message || 'Error al actualizar la fecha');
+      }
     }
   };
-  
+
   const renderDayContents = (day, date) => {
-    const baseClasses = "rounded-full w-9 h-9 flex items-center justify-center";
+    const baseClasses = "rounded-full w-9 h-9 flex items-center justify-center font-medium";
+    const isAvailable = isDateAvailable(date);
+    const isOccupied = isDateOccupied(date);
+    const isReserved = isDateReserved(date);
     
-    if (isDateBooked(date)) {
-      return <div className={`bg-red-100 text-red-800 ${baseClasses}`}>{day}</div>;
+    let dayContent;
+    let title = '';
+    
+    if (isOccupied) {
+      dayContent = <div className={`bg-red-200 text-red-900 border-2 border-red-400 ${baseClasses} cursor-pointer hover:bg-red-300`}>{day}</div>;
+      title = 'Doble clic para marcar como Disponible';
+    } else if (isReserved) {
+      dayContent = <div className={`bg-yellow-200 text-yellow-900 border-2 border-yellow-400 ${baseClasses} cursor-pointer hover:bg-yellow-300`}>{day}</div>;
+      title = 'Doble clic para marcar como Disponible';
+    } else if (isAvailable) {
+      dayContent = <div className={`bg-green-200 text-green-900 border-2 border-green-400 ${baseClasses} cursor-pointer hover:bg-green-300`}>
+        {day}
+      </div>;
+      title = 'Doble clic para marcar como No Disponible';
+    } else {
+      dayContent = <div className={`text-gray-400 ${baseClasses}`}>{day}</div>;
     }
-    if (isDateAvailable(date)) {
-      return <div className={`bg-green-100 text-green-800 ${baseClasses}`}>{day}</div>;
-    }
-    return <div className={`text-gray-400 ${baseClasses}`}>{day}</div>;
+    
+    const canDoubleClick = isAvailable || isOccupied || isReserved;
+    
+    return (
+      <div 
+        onDoubleClick={() => canDoubleClick && handleDeleteDate(date)}
+        title={title}
+      >
+        {dayContent}
+      </div>
+    );
   };
   
   const handleDateChange = (dates) => {
     const [start, end] = dates;
+    
+    if (start && selectedDates.startDate && start.getTime() === selectedDates.startDate.getTime() && !end) {
+      setSelectedDates({
+        startDate: null,
+        endDate: null,
+        status: selectedDates.status
+      });
+      return;
+    }
+    
+    if (end && selectedDates.endDate && end.getTime() === selectedDates.endDate.getTime()) {
+      setSelectedDates(prev => ({
+        ...prev,
+        endDate: null
+      }));
+      return;
+    }
     
     const startDate = start ? new Date(start.setHours(0, 0, 0, 0)) : null;
     const endDate = end ? new Date(end.setHours(23, 59, 59, 999)) : null;
     
     setSelectedDates({ 
       startDate: startDate,
-      endDate: endDate 
+      endDate: endDate,
+      status: selectedDates.status
     });
   };
 
@@ -517,7 +832,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
             
             const propertyId = property.id || property._id || `property-${index}`;
             const propertyTitle = property.title || 'Sin título';
-            const currentStatus = mapStatus(property.estado || property.status || 'disponible');
+            const currentStatus = mapStatus(property.estado || 'disponible');
             const displayPrice = property.price || property.precioPorNoche || property.pricePerWeek || property.pricePerMonth || 0;
             const priceDescription = (property.price || property.precioPorNoche) ? 'por noche' : (property.pricePerWeek ? 'por semana' : (property.pricePerMonth ? 'por mes' : ''));
             
@@ -744,13 +1059,13 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                   {(selectedProperty.images && selectedProperty.images.length > 0) ? (
                     <>
                       <img
-                        src={(typeof selectedProperty.images[currentImageIndex] === 'object' && selectedProperty.images[currentImageIndex] !== null) ? 
-                             (selectedProperty.images[currentImageIndex].rutaArchivo || selectedProperty.images[currentImageIndex].url) :
-                             selectedProperty.images[currentImageIndex]}
+                        src={(typeof selectedProperty.images[currentImageIndex] === 'object' && selectedProperty.images[currentImageIndex] !== null) 
+                             ? (selectedProperty.images[currentImageIndex].rutaArchivo || selectedProperty.images[currentImageIndex].url) 
+                             : (typeof selectedProperty.images[currentImageIndex] === 'string' ? selectedProperty.images[currentImageIndex] : null)}
                         alt={`Imagen ${currentImageIndex + 1}`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.target.src = "https://via.placeholder.com/600x400";
+                          e.target.src = "https://via.placeholder.com/600";
                         }}
                       />
                       {selectedProperty.images.length > 1 && (
@@ -810,6 +1125,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                   
                   <div className="mb-4">
                     <DatePicker
+                      key={`datepicker-${selectedProperty?._id || selectedProperty?.id}-${datePickerKey}`}
                       selected={selectedDates.startDate}
                       onChange={handleDateChange}
                       startDate={selectedDates.startDate}
@@ -823,17 +1139,21 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                       monthsShown={2}
                     />
                     
-                    <div className="flex items-center mt-2 text-base">
-                      <div className="flex items-center mr-4">
-                        <div className="w-4 h-4 bg-green-100 rounded-full mr-1"></div>
+                    <div className="flex items-center mt-2 text-base flex-wrap gap-4">
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 bg-green-200 border-2 border-green-400 rounded-full mr-2"></div>
                         <span>Disponible</span>
                       </div>
-                      <div className="flex items-center mr-4">
-                        <div className="w-4 h-4 bg-red-100 rounded-full mr-1"></div>
-                        <span>Ocupado/Reservado</span>
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 bg-yellow-200 border-2 border-yellow-400 rounded-full mr-2"></div>
+                        <span>Reservado</span>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-4 h-4 bg-gray-100 rounded-full mr-1"></div>
+                        <div className="w-4 h-4 bg-red-200 border-2 border-red-400 rounded-full mr-2"></div>
+                        <span>Ocupado</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 bg-gray-100 rounded-full mr-2"></div>
                         <span>No disponible</span>
                       </div>
                     </div>
@@ -949,11 +1269,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                                 )}
                               </div>
                               <button 
-                                onClick={() => {
-                                  if (window.confirm('¿Está seguro de que desea eliminar este rango de fechas?')) {
-                                    toast.info('La eliminación de rangos individuales debe implementarse en el backend (DELETE /Disponibilidad/:id/:rangeId).');
-                                  }
-                                }}
+                                onClick={() => handleDeleteRange(range.id || range._id)}
                                 className="text-red-500 hover:text-red-700"
                                 title="Eliminar"
                               >
@@ -1054,13 +1370,11 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                     <FaPlus />
                     <span>{showSeasonForm ? 'Cerrar Formulario' : 'Añadir Ajuste'}</span>
                   </button>
-
                   {showSeasonForm && (
                     <form onSubmit={handleAddSeason} className="mt-4 space-y-3 p-3 border rounded-lg bg-gray-50">
-                      <input name="description" value={newSeason.description} onChange={handleSeasonChange} placeholder="Descripción (Ej: Alta Temporada)" className="w-full p-2 border rounded text-base" required />
                       <input name="startDate" value={newSeason.startDate} onChange={handleSeasonChange} type="date" className="w-full p-2 border rounded text-base" required />
                       <input name="endDate" value={newSeason.endDate} onChange={handleSeasonChange} type="date" className="w-full p-2 border rounded text-base" required />
-                      <input name="percentage" value={newSeason.percentage} onChange={handleSeasonChange} placeholder="Ajuste % (Ej: 10 o -5)" className="w-full p-2 border rounded text-base" type="number" required />
+                      <input name="percentage" value={newSeason.percentage} onChange={handleSeasonChange} placeholder="Ej: 10%" className="w-full p-2 border rounded text-base" type="number" required />
                       <button type="submit" disabled={isSubmitting} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg disabled:bg-gray-400 text-base">
                         {isSubmitting ? 'Guardando...' : 'Guardar Ajuste'}
                       </button>
