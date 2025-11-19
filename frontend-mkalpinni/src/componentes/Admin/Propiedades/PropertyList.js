@@ -1,14 +1,20 @@
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
+import { FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaRuler, FaCheck, FaTimes, FaEdit, FaTrash, FaEye, FaClock, FaTag } from 'react-icons/fa';
 import React, { useState } from 'react';
 
-const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddNew, onEdit, onDelete, onUpdateStatus }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+const PropertyList = ({ 
+  properties, 
+  selectedOperation, 
+  viewMode = 'grid', 
+  onEdit, 
+  onDelete, 
+  searchTerm = '',
+  onUpdateStatus,
+  setImages
+}) => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [lessor, setLessor] = useState('');
   const [lessee, setLessee] = useState('');
-  const [images, setImages] = useState([]);
 
   const filteredProperties = properties.filter((property) => {
     const matchesOperation = property.operationType === selectedOperation || 
@@ -35,6 +41,8 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
     setLessee('');
   };
 
+  // Manejadores de eventos comentados ya que no se están utilizando actualmente
+  /*
   const handleReserveProperty = () => {
     if (lessor && lessee) {
       onUpdateStatus(selectedProperty.id, 'reservado', lessor, lessee);
@@ -53,6 +61,7 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
     const files = Array.from(e.target.files);
     setImages(files);
   };
+  */
 
   const renderPropertyImage = (property) => {
     if (property.images && property.images.length > 0) {
@@ -94,103 +103,96 @@ const PropertyList = ({ properties, selectedOperation, viewMode = 'grid', onAddN
   };
 
   return (
-    <div>
-
+    <div className="w-full">
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProperties.map((property) => (
             <div
               key={property.id}
               className={`bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-lg ${
-                property.status === 'ocupado' ? 'opacity-80' : ''
+                property.status === 'ocupado' ? 'opacity-80 border-l-4 border-red-500' : ''
               } ${
                 property.status === 'reservado' ? 'border-l-4 border-yellow-400' : ''
               }`}
             >
-              {renderPropertyImage(property)}
+              <div className="relative h-48 w-full overflow-hidden">
+                {renderPropertyImage(property)}
+                {property.status === 'ocupado' && (
+                  <div className="absolute top-2 right-2 flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    <FaTimes className="w-3 h-3 mr-1" />
+                    Ocupado
+                  </div>
+                )}
+                {property.status === 'reservado' && (
+                  <div className="absolute top-2 right-2 flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    <FaClock className="w-3 h-3 mr-1" />
+                    Reservado
+                  </div>
+                )}
+                {!['ocupado', 'reservado'].includes(property.status) && (
+                  <div className="absolute top-2 right-2 flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <FaCheck className="w-3 h-3 mr-1" />
+                    Disponible
+                  </div>
+                )}
+              </div>
               
               <div className="p-6">
                 <div className="flex flex-col mb-4">
-                  <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{property.title}</h3>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{property.title}</h3>
+                  <p className="text-gray-600 flex items-center mb-1">
+                    <FaMapMarkerAlt className="mr-2 text-blue-500" />
+                    {property.address}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {property.neighborhood && `${property.neighborhood}, `}
+                    {property.locality && `${property.locality}, `}
+                    {property.province}
+                  </p>
                   <div className="flex justify-between items-center mt-1">
-                    <span className="text-green-600 font-bold text-xl">${property.price.toLocaleString()}</span>
-                    {property.status === 'ocupado' && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        Ocupado
-                      </span>
-                    )}
-                    {property.status === 'reservado' && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        Reservado
-                      </span>
-                    )}
+                    <span className="text-green-600 font-bold text-xl">${property.price?.toLocaleString() || 'N/A'}</span>
+                    <span className="text-sm text-gray-500">
+                      {selectedOperation === 'alquiler' ? '/mes' : ''}
+                    </span>
                   </div>
                 </div>
-
-                <p className="text-gray-600 mb-4 flex items-center">
-                  <FaMapMarkerAlt className="mr-2 text-blue-500" />
-                  {property.address}
-                </p>
-
-                <div className={`grid ${property.landSquareMeters ? 'grid-cols-4' : 'grid-cols-3'} gap-2 text-gray-600 mb-6 text-sm`}>
+                
+                <div className="grid grid-cols-3 gap-2 text-gray-600 mb-6 text-sm">
                   <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
                     <FaBed className="text-blue-500 mb-1" />
-                    <span>{property.bedrooms || '0'} {property.bedrooms === 1 ? 'dormitorio' : 'dormitorios'}</span>
+                    <span>{property.bedrooms || '0'} dorm.</span>
                   </span>
                   <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
                     <FaBath className="text-blue-500 mb-1" />
-                    <span>{property.bathrooms || '0'} {property.bathrooms === 1 ? 'baño' : 'baños'}</span>
+                    <span>{property.bathrooms || '0'} baños</span>
                   </span>
                   <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
                     <FaRulerCombined className="text-blue-500 mb-1" />
                     <span>{property.squareMeters || '0'} m²</span>
                   </span>
-                  {property.landSquareMeters !== undefined && property.landSquareMeters !== null && property.landSquareMeters !== '' && (
-                    <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
-                      <FaRuler className="text-blue-500 mb-1" />
-                      <span>{property.landSquareMeters} m² terreno</span>
-                    </span>
-                  )}
                 </div>
-
-                <div className="flex items-center mb-4">
-                  <FaTag className="mr-2 text-blue-500" />
-                  <span className="text-gray-600">Tipo: {property.type}</span>
-                </div>
-
-                <div className="text-gray-600 mb-6">
-                  <p className="flex items-center">
-                    <FaMapMarkerAlt className="mr-2 text-blue-500" />
-                    Barrio: {property.neighborhood}
-                  </p>
-                  <p className="flex items-center">
-                    Localidad: {property.locality}
-                  </p>
-                  <p className="flex items-center">
-                    Provincia: {property.province}
-                  </p>
-                </div>
-
-                <div className="text-gray-600 mb-6">
-                  <p className="flex items-center">
-                    Estado: {property.status}
-                  </p>
-                </div>
-
+                
+                {property.landSquareMeters && (
+                  <div className="text-sm text-gray-600 mb-4 flex items-center">
+                    <FaRuler className="text-blue-500 mr-2" />
+                    {property.landSquareMeters} m² terreno
+                  </div>
+                )}
+                
                 <div className="flex space-x-2">
                   <button
                     onClick={() => onEdit(property)}
-                    className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300"
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-lg transition duration-300"
+                    title="Editar"
                   >
                     <FaEdit />
-                    <span>Editar</span>
                   </button>
                   <button
                     onClick={() => onDelete(property.id)}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition duration-300"
+                    className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition duration-300"
+                    title="Eliminar"
                   >
                     <FaTrash />
-                    <span>Eliminar</span>
                   </button>
                   <button
                     onClick={() => handleViewProperty(property)}
