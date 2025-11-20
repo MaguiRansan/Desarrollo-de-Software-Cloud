@@ -1,60 +1,143 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, Link } from "react-router-dom";
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import TemporaryPropertyList from './TemporaryPropertyList';
 import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
 import AddPropertyForm from './AddPropertyForm';
 import Filters from './Filters';
 import ReservationCalendar from './ReservationCalendar';
 import EditPropertyForm from './EditPropertyForm';
 import AdminLayout from '../AdminLayout';
+
 import { propertyService } from '../../../services/api';
 
-const PropertyList = () => {
+const Temporarios = () => {
   const [properties, setProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [editingProperty, setEditingProperty] = useState(null);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [filters, setFilters] = useState({
+    city: '',
+    capacity: '',
+    priceRange: { min: 0, max: 10000000 },
+    services: [],
+  });
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [propertyToEdit, setPropertyToEdit] = useState(null);
+
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  const [users, setUsers] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [sortBy, setSortBy] = useState('name');
 
   useEffect(() => {
     const fetchTemporaryRentals = async () => {
       try {
         setIsLoading(true);
+
+        const token = localStorage.getItem('token');
+
         const response = await propertyService.getForTemporaryRent();
-        
+
         if (response.status && response.value) {
-          const mappedProperties = response.value.map(prop => ({
-            id: prop.id,
-            name: prop.titulo,
-            description: prop.descripcion,
-            location: { 
-              city: prop.ubicacion || prop.localidad || 'Sin ubicación', 
-              address: prop.direccion || 'Sin dirección' 
-            },
-            capacity: prop.capacidadPersonas || 1,
-            services: prop.servicios || [],
-            price: { 
-              night: prop.precioPorNoche || 0, 
-              week: prop.precioPorSemana || 0, 
-              month: prop.precioPorMes || 0 
-            },
-            images: prop.imagenes && prop.imagenes.length > 0 
-              ? prop.imagenes.map(img => `http://localhost:5228/uploads/${img.rutaArchivo}`)
-              : ['https://via.placeholder.com/300'],
-            availability: [], 
-            rules: {
-              checkIn: prop.horarioCheckIn || '15:00',
-              checkOut: prop.horarioCheckOut || '11:00',
-              cancellationPolicy: prop.politicaCancelacion || 'Flexible',
-              houseRules: prop.reglasPropiedad ? prop.reglasPropiedad.join(', ') : 'Sin reglas específicas',
-            },
-            securityDeposit: prop.depositoSeguridad || 0,
-            paymentMethods: prop.metodosPago || ['Efectivo'],
-            paymentHistory: [],
-          }));
-          setProperties(mappedProperties);
+          const propertiesWithAvailability = await Promise.all(
+            response.value.map(async (prop) => {
+              try {
+                const availabilityResponse = await fetch(`/API/Propiedad/Disponibilidad/${prop._id || prop.id}`, {
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                  }
+                });
+
+                let availability = [];
+                if (availabilityResponse.ok) {
+                  const availabilityData = await availabilityResponse.json();
+                  if (availabilityData.status && availabilityData.value) {
+                    availability = availabilityData.value.availability || [];
+                  }
+                }
+
+                const mappedProperty = {
+                  id: prop.id || prop._id,
+                  _id: prop._id || prop.id,
+                  title: prop.title || prop.titulo || 'Sin título',
+                  description: prop.description || prop.descripcion || 'Sin descripción',
+                  address: prop.address || prop.direccion || 'Sin dirección',
+                  neighborhood: prop.neighborhood || prop.barrio || 'Sin barrio',
+                  locality: prop.locality || prop.localidad || 'Sin localidad',
+                  province: prop.province || prop.provincia || 'Sin provincia',
+                  type: prop.type || prop.tipoPropiedad || 'Casa/Depto',
+                  price: prop.precioPorNoche || 0,
+                  transaccionTipo: 'Alquiler Temporario',
+                  pricePerWeek: prop.precioPorSemana || 0,
+                  pricePerMonth: prop.precioPorMes || 0,
+                  priceDescription: 'por noche',
+                  squareMeters: prop.squareMeters || prop.superficieM2 || 0,
+                  bedrooms: prop.bedrooms || prop.habitaciones || 0,
+                  bathrooms: prop.bathrooms || prop.banos || 0,
+                  capacity: prop.capacidadPersonas || 1,
+                  services: Array.isArray(prop.services) ? prop.services : [],
+                  rules: Array.isArray(prop.reglasPropiedad) ? prop.reglasPropiedad : [],
+                  status: (prop.estado || 'disponible').toLowerCase(),
+                  operationType: 'alquiler_temporario',
+                  checkInTime: prop.horarioCheckIn || '15:00',
+                  checkOutTime: prop.horarioCheckOut || '11:00',
+                  estadiaMinima: (prop.estadiaMinima === null || prop.estadiaMinima === undefined || prop.estadiaMinima === 0)
+                    ? 1
+                    : prop.estadiaMinima,
+                  securityDeposit: prop.depositoSeguridad || 0,
+                  currency: prop.currency || 'USD',
+                  images: Array.isArray(prop.images) && prop.images.length > 0
+                    ? prop.images.map(img => {
+                      if (typeof img === 'object') {
+                        return {
+                          ...img,
+                          rutaArchivo: img.rutaArchivo || img.url || 'https://via.placeholder.com/300',
+                          url: img.url || img.rutaArchivo || 'https://via.placeholder.com/300'
+                        };
+                      }
+                      return {
+                        rutaArchivo: img,
+                        url: img
+                      };
+                    })
+                    : ['https://via.placeholder.com/300'],
+                  availability: availability.map(range => ({
+                    ...range,
+                    startDate: new Date(range.startDate),
+                    endDate: new Date(range.endDate)
+                  })),
+                  ...(prop.especificaciones && { specifications: prop.especificaciones }),
+                  ...(prop.latitud && { latitude: parseFloat(prop.latitud) || 0 }),
+                  ...(prop.longitud && { longitude: parseFloat(prop.longitud) || 0 }),
+                  cliente: prop.cliente || '',
+                  fechaReserva: prop.fechaReserva || ''
+                };
+
+                return mappedProperty;
+              } catch (error) {
+                return {
+                  ...prop,
+                  availability: [],
+                  id: prop.id || prop._id,
+                  _id: prop._id || prop.id
+                };
+              }
+            })
+          );
+
+          setProperties(propertiesWithAvailability);
         } else {
           setError('No se pudieron cargar las propiedades de alquiler temporario');
+          toast.error(response.message || 'Error al cargar las propiedades');
         }
       } catch (err) {
-        console.error('❌ Error cargando propiedades temporarias:', err);
         setError('Error al cargar las propiedades: ' + err.message);
       } finally {
         setIsLoading(false);
@@ -64,219 +147,478 @@ const PropertyList = () => {
     fetchTemporaryRentals();
   }, []);
 
-  const [editingProperty, setEditingProperty] = useState(null);
-  const [selectedProperty, setSelectedProperty] = useState(null);
-  const [filters, setFilters] = useState({
-    city: '',
-    capacity: '',
-    priceRange: { min: 0, max: 1000 },
-    services: [],
-  });
+  const handleSaveProperty = async (propertyData, imageFiles = []) => {
+    try {
+      setIsLoading(true);
 
-  const [showFilters, setShowFilters] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('grid');
-  const [users, setUsers] = useState([]);
-  const [payments, setPayments] = useState([]);
+      const propertyToSave = {
+        titulo: propertyData.titulo || '',
+        descripcion: propertyData.descripcion || '',
+        direccion: propertyData.direccion || '',
+        barrio: propertyData.barrio || '',
+        localidad: propertyData.localidad || '',
+        provincia: propertyData.provincia || '',
+        tipoPropiedad: propertyData.tipoPropiedad || 'Casa',
+        transaccionTipo: 'Alquiler Temporario',
 
-  const filteredProperties = properties.filter((property) => {
-    const matchesFilters = (
-      (filters.city === '' || property.location.city.includes(filters.city)) &&
-      (filters.capacity === '' || property.capacity >= parseInt(filters.capacity)) &&
-      property.price.night >= filters.priceRange.min &&
-      property.price.night <= filters.priceRange.max &&
-      (filters.services.length === 0 ||
-        filters.services.every((service) => property.services.includes(service)))
-    );
-    
-    const matchesSearch = !searchTerm || 
-      property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.location.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.location.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.description.toLowerCase().includes(searchTerm.toLowerCase());
+        habitaciones: propertyData.habitaciones ? parseInt(propertyData.habitaciones) : 0,
+        banos: propertyData.banos ? parseInt(propertyData.banos) : 0,
+        superficieM2: propertyData.superficieM2 ? parseFloat(propertyData.superficieM2) : 0,
+        capacidadPersonas: propertyData.capacidadPersonas ? parseInt(propertyData.capacidadPersonas) : 1,
 
-    return matchesFilters && matchesSearch;
-  });
+        precio: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
+        precioPorNoche: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
+        precioPorSemana: propertyData.precioPorSemana ? parseFloat(propertyData.precioPorSemana) : 0,
+        precioPorMes: propertyData.precioPorMes ? parseFloat(propertyData.precioPorMes) : 0,
+
+        horarioCheckIn: propertyData.horarioCheckIn || '15:00',
+        horarioCheckOut: propertyData.horarioCheckOut || '11:00',
+        estadiaMinima: propertyData.estadiaMinima,
+
+        servicios: Array.isArray(propertyData.servicios) ? propertyData.servicios : [],
+        reglasPropiedad: Array.isArray(propertyData.reglasPropiedad) ? propertyData.reglasPropiedad : [],
+
+        estado: propertyData.estado ? propertyData.estado.charAt(0).toUpperCase() + propertyData.estado.slice(1).toLowerCase() : 'Disponible',
+        esAlquilerTemporario: true,
+        activo: true,
+
+        ...(propertyData.availability && propertyData.availability.length > 0 && {
+          disponibilidad: propertyData.availability.map(avail => ({
+            startDate: new Date(avail.startDate),
+            endDate: new Date(avail.endDate),
+            status: 'disponible',
+            clientName: '',
+            deposit: 0,
+            guests: parseInt(avail.availableGuests) || 1,
+            notes: '',
+            id: `range-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          }))
+        }),
+
+        imagenes: Array.isArray(propertyData.imagenes)
+          ? propertyData.imagenes
+            .filter(img => {
+              if (typeof img === 'string' && img.startsWith('data:')) return false;
+              return true;
+            })
+            .map(img => {
+              if (typeof img === 'object' && img !== null) {
+                return {
+                  rutaArchivo: img.rutaArchivo || img.url,
+                  nombreArchivo: img.nombreArchivo || 'imagen_existente',
+                  _id: img._id
+                };
+              }
+              return {
+                rutaArchivo: img,
+                nombreArchivo: 'imagen_existente'
+              };
+            })
+          : [],
+      };
+
+      if (propertyData.availability && propertyData.availability.length > 0) {
+        propertyToSave.availability = propertyData.availability.map(avail => ({
+          startDate: new Date(avail.startDate),
+          endDate: new Date(avail.endDate),
+          status: 'disponible',
+          clientName: '',
+          deposit: 0,
+          guests: parseInt(avail.availableGuests) || 1,
+          notes: '',
+          id: `range-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        }));
+      }
+
+      Object.keys(propertyToSave).forEach(key => {
+        if (propertyToSave[key] === '' || propertyToSave[key] === null || propertyToSave[key] === undefined) {
+          delete propertyToSave[key];
+        }
+      });
+
+      let response;
+      const isEditing = !!propertyToEdit;
+      const propertyId = isEditing ? (propertyToEdit.id || propertyToEdit._id) : null;
+
+      if (isEditing) {
+        response = await propertyService.update(propertyId, propertyToSave);
+      } else {
+        response = await propertyService.create(propertyToSave);
+      }
+
+      if (response.status && response.value) {
+        const savedPropertyId = response.value._id || response.value.id;
+        let finalProperty = response.value;
+
+        if (imageFiles && imageFiles.length > 0) {
+          const uploadResponse = await propertyService.uploadImages(savedPropertyId, imageFiles);
+
+          if (!uploadResponse.status) {
+            throw new Error('Propiedad guardada pero error al subir las imágenes');
+          }
+
+          if (uploadResponse.value && uploadResponse.value.length > 0) {
+            finalProperty = {
+              ...finalProperty,
+              imagenes: uploadResponse.value
+            };
+          }
+        }
+
+        if (isEditing) {
+          setProperties(prev => prev.map(p =>
+            (p.id === propertyId || p._id === propertyId) ? finalProperty : p
+          ));
+          toast.success('Propiedad actualizada exitosamente');
+        } else {
+          setProperties(prev => [...prev, finalProperty]);
+          toast.success('Propiedad creada exitosamente');
+        }
+
+        setIsFormOpen(false);
+        setPropertyToEdit(null);
+      } else {
+        throw new Error(response.message || 'Error al guardar la propiedad');
+      }
+    } catch (error) {
+      toast.error(`Error al guardar la propiedad: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddProperty = () => {
+    setPropertyToEdit(null);
+    setIsFormOpen(true);
+  };
+
+  const handleEditProperty = (property) => {
+    setPropertyToEdit(property);
+    setIsFormOpen(true);
+  };
+
+  const handleCancelForm = () => {
+    setPropertyToEdit(null);
+    setIsFormOpen(false);
+  };
+
+  const handleDeleteProperty = async (propertyId) => {
+    if (!window.confirm('¿Está seguro de eliminar esta propiedad temporaria?')) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await propertyService.delete(propertyId);
+
+      if (response.status) {
+        setProperties(prevProperties =>
+          prevProperties.filter(p => (p.id !== propertyId && p._id !== propertyId))
+        );
+        toast.success('Propiedad eliminada correctamente');
+      } else {
+        throw new Error(response.message || 'Error al eliminar la propiedad');
+      }
+    } catch (error) {
+      toast.error(`Error al eliminar la propiedad: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (id, status, clientName = '', dateRange = '', rangeData = null) => {
+    try {
+      const currentProperty = properties.find(p => p.id === id || p._id === id);
+      if (!currentProperty) {
+        throw new Error('Propiedad no encontrada');
+      }
+
+      if (rangeData) {
+        const response = await fetch(`/API/Propiedad/Disponibilidad/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            disponible: status === 'disponible',
+            fechaInicio: rangeData.startDate,
+            fechaFin: rangeData.endDate,
+            cliente: rangeData.clientName || '',
+            deposito: rangeData.deposit || 0,
+            huespedes: rangeData.guests || 1
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Error al actualizar la disponibilidad');
+        }
+
+        const updatedProperty = await response.json();
+
+        setProperties(prevProperties =>
+          prevProperties.map(p =>
+            (p.id === id || p._id === id)
+              ? { ...updatedProperty.value, id: p.id || p._id, _id: p._id || p.id }
+              : p
+          )
+        );
+
+        toast.success('Disponibilidad actualizada correctamente');
+        return;
+      }
+
+
+      setProperties(prevProperties =>
+        prevProperties.map(p =>
+          (p.id === id || p._id === id)
+            ? {
+              ...p,
+              estado: status,
+              cliente: clientName,
+              fechaReserva: dateRange
+            }
+            : p
+        )
+      );
+
+      toast.success('Estado de la propiedad actualizado correctamente');
+
+    } catch (error) {
+      toast.error(`Error al actualizar el estado: ${error.message}`);
+    }
+  };
+
+  const getFilteredAndSortedProperties = () => {
+
+    if (!Array.isArray(properties) || properties.length === 0) {
+      return [];
+    }
+
+    let currentProperties = [...properties];
+
+    currentProperties.sort((a, b) => {
+      if (sortBy === 'name') {
+        return a.title.localeCompare(b.title);
+      }
+      if (sortBy === 'price') {
+        return a.price - b.price;
+      }
+      return 0;
+    });
+
+    return currentProperties;
+  };
+
+  const currentFilteredProperties = getFilteredAndSortedProperties();
 
   const handleReserve = (propertyId, reservation) => {
-    setProperties((prevProperties) =>
-      prevProperties.map((p) =>
-        p.id === propertyId
-          ? { ...p, availability: [...p.availability, reservation] }
-          : p
-      )
-    );
   };
 
   const handleCancelReservation = (reservation) => {
-    setProperties((prevProperties) =>
-      prevProperties.map((p) =>
-        p.id === selectedProperty.id
-          ? {
-              ...p,
-              availability: p.availability.filter(
-                (r) => r.startDate !== reservation.startDate || r.endDate !== reservation.endDate
-              ),
-            }
-          : p
-      )
-    );
   };
 
   const handleViewProperty = (property) => {
-    setSelectedProperty(property);
+    const propertyWithDates = {
+      ...property,
+      availability: property.availability ? property.availability.map(range => ({
+        ...range,
+        startDate: range.startDate instanceof Date ? range.startDate : new Date(range.startDate),
+        endDate: range.endDate instanceof Date ? range.endDate : new Date(range.endDate)
+      })) : []
+    };
+    setSelectedProperty(propertyWithDates);
   };
 
   const handleCloseDetail = () => {
     setSelectedProperty(null);
   };
 
-  const handleSaveProperty = (updatedProperty) => {
-    setProperties((prevProperties) =>
-      prevProperties.map((p) =>
-        p.id === updatedProperty.id ? updatedProperty : p
-      )
-    );
-    setEditingProperty(null);
-  };
 
-  return (
-    <AdminLayout>
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Alquiler Temporario</h1>
-            <p className="text-gray-600">Gestiona propiedades para alquiler a corto plazo</p>
-          </div>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="inline-flex items-center bg-green-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
-          >
-            <FaPlus className="mr-2" />
-            {showAddForm ? 'Ocultar Formulario' : 'Nueva Propiedad'}
-          </button>
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="text-center py-20">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">Cargando propiedades de alquiler temporario...</p>
         </div>
-      </div>
+      </AdminLayout>
+    );
+  }
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por nombre, ciudad, dirección..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="text-center py-20">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+            <div className="text-red-600 mb-4">
+              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
             </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`px-4 py-3 ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-              >
-                <FaTh />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-4 py-3 ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-              >
-                <FaList />
-              </button>
-            </div>
-
+            <h3 className="text-lg font-medium text-red-900 mb-2">Error al cargar propiedades</h3>
+            <p className="text-red-700 mb-4">{error}</p>
             <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`inline-flex items-center px-4 py-3 rounded-lg font-medium transition-colors ${
-                showFilters 
-                  ? 'bg-blue-600 text-white' 
-                  : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
+              onClick={() => window.location.reload()}
+              className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-300"
             >
-              <FaFilter className="mr-2" />
-              Filtros
+              Reintentar
             </button>
           </div>
         </div>
+      </AdminLayout>
+    );
+  }
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{filteredProperties.length}</div>
-            <div className="text-sm text-gray-600">Propiedades</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {filteredProperties.filter(p => p.availability.length === 0).length}
-            </div>
-            <div className="text-sm text-gray-600">Disponibles</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600">
-              {filteredProperties.filter(p => p.availability.length > 0).length}
-            </div>
-            <div className="text-sm text-gray-600">Con reservas</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              ${Math.round(filteredProperties.reduce((sum, p) => sum + p.price.night, 0) / filteredProperties.length || 0)}
-            </div>
-            <div className="text-sm text-gray-600">Precio promedio</div>
-          </div>
+  return (
+    <AdminLayout>
+      {isFormOpen && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            {propertyToEdit ? 'Editar Propiedad Temporaria' : 'Nueva Propiedad Temporaria'}
+          </h2>
+          {propertyToEdit ? (
+            <EditPropertyForm
+              property={propertyToEdit}
+              onSave={handleSaveProperty}
+              onClose={handleCancelForm}
+            />
+          ) : (
+            <AddPropertyForm
+              onAddProperty={handleSaveProperty}
+              onCancel={handleCancelForm}
+            />
+          )}
         </div>
-      </div>
+      )}
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="flex-1">
-          {showFilters && (
-            <div className="mb-8">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <Filters filters={filters} onFilterChange={setFilters} />
+      {!isFormOpen && (
+        <div>
+          <div className="mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
+                  Alquiler Temporario
+                </h1>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Gestiona propiedades para alquiler a corto plazo
+                </p>
               </div>
             </div>
-          )}
+          </div>
 
-          {isLoading && (
-            <div className="text-center py-20">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-gray-600">Cargando propiedades de alquiler temporario...</p>
-            </div>
-          )}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div className="relative flex-1 max-w-xl">
+                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, ciudad, dirección..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
 
-          {error && (
-            <div className="text-center py-20">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-                <div className="text-red-600 mb-4">
-                  <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="appearance-none pl-3 pr-8 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                  >
+                    <option value="name">Ordenar por Nombre</option>
+                    <option value="price">Ordenar por Precio</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
-                <h3 className="text-lg font-medium text-red-900 mb-2">Error al cargar propiedades</h3>
-                <p className="text-red-700 mb-4">{error}</p>
-                <button 
-                  onClick={() => window.location.reload()} 
-                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-300"
+
+                <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`px-3 py-2 ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'} transition-colors`}
+                    title="Vista de cuadrícula"
+                  >
+                    <FaTh className="text-sm" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-3 py-2 ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'} transition-colors`}
+                    title="Vista de lista"
+                  >
+                    <FaList className="text-sm" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showFilters
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  title={showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
                 >
-                  Reintentar
+                  <FaFilter className="mr-1.5" />
+                  <span className="hidden sm:inline">Filtros</span>
+                </button>
+
+                <button
+                  onClick={handleAddProperty}
+                  className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                  title="Agregar nueva propiedad"
+                >
+                  <FaPlus className="mr-1.5" />
+                  <span className="hidden sm:inline">Agregar</span>
                 </button>
               </div>
             </div>
-          )}
 
-          {!isLoading && !error && (
-            <>
-              {filteredProperties.length === 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{currentFilteredProperties.length}</div>
+                <div className="text-sm font-medium text-blue-800">Total Propiedades</div>
+                <div className="text-xs text-gray-500 mt-1">Temporario</div>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">
+                  {currentFilteredProperties.filter(p => p.status === 'disponible').length}
+                </div>
+                <div className="text-sm font-medium text-green-800">Disponibles</div>
+                <div className="text-xs text-gray-500 mt-1">Actualmente</div>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">
+                  ${Math.round(currentFilteredProperties.reduce((sum, p) => sum + p.price, 0) / currentFilteredProperties.length || 0).toLocaleString()}
+                </div>
+                <div className="text-sm font-medium text-purple-800">Precio Promedio</div>
+                <div className="text-xs text-gray-500 mt-1">/noche</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col lg:flex-row gap-8">
+            <div className="flex-1">
+              {showFilters && (
+                <div className="mb-8">
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <Filters filters={filters} onFilterChange={setFilters} />
+                  </div>
+                </div>
+              )}
+
+              {currentFilteredProperties.length === 0 ? (
                 <div className="text-center py-20">
                   <div className="text-gray-400 mb-4">
                     <FaHome className="mx-auto h-16 w-16" />
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {searchTerm || Object.values(filters).some(f => f !== '' && f !== 0 && (Array.isArray(f) ? f.length > 0 : true)) 
-                      ? 'No se encontraron propiedades' 
+                    {searchTerm || Object.values(filters).some(f => f !== '' && f !== 0 && (Array.isArray(f) ? f.length > 0 : true))
+                      ? 'No se encontraron propiedades'
                       : 'No hay propiedades de alquiler temporario'
                     }
                   </h3>
@@ -288,7 +630,7 @@ const PropertyList = () => {
                   </p>
                   {!searchTerm && !Object.values(filters).some(f => f !== '' && f !== 0 && (Array.isArray(f) ? f.length > 0 : true)) && (
                     <button
-                      onClick={() => setShowAddForm(true)}
+                      onClick={handleAddProperty}
                       className="inline-flex items-center bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                     >
                       <FaPlus className="mr-2" />
@@ -297,114 +639,17 @@ const PropertyList = () => {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredProperties.map((property) => (
-              <div key={property.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">{property.name}</h3>
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{property.description}</p>
-                      
-                      <div className="flex items-center text-gray-500 mb-2">
-                        <FaMapMarkerAlt className="mr-2 text-blue-500" size={14} />
-                        <span className="text-sm">{property.location.city}, {property.location.address}</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center text-gray-500">
-                          <FaUsers className="mr-1 text-green-500" size={14} />
-                          <span className="text-sm">{property.capacity} huéspedes</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-2xl font-bold text-blue-600">${property.price.night}</span>
-                          <span className="text-sm text-gray-500">/noche</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    {property.availability.length > 0 ? (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                        <div className="flex items-center">
-                          <FaCalendarAlt className="text-yellow-600 mr-2" />
-                          <span className="text-sm font-medium text-yellow-800">
-                            {property.availability.length} reserva(s) activa(s)
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                        <div className="flex items-center">
-                          <FaHome className="text-green-600 mr-2" />
-                          <span className="text-sm font-medium text-green-800">Disponible para reservar</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleViewProperty(property)}
-                      className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center"
-                    >
-                      <FaEye className="mr-2" size={14} />
-                      Ver Detalles
-                    </button>
-                    <button
-                      onClick={() => setEditingProperty(property)}
-                      className="bg-yellow-500 text-white p-2 rounded-lg hover:bg-yellow-600 transition-colors"
-                    >
-                      <FaEdit size={14} />
-                    </button>
-                    <button
-                      onClick={() => setProperties(properties.filter((p) => p.id !== property.id))}
-                      className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors"
-                    >
-                      <FaTrash size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-                  ))}
-                </div>
+                <TemporaryPropertyList
+                  properties={currentFilteredProperties}
+                  viewMode={viewMode}
+                  onAddNew={handleAddProperty}
+                  onEdit={handleEditProperty}
+                  onDelete={handleDeleteProperty}
+                  onUpdateStatus={handleUpdateStatus}
+                  onView={handleViewProperty}
+                />
               )}
-            </>
-          )}
-        </div>
-
-        {showAddForm && (
-          <div className="w-full lg:w-1/3">
-            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 sticky top-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Nueva Propiedad</h3>
-                <button 
-                  onClick={() => setShowAddForm(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ×
-                </button>
-              </div>
-              <AddPropertyForm
-                onAddProperty={(property) => {
-                  setProperties([...properties, { ...property, id: properties.length + 1 }]);
-                  setShowAddForm(false);
-                }}
-              />
             </div>
-          </div>
-        )}
-      </div>
-
-      {editingProperty && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-2xl max-h-screen overflow-y-auto">
-            <EditPropertyForm
-              property={editingProperty}
-              onSave={handleSaveProperty}
-              onClose={() => setEditingProperty(null)}
-            />
           </div>
         </div>
       )}
@@ -413,7 +658,7 @@ const PropertyList = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-4xl shadow-2xl max-h-screen overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-3xl font-bold text-gray-900">{selectedProperty.name}</h2>
+              <h2 className="text-3xl font-bold text-gray-900">{selectedProperty.title}</h2>
               <button
                 onClick={handleCloseDetail}
                 className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -425,19 +670,19 @@ const PropertyList = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
                 <p className="text-gray-600 mb-4">{selectedProperty.description}</p>
-                
+
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center text-gray-700">
                     <FaMapMarkerAlt className="mr-3 text-blue-500" />
-                    <span>{selectedProperty.location.city}, {selectedProperty.location.address}</span>
+                    <span>{selectedProperty.locality}, {selectedProperty.address}</span>
                   </div>
                   <div className="flex items-center text-gray-700">
                     <FaUsers className="mr-3 text-green-500" />
                     <span>Capacidad: {selectedProperty.capacity} huéspedes</span>
                   </div>
                   <div className="flex items-center text-gray-700">
-                    <FaHome className="mr-3 text-purple-500" />
-                    <span>${selectedProperty.price.night}/noche - ${selectedProperty.price.week}/semana - ${selectedProperty.price.month}/mes</span>
+                    <FaMoneyBillWave className="mr-3 text-purple-500" />
+                    <span>${selectedProperty.price}/noche</span>
                   </div>
                 </div>
 
@@ -466,7 +711,7 @@ const PropertyList = () => {
 
             <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
               <button
-                onClick={() => setEditingProperty(selectedProperty)}
+                onClick={() => handleEditProperty(selectedProperty)}
                 className="bg-yellow-500 text-white py-2 px-4 rounded-lg hover:bg-yellow-600 transition-colors flex items-center"
               >
                 <FaEdit className="mr-2" />
@@ -486,4 +731,4 @@ const PropertyList = () => {
   );
 };
 
-export default PropertyList;
+export default Temporarios;

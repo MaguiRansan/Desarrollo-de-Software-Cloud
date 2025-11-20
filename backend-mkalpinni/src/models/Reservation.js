@@ -56,8 +56,8 @@ const reservationSchema = new mongoose.Schema({
   },
   estado: {
     type: String,
-    enum: ['Pendiente', 'Confirmada', 'Cancelada', 'Completada'],
-    default: 'Pendiente',
+    enum: ['Disponible', 'Reservado', 'Ocupado'],
+    default: 'Disponible',
     index: true
   },
   montoTotal: {

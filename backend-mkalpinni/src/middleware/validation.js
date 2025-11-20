@@ -38,10 +38,11 @@ const validateProperty = [
   body('direccion').trim().isLength({ min: 5, max: 255 }).withMessage('La dirección debe tener entre 5 y 255 caracteres'),
   body('precio').isFloat({ min: 0 }).withMessage('El precio debe ser un número mayor a 0'),
   body('tipoPropiedad').isIn(['Casa', 'Apartamento', 'Local', 'Terreno', 'Oficina', 'Depósito']).withMessage('Tipo de propiedad inválido'),
-  body('transaccionTipo').isIn(['Venta', 'Alquiler']).withMessage('Tipo de transacción debe ser Venta o Alquiler'),
+  body('transaccionTipo').isIn(['Venta', 'Alquiler', 'Alquiler Temporario']).withMessage('Tipo de transacción debe ser Venta, Alquiler o Alquiler Temporario'),
   body('habitaciones').optional().isInt({ min: 0 }).withMessage('Las habitaciones deben ser un número entero mayor o igual a 0'),
   body('banos').optional().isInt({ min: 0 }).withMessage('Los baños deben ser un número entero mayor o igual a 0'),
   body('superficieM2').optional().isFloat({ min: 0 }).withMessage('La superficie debe ser un número mayor o igual a 0'),
+  body('estadiaMinima').optional().isInt({ min: 1 }).withMessage('La estadía mínima debe ser al menos 1 noche'),
   body('latitud').optional().isFloat({ min: -90, max: 90 }).withMessage('La latitud debe estar entre -90 y 90'),
   body('longitud').optional().isFloat({ min: -180, max: 180 }).withMessage('La longitud debe estar entre -180 y 180'),
   handleValidationErrors
@@ -87,6 +88,7 @@ const validateReservation = [
   body('cantidadPersonas').optional().isInt({ min: 1, max: 20 }).withMessage('La cantidad de personas debe estar entre 1 y 20'),
   body('nombreHuesped').optional().trim().isLength({ max: 255 }).withMessage('El nombre del huésped no puede exceder 255 caracteres'),
   body('emailHuesped').optional().isEmail().normalizeEmail().withMessage('Email del huésped inválido'),
+  body('estado').optional().isIn(['Disponible', 'Reservado', 'Ocupado']).withMessage('Estado de reserva inválido'),
   handleValidationErrors
 ];
 

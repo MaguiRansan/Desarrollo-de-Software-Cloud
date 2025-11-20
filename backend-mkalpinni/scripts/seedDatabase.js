@@ -12,7 +12,7 @@ async function seedDatabase() {
     });
     await User.deleteMany({});
     await Property.deleteMany({});
-    
+
 
     const adminUser = new User({
       nombre: 'Administrador',
@@ -62,7 +62,6 @@ async function seedDatabase() {
         habitaciones: 3,
         banos: 2,
         superficieM2: 65,
-        terrenoM2: 190,
         estado: 'Disponible',
         latitud: 20.6273,
         longitud: -87.0746,
@@ -132,7 +131,7 @@ async function seedDatabase() {
 
     const savedProperties = await Property.insertMany(propiedades);
 
-    
+
 
 
     mongoose.disconnect();
