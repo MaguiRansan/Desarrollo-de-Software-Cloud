@@ -27,7 +27,7 @@ const OperationSelection = ({ onSelect }) => {
             <div className="space-y-2">
               <h3 className="text-2xl font-bold">Propiedades en Venta</h3>
               <p className="text-white/80 text-sm leading-relaxed">
-                Accede a la gestión integral de propiedades en venta, revisa estados, precios y toda la información clave en un solo lugar.
+                Accede a la gestión integral de tus propiedades en venta. Podrás crear, editar, publicar y dar de baja toda la información clave desde un solo lugar.
               </p>
             </div>
             <span className="mt-auto inline-flex items-center gap-2 text-sm font-semibold text-white/90 group-hover:text-white">
@@ -52,8 +52,7 @@ const OperationSelection = ({ onSelect }) => {
             <div className="space-y-2">
               <h3 className="text-2xl font-bold">Propiedades en Alquiler</h3>
               <p className="text-white/80 text-sm leading-relaxed">
-                Mantén el control de tus propiedades en alquiler, administra contratos, reservas y ocupación con la misma facilidad de siempre.
-              </p>
+                Accede a la gestión integral de tus propiedades en alquiler. Podrás crear, editar, publicar y dar de baja toda la información clave desde un solo lugar.              </p>
             </div>
             <span className="mt-auto inline-flex items-center gap-2 text-sm font-semibold text-white/90 group-hover:text-white">
               Explorar alquiler

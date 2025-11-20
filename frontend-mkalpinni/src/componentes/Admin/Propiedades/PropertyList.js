@@ -57,28 +57,6 @@ const PropertyList = ({
     setLessee('');
   };
 
-  // Manejadores de eventos comentados ya que no se están utilizando actualmente
-  /*
-  const handleReserveProperty = () => {
-    if (lessor && lessee) {
-      onUpdateStatus(selectedProperty.id, 'reservado', lessor, lessee);
-      closeModal();
-    } else {
-      alert('Por favor ingrese el nombre del locador y locatario.');
-    }
-  };
-
-  const handleOccupyProperty = () => {
-    onUpdateStatus(selectedProperty.id, 'ocupado');
-    closeModal();
-  };
-
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    setImages(files);
-  };
-  */
-
   const renderPropertyImage = (property) => {
     if (property.images && property.images.length > 0) {
       const firstImage = property.images[0];
@@ -172,7 +150,10 @@ const PropertyList = ({
                     </span>
                   </div>
                 </div>
-                
+                <p className="text-gray-600 mb-4 flex items-center">
+                  <FaMapMarkerAlt className="mr-2 text-blue-500" />
+                  {property.address}
+                </p>
                 <div className="grid grid-cols-3 gap-2 text-gray-600 mb-6 text-sm">
                   <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
                     <FaBed className="text-blue-500 mb-1" />
@@ -337,7 +318,6 @@ const PropertyList = ({
       {isModalOpen && selectedProperty && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50">
           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-            {/* Header */}
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-start">
                 <div>
@@ -356,7 +336,6 @@ const PropertyList = ({
                 </button>
               </div>
               
-              {/* Estado */}
               <div className="mt-4">
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                   selectedProperty.status === 'disponible' 
@@ -373,9 +352,7 @@ const PropertyList = ({
               </div>
             </div>
 
-            {/* Contenido con scroll */}
             <div className="flex-1 overflow-y-auto p-6">
-              {/* Galería de imágenes */}
               <div className="relative mb-6 rounded-xl overflow-hidden bg-gray-100 h-80">
                 {selectedProperty.images && selectedProperty.images.length > 0 ? (
                   <>
@@ -411,7 +388,7 @@ const PropertyList = ({
                       </div>
                     ))}
                     
-                    {/* Controles de navegación */}
+                    
                     {selectedProperty.images.length > 1 && (
                       <>
                         <button
@@ -429,7 +406,7 @@ const PropertyList = ({
                           <FaChevronRight className="w-5 h-5" />
                         </button>
                         
-                        {/* Indicadores de imagen */}
+                        
                         <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
                           {selectedProperty.images.map((_, i) => (
                             <button
@@ -452,7 +429,7 @@ const PropertyList = ({
                 )}
               </div>
 
-              {/* Precio destacado */}
+              
               <div className="bg-blue-50 rounded-xl p-4 mb-6">
                 <div className="flex justify-between items-center">
                   <div>
@@ -473,7 +450,7 @@ const PropertyList = ({
                 </div>
               </div>
 
-              {/* Detalles principales */}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Detalles de la propiedad</h3>
@@ -542,7 +519,7 @@ const PropertyList = ({
                 </div>
               </div>
 
-              {/* Descripción */}
+              
               {selectedProperty.description && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Descripción</h3>
@@ -550,7 +527,6 @@ const PropertyList = ({
                 </div>
               )}
 
-              {/* Características adicionales */}
               {(selectedProperty.amenities || []).length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Características</h3>

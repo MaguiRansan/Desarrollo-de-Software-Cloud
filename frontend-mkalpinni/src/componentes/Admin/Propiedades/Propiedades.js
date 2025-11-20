@@ -183,19 +183,28 @@ const PropertyManagement = () => {
 
   const handleAddProperty = () => {
     setEditingProperty(null);
-    setFormProperty(createEmptyProperty(selectedOperation));
     setView('form');
   };
 
   const handleEditProperty = (property) => {
-    const normalized = normalizeProperty(property);
-    setEditingProperty({ id: normalized.id });
-    setFormProperty({
-      ...normalized,
-      images: normalized.images && normalized.images.length > 0 ? normalized.images : [null],
-      removedImages: []
-    });
-    setView('form');
+    try {
+      console.log('Editing property:', property);
+      const normalized = normalizeProperty(property);
+      console.log('Normalized property:', normalized);
+      setEditingProperty(normalized);
+      setFormProperty({
+        ...normalized,
+        images: Array.isArray(normalized.images) && normalized.images.length > 0 
+          ? normalized.images 
+          : [null],
+        removedImages: []
+      });
+      
+      setView('form');
+    } catch (error) {
+      console.error('Error in handleEditProperty:', error);
+      showNotification('Error al cargar la propiedad para editar', 'error');
+    }
   };
 
   const handleDeleteProperty = async (propertyId) => {
@@ -223,6 +232,7 @@ const PropertyManagement = () => {
     setIsSubmitting(true);
     
     try {
+      const isEdit = !!editingProperty;
       const backendData = {
         titulo: propertyData.title,
         descripcion: propertyData.description,
@@ -249,15 +259,19 @@ const PropertyManagement = () => {
       let createdOrUpdatedId;
       let refreshedProperty = null;
 
-      if (editingProperty && editingProperty.id) {
+      if (isEdit && editingProperty.id) {
+        console.log('Updating property:', editingProperty.id, backendData);
         response = await propertyService.update(editingProperty.id, backendData);
         if (response.status) {
           createdOrUpdatedId = editingProperty.id;
+          showNotification('Propiedad actualizada correctamente');
         }
       } else {
+        console.log('Creating new property:', backendData);
         response = await propertyService.create(backendData);
         if (response.status && response.value) {
           createdOrUpdatedId = response.value._id || response.value.id;
+          showNotification('Propiedad creada correctamente');
         }
       }
 
@@ -364,6 +378,8 @@ const PropertyManagement = () => {
 
   const handleCancelForm = () => {
     try {
+      setFormProperty(createEmptyProperty(selectedOperation));
+      setEditingProperty(null);
       setView('list');
       const path = selectedOperation === 'venta' ? '/admin/propiedades' : '/admin/propiedades/alquiler';
       window.location.href = path;
@@ -433,8 +449,8 @@ const PropertyManagement = () => {
       {view === 'form' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <PropertyForm
-            key={editingProperty ? `edit-${editingProperty.id || 'new'}` : `new-${selectedOperation}`}
-            property={formProperty}
+            key={editingProperty ? `edit-${editingProperty.id || 'new'}` : 'new'}
+            property={editingProperty || formProperty}
             editing={!!editingProperty}
             onSave={handleSaveProperty}
             onCancel={handleCancelForm}

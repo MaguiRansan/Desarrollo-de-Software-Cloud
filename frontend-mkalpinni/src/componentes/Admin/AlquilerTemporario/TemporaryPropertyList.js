@@ -1,4 +1,4 @@
-import { FaUsers, FaCalendarAlt, FaPlus, FaSearch, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaCalendarCheck, FaClock, FaMoneyBill, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaUsers, FaCalendarAlt, FaPlus, FaSearch, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaCalendarCheck, FaClock, FaMoneyBill, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -22,24 +22,17 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showSeasonForm, setShowSeasonForm] = useState(false);
-  
+
   const [availabilityData, setAvailabilityData] = useState({
-    estado: 'disponible', 
-    availability: []      
+    estado: 'disponible',
+    availability: []
   });
-  
+
   const [clientName, setClientName] = useState('');
   const [reservationDeposit, setReservationDeposit] = useState('');
   const [reservationGuests, setReservationGuests] = useState('');
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newSeason, setNewSeason] = useState({
-    startDate: '',
-    endDate: '',
-    percentage: '',
-    description: ''
-  });
   const [selectedDates, setSelectedDates] = useState({
     startDate: null,
     endDate: null,
@@ -69,7 +62,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token}` }) 
+            ...(token && { 'Authorization': `Bearer ${token}` })
           }
         });
 
@@ -84,15 +77,15 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
         }
 
         const data = await response.json();
-        
+
         if (data.status && data.value) {
           const availability = data.value.availability || data.value.disponibilidad || [];
-          
+
           const normalizedAvailability = availability.map(range => ({
             ...range,
             status: range.status ? String(range.status).toLowerCase() : 'disponible'
           }));
-          
+
           setAvailabilityData({
             estado: data.value.estado || 'disponible',
             availability: normalizedAvailability
@@ -109,13 +102,13 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     };
 
     loadPropertyAvailability();
-  }, [selectedProperty]); 
+  }, [selectedProperty]);
 
-  
+
   const propertiesArray = Array.isArray(properties) ? properties : [];
   const filteredProperties = propertiesArray.filter(property => {
     if (!property || typeof property !== 'object' || !property.title) {
-        return false;
+      return false;
     }
     const searchTermLower = searchTerm.toLowerCase();
     return (
@@ -129,8 +122,8 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     setSelectedProperty(property);
     setIsModalOpen(true);
     setClientName('');
-    setReservationDeposit(''); 
-    setReservationGuests(''); 
+    setReservationDeposit('');
+    setReservationGuests('');
     setCurrentImageIndex(0);
     setSelectedDates({ startDate: null, endDate: null });
     setDatePickerKey(0);
@@ -142,76 +135,32 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     setClientName('');
     setReservationDeposit('');
     setReservationGuests('');
-    setShowSeasonForm(false);
-    setNewSeason({
-      startDate: '',
-      endDate: '',
-      percentage: '',
-      description: ''
-    });
+
     setCurrentImageIndex(0);
   };
 
-  const handleSeasonChange = (e) => {
-    const { name, value } = e.target;
-    setNewSeason(prev => ({
-      ...prev,
-      [name]: name === 'percentage' ? value.replace(/[^0-9-]/g, '') : value
-    }));
-  };
-
-  const handleAddSeason = (e) => {
-    e.preventDefault();
-    if (!selectedProperty) return;
-    
-    setIsSubmitting(true);
-    
-    const updatedProperty = {
-      ...selectedProperty,
-      seasonalPrices: [
-        ...(selectedProperty.seasonalPrices || []),
-        {
-          ...newSeason,
-          id: Date.now(), 
-          percentage: parseFloat(newSeason.percentage)
-        }
-      ]
-    };
-    
-    setSelectedProperty(updatedProperty); 
-    
-    setShowSeasonForm(false);
-    setNewSeason({
-      startDate: '',
-      endDate: '',
-      percentage: '',
-      description: ''
-    });
-    setIsSubmitting(false);
-    toast.info("Ajuste de temporada añadido localmente. Recuerda guardar la propiedad.");
-  };
 
   const handleDeleteRange = async (rangeId) => {
     if (!selectedProperty) return;
-    
+
     const rangeToDelete = (selectedProperty.availability || []).find(
       range => (range.id === rangeId || range._id?.toString() === rangeId)
     );
-    
+
     if (!rangeToDelete) return;
-    
+
     const isAvailable = rangeToDelete.status?.toLowerCase() === 'disponible';
-    
+
     let confirmMessage = `¿Está seguro de que desea eliminar este rango de fechas?\n\n` +
       `Del ${format(new Date(rangeToDelete.startDate), 'dd/MM/yyyy')} al ${format(new Date(rangeToDelete.endDate), 'dd/MM/yyyy')}\n\n`;
-    
+
     if (!isAvailable) {
       confirmMessage += `• 'Aceptar' para marcar como disponible\n`;
     }
     confirmMessage += `• 'Cancelar' para no hacer cambios`;
-    
+
     const userConfirmed = window.confirm(confirmMessage);
-    
+
     if (!userConfirmed) return;
 
     try {
@@ -231,16 +180,16 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
 
       if (!deleteResponse.ok) {
         const errorData = await deleteResponse.json().catch(() => ({}));
-        
+
         if (deleteResponse.status === 401) {
           sessionStorage.removeItem('authToken');
           sessionStorage.removeItem('userData');
           throw new Error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
         }
-        
+
         throw new Error(errorData.message || 'Error al eliminar el rango de fechas');
       }
-      
+
       if (!isAvailable) {
         const markAvailableResponse = await fetch(`${API_BASE_URL}/Propiedad/Disponibilidad/${selectedProperty.id || selectedProperty._id}`, {
           method: 'PUT',
@@ -258,7 +207,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
             guests: 1
           })
         });
-        
+
         if (!markAvailableResponse.ok) {
           const errorData = await markAvailableResponse.json().catch(() => ({}));
           throw new Error(errorData.message || 'Error al marcar las fechas como disponibles');
@@ -287,44 +236,26 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     }
   };
 
-  const handleDeleteSeason = (seasonId) => {
-    if (!selectedProperty || !window.confirm('¿Estás seguro de que deseas eliminar este ajuste de temporada?')) {
-      return;
-    }
-    
-    const updatedSeasons = (selectedProperty.seasonalPrices || []).filter(season => 
-      season.id !== seasonId
-    );
-    
-    const updatedProperty = {
-      ...selectedProperty,
-      seasonalPrices: updatedSeasons
-    };
-    
-    setSelectedProperty(updatedProperty);
-    toast.info("Ajuste de temporada eliminado localmente. Recuerda guardar la propiedad.");
-  };
-
 
   const isDateOccupied = (date) => {
     if (!date) return false;
-    const checkDate = date; 
-    
+    const checkDate = date;
+
     if (!availabilityData.availability || !Array.isArray(availabilityData.availability)) {
       return false;
     }
-    
+
     return availabilityData.availability.some(range => {
       if (!range || !range.startDate || !range.endDate) return false;
-      
+
       try {
         const startDate = new Date(range.startDate);
         const endDate = new Date(range.endDate);
-        
+
         const isInRange = checkDate >= startDate && checkDate <= endDate;
         const statusLower = String(range.status || '').toLowerCase();
         const isOccupiedStatus = statusLower === 'ocupado_temp' || statusLower === 'ocupado';
-        
+
         return isInRange && isOccupiedStatus;
       } catch (error) {
         console.error('Error checking if date is occupied:', error, range);
@@ -336,22 +267,22 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
   const isDateReserved = (date) => {
     if (!date) return false;
     const checkDate = date;
-    
+
     if (!availabilityData.availability || !Array.isArray(availabilityData.availability)) {
       return false;
     }
-    
+
     return availabilityData.availability.some(range => {
       if (!range || !range.startDate || !range.endDate) return false;
-      
+
       try {
         const startDate = new Date(range.startDate);
         const endDate = new Date(range.endDate);
-        
+
         const isInRange = checkDate >= startDate && checkDate <= endDate;
         const statusLower = String(range.status || '').toLowerCase();
         const isReservedStatus = statusLower === 'reservado_temp' || statusLower === 'reservado';
-        
+
         return isInRange && isReservedStatus;
       } catch (error) {
         console.error('Error checking if date is reserved:', error, range);
@@ -359,18 +290,18 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       }
     });
   };
-  
+
   const isDateAvailable = (date) => {
     if (!date) return false;
     const checkDate = date;
-    
+
     if (!availabilityData.availability || !Array.isArray(availabilityData.availability)) {
       return false;
     }
-    
+
     return availabilityData.availability.some(range => {
       if (!range || !range.startDate || !range.endDate) return false;
-      
+
       try {
         const startDate = new Date(range.startDate);
         const endDate = new Date(range.endDate);
@@ -378,7 +309,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
         const isInRange = checkDate >= startDate && checkDate <= endDate;
         const statusLower = String(range.status || '').toLowerCase();
         const isAvailableStatus = statusLower === 'disponible';
-        
+
         return isInRange && isAvailableStatus;
       } catch (error) {
         console.error('Error checking if date is available:', error, range);
@@ -404,19 +335,19 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     }
     return false;
   };
-  
+
   const isRangeFullyAvailable = (start, end) => {
     if (!start || !end) return false;
     let currentDate = new Date(start);
     const finalEndDate = new Date(end);
-    
+
     if (!availabilityData.availability || availabilityData.availability.length === 0) {
       return false;
     }
 
     while (isBefore(currentDate, finalEndDate) || currentDate.getTime() === finalEndDate.getTime()) {
       if (!isDateAvailable(currentDate)) {
-        return false; 
+        return false;
       }
       currentDate.setDate(currentDate.getDate() + 1);
     }
@@ -440,7 +371,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     if (!start || !end) return false;
     let currentDate = new Date(start);
     const finalEndDate = new Date(end);
-    
+
     if (!availabilityData.availability || availabilityData.availability.length === 0) {
       return false;
     }
@@ -448,15 +379,15 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     while (isBefore(currentDate, finalEndDate) || currentDate.getTime() === finalEndDate.getTime()) {
       const isAvailable = isDateAvailable(currentDate);
       const isReserved = isDateReserved(currentDate);
-      
+
       if (!isAvailable && !isReserved) {
-        return false; 
+        return false;
       }
       currentDate.setDate(currentDate.getDate() + 1);
     }
     return true;
   };
-  
+
   const sendAvailabilityUpdate = async (status, startDate, endDate, clientName, deposit, guests) => {
     if (!selectedProperty) return;
 
@@ -469,7 +400,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       }
 
       const response = await fetch(`${API_BASE_URL}/Propiedad/Disponibilidad/${propertyId}`, {
-        method: 'PUT', 
+        method: 'PUT',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
@@ -481,39 +412,39 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
           clientName: clientName || '',
           deposit: parseFloat(deposit) || 0,
           guests: parseInt(guests) || 1,
-          status: status 
+          status: status
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        
+
         if (response.status === 401) {
           sessionStorage.removeItem('authToken');
           sessionStorage.removeItem('userData');
           throw new Error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
         }
-        
+
         throw new Error(errorData.message || 'Error al actualizar la disponibilidad');
       }
 
       const data = await response.json();
-      
+
       if (data.status) {
         const availability = data.value.availability || data.value.disponibilidad || [];
         console.log('Availability actualizada:', availability);
         console.log('Estado actualizado:', data.value.estado);
-        
+
         const normalizedAvailability = availability.map(range => ({
           ...range,
           status: range.status ? String(range.status).toLowerCase() : 'disponible'
         }));
-        
+
         setAvailabilityData({
           estado: data.value.estado || 'disponible',
           availability: normalizedAvailability
         });
-        
+
         setSelectedProperty(prev => ({
           ...prev,
           estado: data.value.estado || 'disponible',
@@ -525,10 +456,10 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
         setSelectedDates({ startDate: null, endDate: null });
         setReservationDeposit('');
         setReservationGuests('');
-        
+
         setDatePickerKey(prev => prev + 1);
-        
-        return true; 
+
+        return true;
       } else {
         throw new Error(data.message || 'Error al guardar la disponibilidad');
       }
@@ -548,6 +479,13 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       toast.error('Por favor complete el Nombre del Cliente y el Número de Huéspedes.');
       return;
     }
+
+    const maxGuests = parseInt(selectedProperty.capacity || selectedProperty.capacidadPersonas || 1);
+    if (parseInt(reservationGuests) > maxGuests) {
+      toast.error(`La cantidad de huéspedes supera la capacidad máxima de la propiedad (${maxGuests}).`);
+      return;
+    }
+
     if (isRangeBooked(selectedDates.startDate, selectedDates.endDate)) {
       toast.error('Error: El rango seleccionado se superpone con fechas que ya están reservadas u ocupadas.');
       return;
@@ -556,7 +494,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       toast.error('Error: Solo puede reservar u ocupar fechas que estén explícitamente marcadas como "Disponibles".');
       return;
     }
-    
+
     const success = await sendAvailabilityUpdate(
       'reservado_temp',
       selectedDates.startDate,
@@ -584,6 +522,13 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       toast.error('Por favor complete el Nombre del Cliente y el Número de Huéspedes.');
       return;
     }
+
+    const maxGuests = parseInt(selectedProperty.capacity || selectedProperty.capacidadPersonas || 1);
+    if (parseInt(reservationGuests) > maxGuests) {
+      toast.error(`La cantidad de huéspedes supera la capacidad máxima de la propiedad (${maxGuests}).`);
+      return;
+    }
+
     if (isRangeOccupied(selectedDates.startDate, selectedDates.endDate)) {
       toast.error('Error: El rango seleccionado se superpone con fechas que ya están ocupadas.');
       return;
@@ -615,7 +560,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       toast.error('Por favor seleccione un rango de fechas.');
       return;
     }
-    
+
     const success = await sendAvailabilityUpdate(
       'disponible',
       selectedDates.startDate,
@@ -632,14 +577,14 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       setSelectedDates({ startDate: null, endDate: null });
       toast.success('Rango de fechas marcado como disponible correctamente');
     }
-  };  
+  };
   const handleDeleteDate = async (date) => {
     if (!selectedProperty || !date) return;
-    
+
     const formattedDate = format(date, 'yyyy-MM-dd');
-    
+
     const isBooked = isDateOccupied(date) || isDateReserved(date);
-    const confirmMessage = isBooked 
+    const confirmMessage = isBooked
       ? `¿Está seguro de que desea marcar el día ${format(date, 'dd/MM/yyyy')} como disponible?`
       : `¿Está seguro de que desea marcar el día ${format(date, 'dd/MM/yyyy')} como no disponible?`;
 
@@ -649,7 +594,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
         if (!token) {
           throw new Error('No estás autenticado. Por favor, inicia sesión nuevamente.');
         }
-        
+
         const response = await fetch(`${API_BASE_URL}/Propiedad/Disponibilidad/${selectedProperty.id || selectedProperty._id}/date/${formattedDate}`, {
           method: 'DELETE',
           headers: {
@@ -663,12 +608,12 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.message || 'Error al actualizar la fecha');
         }
-        
+
         const data = await response.json();
-        
+
         if (data.status && data.value) {
           const availability = data.value.availability || data.value.disponibilidad || [];
-          
+
           const normalizedAvailability = availability.map(range => ({
             ...range,
             status: range.status ? String(range.status).toLowerCase() : 'disponible'
@@ -684,14 +629,14 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
             availability: normalizedAvailability,
             disponibilidad: normalizedAvailability
           }));
-          
+
           setDatePickerKey(prev => prev + 1);
-          
+
           toast.success('Fecha actualizada correctamente');
         } else {
           throw new Error(data.message || 'La respuesta del servidor no fue válida');
         }
-        
+
       } catch (error) {
         console.error('Error al actualizar la fecha:', error);
         toast.error(error.message || 'Error al actualizar la fecha');
@@ -704,10 +649,10 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     const isAvailable = isDateAvailable(date);
     const isOccupied = isDateOccupied(date);
     const isReserved = isDateReserved(date);
-    
+
     let dayContent;
     let title = '';
-    
+
     if (isOccupied) {
       dayContent = <div className={`bg-red-200 text-red-900 border-2 border-red-400 ${baseClasses} cursor-pointer hover:bg-red-300`}>{day}</div>;
       title = 'Doble clic para marcar como Disponible';
@@ -722,11 +667,11 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     } else {
       dayContent = <div className={`text-gray-400 ${baseClasses}`}>{day}</div>;
     }
-    
+
     const canDoubleClick = isAvailable || isOccupied || isReserved;
-    
+
     return (
-      <div 
+      <div
         onDoubleClick={() => canDoubleClick && handleDeleteDate(date)}
         title={title}
       >
@@ -734,10 +679,10 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       </div>
     );
   };
-  
+
   const handleDateChange = (dates) => {
     const [start, end] = dates;
-    
+
     if (start && selectedDates.startDate && start.getTime() === selectedDates.startDate.getTime() && !end) {
       setSelectedDates({
         startDate: null,
@@ -746,7 +691,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       });
       return;
     }
-    
+
     if (end && selectedDates.endDate && end.getTime() === selectedDates.endDate.getTime()) {
       setSelectedDates(prev => ({
         ...prev,
@@ -754,11 +699,11 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
       }));
       return;
     }
-    
+
     const startDate = start ? new Date(start.setHours(0, 0, 0, 0)) : null;
     const endDate = end ? new Date(end.setHours(23, 59, 59, 999)) : null;
-    
-    setSelectedDates({ 
+
+    setSelectedDates({
       startDate: startDate,
       endDate: endDate,
       status: selectedDates.status
@@ -766,13 +711,13 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
   };
 
   const goToPreviousImage = () => {
-    setCurrentImageIndex((prevIndex) => 
+    setCurrentImageIndex((prevIndex) =>
       prevIndex === 0 ? (selectedProperty.images?.length || 1) - 1 : prevIndex - 1
     );
   };
 
   const goToNextImage = () => {
-    setCurrentImageIndex((prevIndex) => 
+    setCurrentImageIndex((prevIndex) =>
       prevIndex === (selectedProperty.images?.length || 1) - 1 ? 0 : prevIndex + 1
     );
   };
@@ -781,11 +726,11 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     const images = property.images || [];
     if (images.length > 0) {
       const firstImage = images[0];
-      
-      const imageUrl = (typeof firstImage === 'object' && firstImage !== null) 
-        ? (firstImage.rutaArchivo || firstImage.url) 
+
+      const imageUrl = (typeof firstImage === 'object' && firstImage !== null)
+        ? (firstImage.rutaArchivo || firstImage.url)
         : (typeof firstImage === 'string' ? firstImage : null);
-      
+
       if (imageUrl) {
         return (
           <img
@@ -829,24 +774,22 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
               console.error(`Invalid property at index ${index}:`, property);
               return null;
             }
-            
+
             const propertyId = property.id || property._id || `property-${index}`;
             const propertyTitle = property.title || 'Sin título';
             const currentStatus = mapStatus(property.estado || 'disponible');
             const displayPrice = property.price || property.precioPorNoche || property.pricePerWeek || property.pricePerMonth || 0;
             const priceDescription = (property.price || property.precioPorNoche) ? 'por noche' : (property.pricePerWeek ? 'por semana' : (property.pricePerMonth ? 'por mes' : ''));
-            
+
             return (
               <div
                 key={propertyId}
-                className={`bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-lg ${
-                  currentStatus === 'ocupado_temp' ? 'opacity-80 border-l-4 border-red-500' : ''
-                } ${
-                  currentStatus === 'reservado_temp' ? 'border-l-4 border-yellow-400' : ''
-                }`}
+                className={`bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-lg ${currentStatus === 'ocupado_temp' ? 'opacity-80 border-l-4 border-red-500' : ''
+                  } ${currentStatus === 'reservado_temp' ? 'border-l-4 border-yellow-400' : ''
+                  }`}
               >
                 {renderPropertyImage(property)}
-                
+
                 <div className="p-6">
                   <div className="flex flex-col mb-4">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{propertyTitle}</h3>
@@ -858,10 +801,10 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                       {(property.neighborhood || property.barrio) && `${property.neighborhood || property.barrio}, `}
                       {(property.locality || property.localidad) && `${property.locality || property.localidad}, `}
                       {property.province || property.provincia}
-                    </p>  
+                    </p>
                     <div className="flex justify-between items-center mt-1">
                       <span className="text-green-600 font-bold text-xl">${displayPrice ? displayPrice.toLocaleString() : 'N/A'}</span>
-                      
+
                       {currentStatus === 'ocupado_temp' && (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                           <FaTimes className="w-3 h-3 mr-1" />
@@ -897,7 +840,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                     </span>
                     <span className="flex flex-col items-center text-center p-2 bg-gray-50 rounded-lg">
                       <FaRulerCombined className="text-blue-500 mb-1" />
-                      <span>{property.squareMeters || property.superficieM2 || 0} m²</span>
+                      <span>{property.squareMeters || property.superficieM2 || 0}</span>
                     </span>
                   </div>
 
@@ -948,11 +891,9 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
             return (
               <div
                 key={propertyId}
-                className={`bg-white rounded-xl shadow-lg overflow-hidden flex ${
-                  currentStatus === 'ocupado_temp' ? 'bg-red-50' : ''
-                } ${
-                  currentStatus === 'reservado_temp' ? 'bg-yellow-50' : ''
-                }`}
+                className={`bg-white rounded-xl shadow-lg overflow-hidden flex ${currentStatus === 'ocupado_temp' ? 'bg-red-50' : ''
+                  } ${currentStatus === 'reservado_temp' ? 'bg-yellow-50' : ''
+                  }`}
               >
                 <div className="w-48 h-32 flex-shrink-0">
                   {renderPropertyImage(property)}
@@ -989,9 +930,45 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                     </span>
                     <span className="flex items-center">
                       <FaRulerCombined className="mr-1 text-blue-500" />
-                      {property.squareMeters || property.superficieM2 || 0} m²
+                      {property.squareMeters || property.superficieM2 || 0}
                     </span>
                   </div>
+
+                  {/* Fechas de Disponibilidad */}
+                  {property.availability && property.availability.length > 0 && (
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                        <FaCalendarAlt className="mr-2 text-blue-500" />
+                        Fechas Registradas
+                      </h4>
+                      <div className="space-y-2">
+                        {property.availability.map((range, index) => {
+                          const startDate = new Date(range.startDate);
+                          const endDate = new Date(range.endDate);
+                          const statusLower = String(range.status || 'disponible').toLowerCase();
+
+                          let statusBadge;
+                          if (statusLower === 'ocupado_temp' || statusLower === 'ocupado') {
+                            statusBadge = <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">Ocupado</span>;
+                          } else if (statusLower === 'reservado_temp' || statusLower === 'reservado') {
+                            statusBadge = <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700">Reservado</span>;
+                          } else {
+                            statusBadge = <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Disponible</span>;
+                          }
+
+                          return (
+                            <div key={range.id || range._id || index} className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">
+                                {format(startDate, 'dd/MM/yyyy', { locale: es })} - {format(endDate, 'dd/MM/yyyy', { locale: es })}
+                              </span>
+                              {statusBadge}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
                       {currentStatus === 'ocupado_temp' && (
@@ -1050,18 +1027,18 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
           <div className="bg-white rounded-lg w-full max-w-6xl p-6 overflow-y-auto max-h-[95vh]">
             <h2 className="text-4xl font-bold text-gray-800 mb-4">{selectedProperty.title || selectedProperty.titulo}</h2>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-              
+
               <div className="lg:col-span-2 space-y-4">
-                
+
                 <div className="relative bg-gray-100 rounded-lg overflow-hidden h-[400px] flex items-center justify-center shadow-lg">
                   {(selectedProperty.images && selectedProperty.images.length > 0) ? (
                     <>
                       <img
-                        src={(typeof selectedProperty.images[currentImageIndex] === 'object' && selectedProperty.images[currentImageIndex] !== null) 
-                             ? (selectedProperty.images[currentImageIndex].rutaArchivo || selectedProperty.images[currentImageIndex].url) 
-                             : (typeof selectedProperty.images[currentImageIndex] === 'string' ? selectedProperty.images[currentImageIndex] : null)}
+                        src={(typeof selectedProperty.images[currentImageIndex] === 'object' && selectedProperty.images[currentImageIndex] !== null)
+                          ? (selectedProperty.images[currentImageIndex].rutaArchivo || selectedProperty.images[currentImageIndex].url)
+                          : (typeof selectedProperty.images[currentImageIndex] === 'string' ? selectedProperty.images[currentImageIndex] : null)}
                         alt={`Imagen ${currentImageIndex + 1}`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -1097,7 +1074,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                     <span className="text-gray-500 text-lg">Sin imágenes disponibles</span>
                   )}
                 </div>
-                
+
                 <h3 className="text-2xl font-bold text-gray-800 border-b pb-2 mt-6">Información General</h3>
                 <div className="grid grid-cols-2 gap-y-2 text-gray-600 text-base">
                   <p><span className="font-semibold">Dirección:</span> {selectedProperty.address || selectedProperty.direccion}</p>
@@ -1114,15 +1091,15 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                       <span>{service}</span>
                     </div>
                   )) || (
-                    <p className="text-gray-500 text-base">No se han especificado servicios.</p>
-                  )}
+                      <p className="text-gray-500 text-base">No se han especificado servicios.</p>
+                    )}
                 </div>
 
                 <div className="p-4 border rounded-lg bg-white shadow">
                   <h3 className="text-xl font-bold mb-3 flex items-center">
                     <FaCalendarAlt className="mr-2 text-blue-500" /> Calendario de Disponibilidad
                   </h3>
-                  
+
                   <div className="mb-4">
                     <DatePicker
                       key={`datepicker-${selectedProperty?._id || selectedProperty?.id}-${datePickerKey}`}
@@ -1138,7 +1115,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                       className="border rounded-lg p-2 w-full"
                       monthsShown={2}
                     />
-                    
+
                     <div className="flex items-center mt-2 text-base flex-wrap gap-4">
                       <div className="flex items-center">
                         <div className="w-4 h-4 bg-green-200 border-2 border-green-400 rounded-full mr-2"></div>
@@ -1158,7 +1135,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <input
                       type="text"
@@ -1167,7 +1144,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                       onChange={(e) => setClientName(e.target.value)}
                       className="w-full p-3 border rounded text-base focus:ring-blue-500 focus:border-blue-500"
                     />
-                    
+
                     <div className="grid grid-cols-2 gap-3">
                       <div className="relative">
                         <input
@@ -1201,7 +1178,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                         <FaCalendarCheck />
                         <span>Reservar</span>
                       </button>
-                      
+
                       <button
                         onClick={handleOccupyProperty}
                         className="bg-red-500 hover:bg-red-600 text-white py-2.5 px-4 rounded-lg flex items-center justify-center space-x-2 text-base transition duration-300"
@@ -1210,7 +1187,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                         <FaTimes />
                         <span>Ocupar</span>
                       </button>
-                      
+
                       <button
                         onClick={handleSetAvailable}
                         className="bg-green-500 hover:bg-green-600 text-white py-2.5 px-4 rounded-lg flex items-center justify-center space-x-2 text-base transition duration-300"
@@ -1220,7 +1197,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                         <span>Disponible</span>
                       </button>
                     </div>
-                    
+
                     {selectedDates.startDate && selectedDates.endDate && (
                       <div className="mt-2 p-2 bg-blue-50 rounded-lg text-base">
                         <p className="font-semibold">Rango seleccionado:</p>
@@ -1232,19 +1209,19 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                     )}
                   </div>
                 </div>
-                
+
                 <div className="p-4 border rounded-lg bg-white shadow">
                   <h3 className="text-xl font-bold mb-3 flex items-center">
                     <FaCalendarCheck className="mr-2 text-blue-500" /> Reservas y Ocupaciones
                   </h3>
-                  
+
                   {availabilityData.availability && availabilityData.availability.filter(r => r.status !== 'disponible').length > 0 ? (
                     <div className="space-y-3 max-h-60 overflow-y-auto">
                       {availabilityData.availability
-                        .filter(range => range.status !== 'disponible') 
+                        .filter(range => range.status !== 'disponible')
                         .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
                         .map((range) => (
-                          <div 
+                          <div
                             key={range.id || range._id}
                             className={`p-4 rounded-lg ${range.status === 'reservado_temp' ? 'bg-yellow-50' : 'bg-red-50'}`}
                           >
@@ -1256,7 +1233,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                                 <p className="text-base">
                                   {`${range.clientName || 'Sin nombre'} (${range.status === 'reservado_temp' ? 'Reservado' : 'Ocupado'})`}
                                 </p>
-                                
+
                                 {range.status !== 'disponible' && (
                                   <p className="text-sm text-gray-600 mt-1">
                                     <span className="mr-4">
@@ -1268,7 +1245,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                                   </p>
                                 )}
                               </div>
-                              <button 
+                              <button
                                 onClick={() => handleDeleteRange(range.id || range._id)}
                                 className="text-red-500 hover:text-red-700"
                                 title="Eliminar"
@@ -1293,7 +1270,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                   <div className="space-y-2 text-base">
                     <p><span className="font-semibold">Entrada:</span> {selectedProperty.checkInTime || '14:00'}</p>
                     <p><span className="font-semibold">Salida:</span> {selectedProperty.checkOutTime || '10:00'}</p>
-                    <p><span className="font-semibold">Estadía mínima:</span> {selectedProperty.minimumStay || 1} {selectedProperty.minimumStay > 1 ? 'noches' : 'noche'}</p>
+                    <p><span className="font-semibold">Estadía mínima:</span> {selectedProperty.estadiaMinima || 1}</p>
                     {selectedProperty.availableFrom && (
                       <p><span className="font-semibold">Disponible desde:</span> {new Date(selectedProperty.availableFrom).toLocaleDateString()}</p>
                     )}
@@ -1301,7 +1278,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                       <p><span className="font-semibold">Disponible hasta:</span> {new Date(selectedProperty.availableTo).toLocaleDateString()}</p>
                     )}
                   </div>
-                  
+
                   <div className="mt-4 pt-3 border-t">
                     <h3 className="text-xl font-bold mb-3 flex items-center"><FaCalendarCheck className="mr-2 text-blue-500" /> Estado Actual</h3>
                     <div className="text-center">
@@ -1351,35 +1328,6 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                     )}
                   </div>
 
-                  <h3 className="text-xl font-bold mt-4 mb-2 border-t pt-3 flex items-center"><FaTag className="mr-2 text-blue-500" /> Ajustes por Temporada</h3>
-                  
-                  {(selectedProperty.seasonalPrices || []).map((season, index) => (
-                    <div key={season.id || index} className="p-3 bg-gray-100 rounded-md mb-2 flex justify-between items-center text-base">
-                      <div>
-                        <p className="font-semibold">{season.description}</p>
-                        <p className="text-sm">{season.startDate} a {season.endDate}</p>
-                        <p className={`font-bold ${season.percentage > 0 ? 'text-green-600' : 'text-red-600'}`}>{season.percentage}%</p>
-                      </div>
-                      <button onClick={() => handleDeleteSeason(season.id)} className="text-red-500 hover:text-red-700 p-1">
-                        <FaTimes />
-                      </button>
-                    </div>
-                  ))}
-                  
-                  <button onClick={() => setShowSeasonForm(!showSeasonForm)} className="w-full mt-3 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg flex items-center justify-center space-x-2 transition duration-300 text-base">
-                    <FaPlus />
-                    <span>{showSeasonForm ? 'Cerrar Formulario' : 'Añadir Ajuste'}</span>
-                  </button>
-                  {showSeasonForm && (
-                    <form onSubmit={handleAddSeason} className="mt-4 space-y-3 p-3 border rounded-lg bg-gray-50">
-                      <input name="startDate" value={newSeason.startDate} onChange={handleSeasonChange} type="date" className="w-full p-2 border rounded text-base" required />
-                      <input name="endDate" value={newSeason.endDate} onChange={handleSeasonChange} type="date" className="w-full p-2 border rounded text-base" required />
-                      <input name="percentage" value={newSeason.percentage} onChange={handleSeasonChange} placeholder="Ej: 10%" className="w-full p-2 border rounded text-base" type="number" required />
-                      <button type="submit" disabled={isSubmitting} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg disabled:bg-gray-400 text-base">
-                        {isSubmitting ? 'Guardando...' : 'Guardar Ajuste'}
-                      </button>
-                    </form>
-                  )}
                 </div>
 
               </div>

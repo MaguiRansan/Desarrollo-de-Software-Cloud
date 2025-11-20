@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import TemporaryPropertyList from './TemporaryPropertyList'; 
+import TemporaryPropertyList from './TemporaryPropertyList';
 import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
 import AddPropertyForm from './AddPropertyForm';
 import Filters from './Filters';
@@ -10,7 +10,7 @@ import ReservationCalendar from './ReservationCalendar';
 import EditPropertyForm from './EditPropertyForm';
 import AdminLayout from '../AdminLayout';
 
-import { propertyService } from '../../../services/api'; 
+import { propertyService } from '../../../services/api';
 
 const Temporarios = () => {
   const [properties, setProperties] = useState([]);
@@ -22,48 +22,39 @@ const Temporarios = () => {
   const [filters, setFilters] = useState({
     city: '',
     capacity: '',
-    priceRange: { min: 0, max: 10000000 }, 
+    priceRange: { min: 0, max: 10000000 },
     services: [],
   });
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [propertyToEdit, setPropertyToEdit] = useState(null);
-  
+
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [users, setUsers] = useState([]);
   const [payments, setPayments] = useState([]);
-  const [sortBy, setSortBy] = useState('name'); 
+  const [sortBy, setSortBy] = useState('name');
 
   useEffect(() => {
     const fetchTemporaryRentals = async () => {
       try {
-        console.log('Starting to fetch temporary rentals...');
         setIsLoading(true);
-        
+
         const token = localStorage.getItem('token');
-        console.log('Auth token exists:', !!token);
-        
-        console.log('Calling propertyService.getForTemporaryRent()...');
+
         const response = await propertyService.getForTemporaryRent();
-        console.log('API Response received:', {
-          status: response.status,
-          hasValue: !!response.value,
-          valueCount: Array.isArray(response.value) ? response.value.length : 'Not an array',
-          fullResponse: response
-        });
-        
+
         if (response.status && response.value) {
           const propertiesWithAvailability = await Promise.all(
             response.value.map(async (prop) => {
               try {
-                const availabilityResponse = await fetch(`/properties/${prop._id || prop.id}/availability`, {
+                const availabilityResponse = await fetch(`/API/Propiedad/Disponibilidad/${prop._id || prop.id}`, {
                   headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                   }
                 });
-                
+
                 let availability = [];
                 if (availabilityResponse.ok) {
                   const availabilityData = await availabilityResponse.json();
@@ -71,8 +62,8 @@ const Temporarios = () => {
                     availability = availabilityData.value.availability || [];
                   }
                 }
-                
-                return {
+
+                const mappedProperty = {
                   id: prop.id || prop._id,
                   _id: prop._id || prop.id,
                   title: prop.title || prop.titulo || 'Sin título',
@@ -97,13 +88,25 @@ const Temporarios = () => {
                   operationType: 'alquiler_temporario',
                   checkInTime: prop.horarioCheckIn || '15:00',
                   checkOutTime: prop.horarioCheckOut || '11:00',
+                  estadiaMinima: (prop.estadiaMinima === null || prop.estadiaMinima === undefined || prop.estadiaMinima === 0)
+                    ? 1
+                    : prop.estadiaMinima,
                   securityDeposit: prop.depositoSeguridad || 0,
                   currency: prop.currency || 'USD',
-                  images: Array.isArray(prop.images) && prop.images.length > 0 
-                    ? prop.images.map(img => ({
-                        rutaArchivo: img.rutaArchivo || img || 'https://via.placeholder.com/300',
-                        url: img.url || img.rutaArchivo || img || 'https://via.placeholder.com/300'
-                      }))
+                  images: Array.isArray(prop.images) && prop.images.length > 0
+                    ? prop.images.map(img => {
+                      if (typeof img === 'object') {
+                        return {
+                          ...img,
+                          rutaArchivo: img.rutaArchivo || img.url || 'https://via.placeholder.com/300',
+                          url: img.url || img.rutaArchivo || 'https://via.placeholder.com/300'
+                        };
+                      }
+                      return {
+                        rutaArchivo: img,
+                        url: img
+                      };
+                    })
                     : ['https://via.placeholder.com/300'],
                   availability: availability.map(range => ({
                     ...range,
@@ -116,8 +119,9 @@ const Temporarios = () => {
                   cliente: prop.cliente || '',
                   fechaReserva: prop.fechaReserva || ''
                 };
+
+                return mappedProperty;
               } catch (error) {
-                console.error(`Error cargando disponibilidad para propiedad ${prop.id || prop._id}:`, error);
                 return {
                   ...prop,
                   availability: [],
@@ -127,14 +131,13 @@ const Temporarios = () => {
               }
             })
           );
-          
+
           setProperties(propertiesWithAvailability);
         } else {
           setError('No se pudieron cargar las propiedades de alquiler temporario');
           toast.error(response.message || 'Error al cargar las propiedades');
         }
       } catch (err) {
-        console.error('❌ Error cargando propiedades temporarias:', err);
         setError('Error al cargar las propiedades: ' + err.message);
       } finally {
         setIsLoading(false);
@@ -147,7 +150,7 @@ const Temporarios = () => {
   const handleSaveProperty = async (propertyData, imageFiles = []) => {
     try {
       setIsLoading(true);
-      
+
       const propertyToSave = {
         // Campos obligatorios según la validación del backend
         titulo: propertyData.titulo || 'Sin título',
@@ -161,129 +164,165 @@ const Temporarios = () => {
         barrio: propertyData.barrio || '',
         localidad: propertyData.localidad || '',
         provincia: propertyData.provincia || '',
-        
+        tipoPropiedad: propertyData.tipoPropiedad || 'Casa',
+        transaccionTipo: 'Alquiler Temporario',
+
         habitaciones: propertyData.habitaciones ? parseInt(propertyData.habitaciones) : 0,
         banos: propertyData.banos ? parseInt(propertyData.banos) : 0,
         superficieM2: propertyData.superficieM2 ? parseFloat(propertyData.superficieM2) : 0,
         capacidadPersonas: propertyData.capacidadPersonas ? parseInt(propertyData.capacidadPersonas) : 1,
         
-        // Mantener los precios específicos
+   
+
+        precio: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
         precioPorNoche: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
         precioPorSemana: propertyData.precioPorSemana ? parseFloat(propertyData.precioPorSemana) : 0,
         precioPorMes: propertyData.precioPorMes ? parseFloat(propertyData.precioPorMes) : 0,
-        
+
         horarioCheckIn: propertyData.horarioCheckIn || '15:00',
         horarioCheckOut: propertyData.horarioCheckOut || '11:00',
-        depositoSeguridad: propertyData.depositoSeguridad ? parseFloat(propertyData.depositoSeguridad) : 0,
-        
+        estadiaMinima: propertyData.estadiaMinima,
+
         servicios: Array.isArray(propertyData.servicios) ? propertyData.servicios : [],
         reglasPropiedad: Array.isArray(propertyData.reglasPropiedad) ? propertyData.reglasPropiedad : [],
-        
-        estado: propertyData.estado || 'Disponible',
+
+        estado: propertyData.estado ? propertyData.estado.charAt(0).toUpperCase() + propertyData.estado.slice(1).toLowerCase() : 'Disponible',
         esAlquilerTemporario: true,
         activo: true,
-        
+
         ...(propertyData.availability && propertyData.availability.length > 0 && {
-          disponibilidad: propertyData.availability[0]
-        })
+          disponibilidad: propertyData.availability.map(avail => ({
+            startDate: new Date(avail.startDate),
+            endDate: new Date(avail.endDate),
+            status: 'disponible',
+            clientName: '',
+            deposit: 0,
+            guests: parseInt(avail.availableGuests) || 1,
+            notes: '',
+            id: `range-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          }))
+        }),
+
+        imagenes: Array.isArray(propertyData.imagenes)
+          ? propertyData.imagenes
+            .filter(img => {
+              if (typeof img === 'string' && img.startsWith('data:')) return false;
+              return true;
+            })
+            .map(img => {
+              if (typeof img === 'object' && img !== null) {
+                return {
+                  rutaArchivo: img.rutaArchivo || img.url,
+                  nombreArchivo: img.nombreArchivo || 'imagen_existente',
+                  _id: img._id
+                };
+              }
+              return {
+                rutaArchivo: img,
+                nombreArchivo: 'imagen_existente'
+              };
+            })
+          : [],
       };
-      
-      if (propertyData.seasonalPrices && propertyData.seasonalPrices.length > 0) {
-        propertyToSave.preciosTemporada = propertyData.seasonalPrices;
+
+      if (propertyData.availability && propertyData.availability.length > 0) {
+        propertyToSave.availability = propertyData.availability.map(avail => ({
+          startDate: new Date(avail.startDate),
+          endDate: new Date(avail.endDate),
+          status: 'disponible',
+          clientName: '',
+          deposit: 0,
+          guests: parseInt(avail.availableGuests) || 1,
+          notes: '',
+          id: `range-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        }));
       }
-      
-      // Limpiar campos vacíos, nulos o indefinidos
+
       Object.keys(propertyToSave).forEach(key => {
         if (propertyToSave[key] === '' || propertyToSave[key] === null || propertyToSave[key] === undefined) {
           delete propertyToSave[key];
         }
       });
 
-      // Asegurarse de que la disponibilidad tenga un ID
-      if (propertyToSave.disponibilidad && propertyToSave.disponibilidad.length > 0) {
-        propertyToSave.disponibilidad = propertyToSave.disponibilidad.map(item => ({
-          ...item,
-          id: item.id || `temp-${Math.random().toString(36).substr(2, 9)}`
-        }));
+      let response;
+      const isEditing = !!propertyToEdit;
+      const propertyId = isEditing ? (propertyToEdit.id || propertyToEdit._id) : null;
+
+      if (isEditing) {
+        response = await propertyService.update(propertyId, propertyToSave);
+      } else {
+        response = await propertyService.create(propertyToSave);
       }
 
-      console.log('Datos a enviar a /API/Propiedad/Crear:', JSON.stringify(propertyToSave, null, 2));
-      
-      try {
-        const response = await propertyService.create(propertyToSave);
-        console.log('Respuesta del servidor:', response);
+      if (response.status && response.value) {
+        const savedPropertyId = response.value._id || response.value.id;
+        let finalProperty = response.value;
 
-        if (response.status && response.value) {
-          const propertyId = response.value._id || response.value.id;
-          
-          if (imageFiles && imageFiles.length > 0) {
-            console.log('Subiendo imágenes...');
-            const uploadResponse = await propertyService.uploadImages(propertyId, imageFiles);
-            console.log('Respuesta de subida de imágenes:', uploadResponse);
-            
-            if (!uploadResponse.status) {
-              throw new Error(uploadResponse.message || 'Error al subir las imágenes');
-            }
-            
-            if (uploadResponse.value && uploadResponse.value.length > 0) {
-              const updatedProperty = {
-                ...response.value,
-                imagenes: uploadResponse.value
-              };
-              setProperties(prev => [...prev, updatedProperty]);
-            } else {
-              setProperties(prev => [...prev, response.value]);
-            }
-          } else {
-            console.log('No hay imágenes para subir');
-            setProperties(prev => [...prev, response.value]);
+        if (imageFiles && imageFiles.length > 0) {
+          const uploadResponse = await propertyService.uploadImages(savedPropertyId, imageFiles);
+
+          if (!uploadResponse.status) {
+            throw new Error('Propiedad guardada pero error al subir las imágenes');
           }
 
-          toast.success('Propiedad guardada exitosamente');
-          setIsFormOpen(false);
-          setPropertyToEdit(null);
-        } else {
-          throw new Error(response.message || 'Error al guardar la propiedad');
+          if (uploadResponse.value && uploadResponse.value.length > 0) {
+            finalProperty = {
+              ...finalProperty,
+              imagenes: uploadResponse.value
+            };
+          }
         }
-      } catch (error) {
-        console.error('Error en la petición:', {
-          message: error.message,
-          response: error.response,
-          stack: error.stack
-        });
-        throw error; // Re-lanzamos el error para que se maneje en el catch externo
+
+        if (isEditing) {
+          setProperties(prev => prev.map(p => {
+            if (p.id === propertyId || p._id === propertyId) {
+              // Mantener los campos existentes y combinar con los actualizados
+              return {
+                ...p,  // Mantener los campos existentes
+                ...finalProperty,  // Aplicar los cambios
+                id: p.id || finalProperty.id,  // Asegurar que el ID no se pierda
+                _id: p._id || finalProperty._id,  // Asegurar que el _id no se pierda
+                title: finalProperty.title || finalProperty.titulo || p.title || 'Sin título',
+                description: finalProperty.description || finalProperty.descripcion || p.description || '',
+                price: finalProperty.price || finalProperty.precio || p.price || 0,
+                images: finalProperty.images || finalProperty.imagenes || p.images || []
+              };
+            }
+            return p;
+          }));
+          toast.success('Propiedad actualizada exitosamente');
+        } else {
+          // Para nueva propiedad, asegurarse de que tenga los campos necesarios
+          const newProperty = {
+            ...finalProperty,
+            id: finalProperty.id || finalProperty._id,
+            _id: finalProperty._id || finalProperty.id,
+            title: finalProperty.title || finalProperty.titulo || 'Sin título',
+            description: finalProperty.description || finalProperty.descripcion || '',
+            price: finalProperty.price || finalProperty.precio || 0,
+            images: finalProperty.images || finalProperty.imagenes || []
+          };
+          setProperties(prev => [...prev, newProperty]);
+          toast.success('Propiedad creada exitosamente');
+        }
+
+        setIsFormOpen(false);
+        setPropertyToEdit(null);
+      } else {
+        throw new Error(response.message || 'Error al guardar la propiedad');
       }
     } catch (error) {
-      console.error('Error al guardar la propiedad:', {
-        message: error.message,
-        response: error.response?.data || 'No hay datos de respuesta',
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          data: error.config?.data
-        }
-      });
-      
-      let errorMessage = 'Error al guardar la propiedad';
-      if (error.response?.data?.message) {
-        errorMessage += `: ${error.response.data.message}`;
-      } else if (error.message) {
-        errorMessage += `: ${error.message}`;
-      }
-      
-      toast.error(errorMessage);
+      toast.error(`Error al guardar la propiedad: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleAddProperty = () => {
     setPropertyToEdit(null);
     setIsFormOpen(true);
   };
-  
+
   const handleEditProperty = (property) => {
     setPropertyToEdit(property);
     setIsFormOpen(true);
@@ -298,13 +337,13 @@ const Temporarios = () => {
     if (!window.confirm('¿Está seguro de eliminar esta propiedad temporaria?')) {
       return;
     }
-    
+
     try {
       setIsLoading(true);
       const response = await propertyService.delete(propertyId);
-      
+
       if (response.status) {
-        setProperties(prevProperties => 
+        setProperties(prevProperties =>
           prevProperties.filter(p => (p.id !== propertyId && p._id !== propertyId))
         );
         toast.success('Propiedad eliminada correctamente');
@@ -312,7 +351,6 @@ const Temporarios = () => {
         throw new Error(response.message || 'Error al eliminar la propiedad');
       }
     } catch (error) {
-      console.error('Error al eliminar la propiedad:', error);
       toast.error(`Error al eliminar la propiedad: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -327,7 +365,7 @@ const Temporarios = () => {
       }
 
       if (rangeData) {
-        const response = await fetch(`/Propiedad/Disponibilidad/${id}`, {
+        const response = await fetch(`/API/Propiedad/Disponibilidad/${id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -349,98 +387,70 @@ const Temporarios = () => {
         }
 
         const updatedProperty = await response.json();
-        
-        setProperties(prevProperties => 
-          prevProperties.map(p => 
-            (p.id === id || p._id === id) 
+
+        setProperties(prevProperties =>
+          prevProperties.map(p =>
+            (p.id === id || p._id === id)
               ? { ...updatedProperty.value, id: p.id || p._id, _id: p._id || p.id }
               : p
           )
         );
-        
+
         toast.success('Disponibilidad actualizada correctamente');
         return;
       }
 
-      
-      setProperties(prevProperties => 
-        prevProperties.map(p => 
-          (p.id === id || p._id === id) 
-            ? { 
-                ...p, 
-                estado: status,
-                cliente: clientName,
-                fechaReserva: dateRange
-              } 
+
+      setProperties(prevProperties =>
+        prevProperties.map(p =>
+          (p.id === id || p._id === id)
+            ? {
+              ...p,
+              estado: status,
+              cliente: clientName,
+              fechaReserva: dateRange
+            }
             : p
         )
       );
-      
+
       toast.success('Estado de la propiedad actualizado correctamente');
-      
+
     } catch (error) {
-      console.error('Error al actualizar el estado:', error);
       toast.error(`Error al actualizar el estado: ${error.message}`);
     }
   };
 
   const getFilteredAndSortedProperties = () => {
-    console.log('Raw properties:', properties);
-    
     if (!Array.isArray(properties) || properties.length === 0) {
-      console.log('No properties available to filter');
       return [];
     }
-    
+
     let currentProperties = [...properties];
-    
-    console.log('All property titles:', properties.map(p => ({
-      id: p.id || p._id,
-      title: p.title,
-      type: p.type,
-      transaccionTipo: p.transaccionTipo,
-      operationType: p.operationType
-    })));
-    
-    console.log('Returning all properties without filtering for now');
-    
-    return currentProperties;
 
     currentProperties.sort((a, b) => {
-        if (sortBy === 'name') {
-            return a.title.localeCompare(b.title);
-        }
-        if (sortBy === 'price') {
-            return a.price - b.price; 
-        }
-        return 0;
+      if (sortBy === 'name') {
+        const titleA = a?.title?.toString()?.toLowerCase() || '';
+        const titleB = b?.title?.toString()?.toLowerCase() || '';
+        return titleA.localeCompare(titleB);
+      }
+      if (sortBy === 'price') {
+        const priceA = parseFloat(a?.price) || 0;
+        const priceB = parseFloat(b?.price) || 0;
+        return priceA - priceB;
+      }
+      return 0;
     });
 
     return currentProperties;
   };
 
   const currentFilteredProperties = getFilteredAndSortedProperties();
-  
-  useEffect(() => {
-    console.log('Current filtered properties to render:', {
-      count: currentFilteredProperties.length,
-      properties: currentFilteredProperties.map(p => ({
-        id: p.id || p._id,
-        title: p.title,
-        type: p.type,
-        transaccionTipo: p.transaccionTipo,
-        operationType: p.operationType,
-        status: p.status
-      }))
-    });
-  }, [currentFilteredProperties]);
 
   const handleReserve = (propertyId, reservation) => {
-    console.log(`Reserva para propiedad ${propertyId}:`, reservation);
   };
 
   const handleCancelReservation = (reservation) => {
-    console.log('Cancelación de reserva:', reservation);
   };
 
   const handleViewProperty = (property) => {
@@ -483,8 +493,8 @@ const Temporarios = () => {
             </div>
             <h3 className="text-lg font-medium text-red-900 mb-2">Error al cargar propiedades</h3>
             <p className="text-red-700 mb-4">{error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-300"
             >
               Reintentar
@@ -516,7 +526,7 @@ const Temporarios = () => {
           )}
         </div>
       )}
-      
+
       {!isFormOpen && (
         <div>
           <div className="mb-6">
@@ -552,8 +562,8 @@ const Temporarios = () => {
                     onChange={(e) => setSortBy(e.target.value)}
                     className="appearance-none pl-3 pr-8 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
                   >
-                  <option value="name">Ordenar por Nombre</option>
-                  <option value="price">Ordenar por Precio</option>
+                    <option value="name">Ordenar por Nombre</option>
+                    <option value="price">Ordenar por Precio</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
                     <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -581,18 +591,17 @@ const Temporarios = () => {
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    showFilters 
-                      ? 'bg-blue-600 text-white' 
-                      : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showFilters
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
                   title={showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
                 >
                   <FaFilter className="mr-1.5" />
                   <span className="hidden sm:inline">Filtros</span>
                 </button>
 
-                <button 
+                <button
                   onClick={handleAddProperty}
                   className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
                   title="Agregar nueva propiedad"
@@ -603,7 +612,7 @@ const Temporarios = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
               <div className="text-center p-3 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">{currentFilteredProperties.length}</div>
                 <div className="text-sm font-medium text-blue-800">Total Propiedades</div>
@@ -615,13 +624,6 @@ const Temporarios = () => {
                 </div>
                 <div className="text-sm font-medium text-green-800">Disponibles</div>
                 <div className="text-xs text-gray-500 mt-1">Actualmente</div>
-              </div>
-              <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600">
-                  {currentFilteredProperties.filter(p => p.status === 'reservado_temp').length}
-                </div>
-                <div className="text-sm font-medium text-yellow-800">Reservadas</div>
-                <div className="text-xs text-gray-500 mt-1">Pendiente de ingreso</div>
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">
@@ -642,15 +644,15 @@ const Temporarios = () => {
                   </div>
                 </div>
               )}
-              
+
               {currentFilteredProperties.length === 0 ? (
                 <div className="text-center py-20">
                   <div className="text-gray-400 mb-4">
                     <FaHome className="mx-auto h-16 w-16" />
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {searchTerm || Object.values(filters).some(f => f !== '' && f !== 0 && (Array.isArray(f) ? f.length > 0 : true)) 
-                      ? 'No se encontraron propiedades' 
+                    {searchTerm || Object.values(filters).some(f => f !== '' && f !== 0 && (Array.isArray(f) ? f.length > 0 : true))
+                      ? 'No se encontraron propiedades'
                       : 'No hay propiedades de alquiler temporario'
                     }
                   </h3>
@@ -671,13 +673,14 @@ const Temporarios = () => {
                   )}
                 </div>
               ) : (
-                <TemporaryPropertyList 
+                <TemporaryPropertyList
                   properties={currentFilteredProperties}
                   viewMode={viewMode}
                   onAddNew={handleAddProperty}
                   onEdit={handleEditProperty}
                   onDelete={handleDeleteProperty}
                   onUpdateStatus={handleUpdateStatus}
+                  onView={handleViewProperty}
                 />
               )}
             </div>
@@ -701,7 +704,7 @@ const Temporarios = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
                 <p className="text-gray-600 mb-4">{selectedProperty.description}</p>
-                
+
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center text-gray-700">
                     <FaMapMarkerAlt className="mr-3 text-blue-500" />

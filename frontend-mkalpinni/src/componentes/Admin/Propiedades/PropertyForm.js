@@ -1,20 +1,106 @@
-import React, { useState } from 'react';
-import { FaTimes, FaSave, FaExclamationTriangle, FaStar } from "react-icons/fa";
+import React, { useState, useEffect } from 'react';
+import { FaTimes, FaSave, FaExclamationTriangle, FaStar, FaPlus, FaTrash } from "react-icons/fa";
 
-const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitting = false }) => {
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [imageFiles, setImageFiles] = useState([]);
+const initialFormData = {
+  title: '',
+  address: '',
+  price: '',
+  description: '',
+  neighborhood: '',
+  locality: '',
+  province: '',
+  type: 'Casa', 
+  operationType: 'venta',
+  status: 'disponible',
+  bedrooms: '',
+  bathrooms: '',
+  squareMeters: '',
+  landSquareMeters: '',
+  lessor: '',
+  lessee: '',
+  allowsPets: false,
+};
+
+const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isSubmitting = false }) => {
+  const [showCancelModal, setShowCancelModal] = useState(false);  
+  const [formData, setFormData] = useState(initialFormData);
+  const [imagesState, setImagesState] = useState([]);
+  const [removedImageIds, setRemovedImageIds] = useState([]);
+
+
+  useEffect(() => {
+    if (prop) {
+      setFormData({
+        title: prop.title || prop.titulo || '',
+        address: prop.address || prop.direccion || '',
+        price: prop.price || prop.precio || '',
+        description: prop.description || prop.descripcion || '',
+        neighborhood: prop.neighborhood || prop.barrio || '',
+        locality: prop.locality || prop.localidad || '',
+        province: prop.province || prop.provincia || '',
+        type: prop.type || prop.tipoPropiedad || 'Casa',
+        operationType: prop.operationType || prop.transaccionTipo || 'venta',
+        status: prop.status || prop.estado || 'disponible',
+        bedrooms: prop.bedrooms || prop.habitaciones || '',
+        bathrooms: prop.bathrooms || prop.banos || '',
+        squareMeters: prop.squareMeters || prop.superficieM2 || '',
+        landSquareMeters: prop.landSquareMeters || prop.superficieTerreno || '',
+        lessor: prop.lessor || prop.arrendador || '',
+        lessee: prop.lessee || prop.arrendatario || '',
+        allowsPets: prop.allowsPets || prop.aceptaMascotas || false,
+      });
+
+      const initialImages = Array.isArray(prop.images) && prop.images.length > 0 
+        ? prop.images.filter(img => img !== null).map((img, index) => ({
+            _id: img._id || img.id || img.idImagen || (typeof img === 'string' ? img : null),
+            url: img.url || img.rutaArchivo || (typeof img === 'string' ? img : null),
+            isNew: false,
+            isMain: index === 0, 
+            file: null,
+            preview: null,
+          })) 
+        : [];
+      
+      setImagesState(initialImages);
+      setRemovedImageIds(prop.removedImages || []);
+
+    } else {
+      setFormData(initialFormData);
+      setImagesState([]);
+      setRemovedImageIds([]);
+    }
+  }, [prop]);  
+  useEffect(() => {
+    return () => {
+      imagesState.forEach(image => {
+        if (image && image.preview) {
+          URL.revokeObjectURL(image.preview);
+        }
+      });
+    };
+  }, [imagesState]);
+
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    onChange({
-      ...property,
-      [name]: name === 'price' || name === 'bedrooms' || name === 'bathrooms' || name === 'squareMeters' || name === 'landSquareMeters'
-        ? value === '' ? '' : Number(value)
-        : value,
-    });
+    const { name, value, type, checked } = e.target;
+    
+    const newValue = type === 'checkbox' 
+      ? checked 
+      : (name === 'price' || name === 'bedrooms' || name === 'bathrooms' || name === 'squareMeters' || name === 'landSquareMeters') 
+        ? (value === '' ? '' : Number(value)) 
+        : value;
+    
+    const updatedFormData = {
+      ...formData,
+      [name]: newValue
+    };
+    
+    setFormData(updatedFormData);
+    
+    if (onChange) {
+      onChange(updatedFormData);
+    }
   };
-
   const handleImageFileChange = (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
     
@@ -26,152 +112,108 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
         file,
         preview: URL.createObjectURL(file),
         isNew: true,
-        isMain: false 
+        isMain: false
       }));
     
     if (newImagePreviews.length === 0) return;
     
- 
-    const existingImages = Array.isArray(property.images) 
-      ? property.images
-          .filter(img => img !== null && img !== undefined)
-          .map(img => {
-            if (typeof img === 'string') {
-              return { 
-                url: img, 
-                isNew: false,
-                isMain: false
-              };
-            }
-            return { 
-              ...img, 
-              isNew: img.isNew || false,
-              isMain: img.isMain || false
-            };
-          })
-      : [];
+    let updatedImages = [...imagesState, ...newImagePreviews];
     
-    if (existingImages.length === 0 && newImagePreviews.length > 0) {
-      newImagePreviews[0].isMain = true;
+    const hasExistingMain = updatedImages.some(img => img.isMain);
+    if (!hasExistingMain && updatedImages.length > 0) {
+      updatedImages[0].isMain = true;
     }
     
-    const updatedImages = [...existingImages, ...newImagePreviews];
-    
-    onChange({ 
-      ...property,
-      images: updatedImages,
-      removedImages: property.removedImages || []
-    });
+    setImagesState(updatedImages);
     
     e.target.value = null;
   };
-
+  
   const handleRemoveImage = (indexToRemove) => {
-    if (!property.images || indexToRemove < 0 || indexToRemove >= property.images.length) return;
+    if (indexToRemove < 0 || indexToRemove >= imagesState.length) return;
     
-    const imageToRemove = property.images[indexToRemove];
+    const imageToRemove = imagesState[indexToRemove];
     
     if (imageToRemove && imageToRemove.preview) {
       URL.revokeObjectURL(imageToRemove.preview);
     }
 
-    const newImages = property.images.filter((_, index) => index !== indexToRemove);
-    const newImageFiles = imageFiles.filter((_, index) => index !== indexToRemove);
+    const newImages = imagesState.filter((_, index) => index !== indexToRemove);
     
-    const removedImages = [...(property.removedImages || [])];
+    const newRemovedIds = [...removedImageIds];
     
     if (imageToRemove && !imageToRemove.isNew) {
       const imageId = imageToRemove._id || imageToRemove.id || imageToRemove.idImagen || imageToRemove.url;
-      if (imageId && !removedImages.includes(imageId)) {
-        removedImages.push(imageId);
+      if (imageId && !newRemovedIds.includes(imageId)) {
+        newRemovedIds.push(imageId);
       }
     }
-
-    setImageFiles(newImageFiles);
     
-    if (newImages.length === 0) {
-      onChange({ ...property, images: [], removedImages });
-    } else {
-      onChange({ ...property, images: newImages, removedImages });
+    if (imageToRemove.isMain && newImages.length > 0) {
+      newImages[0].isMain = true;
     }
+    
+    setImagesState(newImages);
+    setRemovedImageIds(newRemovedIds);
   };
 
   const handleSetMainImage = (indexToPromote) => {
     if (indexToPromote === 0) return;
 
-    const newImages = [...property.images];
+    const newImages = [...imagesState];
     const [promotedImage] = newImages.splice(indexToPromote, 1);
+    
+    newImages.forEach(img => img.isMain = false);
+    promotedImage.isMain = true;
+    
     newImages.unshift(promotedImage);
     
-    const newImageFiles = [...imageFiles];
-    if (newImageFiles.length > indexToPromote) {
-      const [promotedFile] = newImageFiles.splice(indexToPromote, 1);
-      newImageFiles.unshift(promotedFile);
-      setImageFiles(newImageFiles);
-    }
-    
-    onChange({ ...property, images: newImages });
+    setImagesState(newImages);
   };
   
 
-  React.useEffect(() => {
-    return () => {
-     
-      if (property.images && Array.isArray(property.images)) {
-        property.images.forEach(image => {
-          if (image && image.preview) {
-            URL.revokeObjectURL(image.preview);
-          }
-        });
-      }
-    };
-  }, [property.images]);
-
-  const handleSave = async () => {
-    if (!property.title || !property.address || !property.price) {
-      alert('Por favor complete los campos requeridos');
+  const handleSave = () => {
+    if (!formData.title || !formData.address || !formData.price) {
+      alert('Por favor complete los campos requeridos: Título, Dirección y Precio.');
       return;
     }
-    const propertyId = property._id || property.id || property.idPropiedad;
-
-  
-    const existingImages = (property.images || [])
+    
+    const existingImages = imagesState
       .filter(img => !img.isNew && img.url)
       .map(img => ({
-        id: img.id,
+        id: img._id, 
         url: img.url,
         isMain: img.isMain || false
       }));
 
-   
-    const newImageFiles = (property.images || [])
+    const newImageFiles = imagesState
       .filter(img => img.isNew && img.file)
       .map(img => img.file);
 
-    
-    const removedImageIds = property.removedImages || [];
+    const removedIds = removedImageIds;
 
-    const { images, _id, id, idPropiedad, ...propertyData } = property;
+    const propertyId = prop?._id || prop?.id || prop?.idPropiedad;
 
-    if (!propertyId && editing) {
+    if (editing && !propertyId) {
       alert('Error: No se encontró el ID de la propiedad. Recarga la página e intenta nuevamente.');
       return;
     }
 
+    const propertyDataToSave = { 
+      ...formData,
+
+      images: existingImages.map(img => img.url)
+    };
+    
     if (typeof onSave === 'function') {
       onSave(
-        { 
-          ...propertyData,
-        
-          images: existingImages
-        },
+        propertyDataToSave,
         newImageFiles,
-        removedImageIds 
+        removedIds 
       );
-      return;
     }
-
   };
+
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-8">
@@ -188,7 +230,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="text"
             name="title"
             id="title"
-            value={property.title}
+            value={formData.title}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese título de la propiedad"
@@ -204,7 +246,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="text"
             name="address"
             id="address"
-            value={property.address}
+            value={formData.address}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese dirección"
@@ -220,7 +262,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="number"
             name="price"
             id="price"
-            value={property.price}
+            value={formData.price}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese precio"
@@ -236,7 +278,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           <select
             name="type"
             id="type"
-            value={property.type}
+            value={formData.type}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -255,7 +297,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="number"
             name="bedrooms"
             id="bedrooms"
-            value={property.bedrooms}
+            value={formData.bedrooms}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Número de dormitorios"
@@ -271,7 +313,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="number"
             name="landSquareMeters"
             id="landSquareMeters"
-            value={property.landSquareMeters}
+            value={formData.landSquareMeters}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese los metros cuadrados del terreno"
@@ -287,7 +329,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="number"
             name="bathrooms"
             id="bathrooms"
-            value={property.bathrooms}
+            value={formData.bathrooms}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Número de baños"
@@ -303,7 +345,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="text"
             name="neighborhood"
             id="neighborhood"
-            value={property.neighborhood}
+            value={formData.neighborhood}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese el barrio"
@@ -318,7 +360,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="text"
             name="locality"
             id="locality"
-            value={property.locality}
+            value={formData.locality}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese la localidad"
@@ -333,7 +375,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="text"
             name="province"
             id="province"
-            value={property.province}
+            value={formData.province}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese la provincia"
@@ -348,7 +390,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             type="number"
             name="squareMeters"
             id="squareMeters"
-            value={property.squareMeters}
+            value={formData.squareMeters}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese los metros cuadrados de la propiedad"
@@ -363,7 +405,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           <select
             name="operationType"
             id="operationType"
-            value={property.operationType}
+            value={formData.operationType}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -379,7 +421,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           <select
             name="status"
             id="status"
-            value={property.status}
+            value={formData.status}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -396,7 +438,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
           <textarea
             name="description"
             id="description"
-            value={property.description}
+            value={formData.description}
             onChange={handleInputChange}
             className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ingrese la descripción de la propiedad"
@@ -414,15 +456,15 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
             multiple 
             onChange={handleImageFileChange} 
             className="shadow border rounded-lg w-full py-3 px-4 text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
-            required={!property.images || property.images.length === 0} 
+            required={imagesState.length === 0} 
           />
           
-          {(property.images && property.images.length > 0) && (
+          {(imagesState && imagesState.length > 0) && (
             <div className="mt-4 flex flex-wrap gap-3">
-              {property.images
+              {imagesState
                 .filter(img => img !== null && img !== undefined)
                 .map((img, index) => {
-                  const imageUrl = img.url || img.preview || (typeof img === 'string' ? img : null);
+                  const imageUrl = img.preview || img.url; 
                   
                   if (!imageUrl) return null;
 
@@ -432,20 +474,29 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
                         relative 
                         h-24 w-24 
                         object-cover rounded-lg shadow-md border 
-                        ${index === 0 ? 'border-4 border-yellow-500' : 'border-gray-200'}
+                        ${img.isMain || index === 0 ? 'border-4 border-yellow-500' : 'border-gray-200'}
                         overflow-hidden`}>
                         <img
                           src={imageUrl}
                           alt={`Imagen de la propiedad ${index + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            e.target.src = '/placeholder-property.jpg';
+                            e.target.src = '/placeholder-property.jpg'; 
                           }}
                         />
+                         
+                         {(img.isMain || index === 0) && (
+                            <div className="absolute top-0 left-0 bg-yellow-500 text-xs text-white px-2 py-0.5 rounded-br-lg font-semibold">
+                                PRINCIPAL
+                            </div>
+                         )}
                       </div>
+                      
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
                         <div className="opacity-0 group-hover:opacity-100 flex space-x-1">
-                          {index !== 0 && (
+                          
+                          
+                          {!img.isMain && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -458,6 +509,7 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
                               <FaStar size={14} />
                             </button>
                           )}
+                          
                           <button
                             type="button"
                             onClick={(e) => {
@@ -511,7 +563,6 @@ const PropertyForm = ({ property, editing, onSave, onCancel, onChange, isSubmitt
         </button>
       </div>
 
-      {/* Modal de confirmación de cancelación */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 transition-opacity duration-300">
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 transform transition-all duration-300 scale-100">
