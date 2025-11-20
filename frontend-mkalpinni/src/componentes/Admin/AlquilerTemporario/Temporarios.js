@@ -334,7 +334,7 @@ const Temporarios = () => {
       }
 
       if (rangeData) {
-        const response = await fetch(`/Propiedad/Disponibilidad/${id}`, {
+        const response = await fetch(`/API/Propiedad/Disponibilidad/${id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -578,7 +578,7 @@ const Temporarios = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
               <div className="text-center p-3 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">{currentFilteredProperties.length}</div>
                 <div className="text-sm font-medium text-blue-800">Total Propiedades</div>
@@ -590,13 +590,6 @@ const Temporarios = () => {
                 </div>
                 <div className="text-sm font-medium text-green-800">Disponibles</div>
                 <div className="text-xs text-gray-500 mt-1">Actualmente</div>
-              </div>
-              <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600">
-                  {currentFilteredProperties.filter(p => p.status === 'reservado_temp').length}
-                </div>
-                <div className="text-sm font-medium text-yellow-800">Reservadas</div>
-                <div className="text-xs text-gray-500 mt-1">Pendiente de ingreso</div>
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">
