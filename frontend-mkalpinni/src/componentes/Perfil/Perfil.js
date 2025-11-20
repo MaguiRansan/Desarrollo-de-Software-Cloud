@@ -192,8 +192,6 @@ const Perfil = () => {
           </div>
         </div>
       )}
-
-      {/* PEQUEÑA SEPARACIÓN DEL HEADER → mt-4 */}
       <div className="mt-4 w-full flex justify-start mb-4 px-6">
         <button
           onClick={() => navigate(-1)}
@@ -207,8 +205,6 @@ const Perfil = () => {
       <div className="max-w-6xl mx-auto px-6 py-12">
 
         <div className="flex flex-col lg:flex-row gap-8">
-
-          {/* --- TARJETA PRINCIPAL DEL PERFIL --- */}
           <div className="flex-1">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="relative h-48 bg-slate-200">
@@ -283,11 +279,7 @@ const Perfil = () => {
               </div>
             </div>
           </div>
-
-          {/* --- COLUMNA DERECHA --- */}
           <div className="flex flex-col gap-6 w-80">
-
-            {/* FOTO PERFIL */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-xl font-semibold text-slate-800 mb-4">Foto de Perfil</h3>
 
@@ -324,8 +316,6 @@ const Perfil = () => {
                 {error && <p className="text-sm text-red-600">{error}</p>}
               </div>
             </div>
-
-            {/* EDITAR PERFIL */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-xl font-semibold text-slate-800 mb-4">Información de Perfil</h3>
 
