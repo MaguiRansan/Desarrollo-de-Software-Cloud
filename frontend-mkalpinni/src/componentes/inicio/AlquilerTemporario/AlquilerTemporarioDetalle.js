@@ -371,9 +371,7 @@ const AlquilerTemporarioDetalle = () => {
                         );
                       })}
                     </div>
-                  ) : (
-                    <p className="text-gray-600 text-sm mb-6">Esta propiedad no tiene especificaciones declaradas.</p>
-                  )}
+                  ) : null}
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <h3 className="font-medium text-gray-900 mb-2">Servicios incluidos</h3>
                     {inmueble.servicios && inmueble.servicios.length > 0 ? (
