@@ -21,10 +21,20 @@ const AdminHeader = ({ onLogoutClick }) => {
           <div className="flex-none relative">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="w-12 h-12 rounded-full bg-gradient-to-r from-green-600 to-green-700 flex items-center justify-center hover:shadow-lg transition-shadow duration-200"
+              className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center hover:shadow-lg transition-shadow duration-200"
               title="Menú de usuario"
             >
-              <FaUser className="text-white" size={20} />
+              {user?.fotoRuta ? (
+                <img 
+                  src={user.fotoRuta} 
+                  alt="Foto de perfil" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-r from-green-600 to-green-700 flex items-center justify-center">
+                  <FaUser className="text-white" size={20} />
+                </div>
+              )}
             </button>
 
             {showDropdown && (
