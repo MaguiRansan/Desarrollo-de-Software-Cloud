@@ -23,13 +23,11 @@ const Perfil = () => {
     if (!user?.fotoRuta) return;
     
     try {
-      // Si la ruta ya es una URL completa (de Cloudinary), la usamos directamente
       if (user.fotoRuta.startsWith('http')) {
         setPhotoUrl(`${user.fotoRuta}?v=${Date.now()}`);
         return;
       }
       
-      // Para compatibilidad con rutas antiguas
       const response = await axios.get(
         `${API_BASE_URL}/Usuario/ObtenerFoto/${user.correo}`,
         { responseType: 'blob', params: { v: Date.now() } }
@@ -87,17 +85,13 @@ const Perfil = () => {
       );
 
       if (response.data.status) {
-        // Actualizar la URL de la foto con la que devuelve el servidor
         if (response.data.fotoUrl) {
           setPhotoUrl(`${response.data.fotoUrl}?v=${Date.now()}`);
         } else if (response.data.user?.fotoRuta) {
           setPhotoUrl(`${response.data.user.fotoRuta}?v=${Date.now()}`);
         }
         
-        // Actualizar el contexto del usuario si es necesario
         if (response.data.user) {
-          // Aquí deberías tener una función para actualizar el usuario en el contexto
-          // Por ejemplo: updateUser(response.data.user);
         }
         
         setPhoto(null);
@@ -112,7 +106,6 @@ const Perfil = () => {
     }
   };
   
-  // Función auxiliar para convertir data URL a Blob
   const dataURItoBlob = (dataURI) => {
     const byteString = atob(dataURI.split(',')[1]);
     const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
@@ -127,8 +120,10 @@ const Perfil = () => {
   };
 
   const handleLogout = () => {
+    sessionStorage.removeItem('authToken');
     logout();
     setShowLogoutModal(false);
+    navigate('/', { replace: true });
   };
 
   if (!user) {
