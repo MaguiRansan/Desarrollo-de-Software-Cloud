@@ -317,16 +317,6 @@ const DetalleInmueble = () => {
                             </button>
                             <button
                                 className={`py-2 px-4 font-medium ${
-                                    activeTab === "especificaciones"
-                                        ? "text-gray-900 border-b-2 border-gray-900"
-                                        : "text-gray-500 hover:text-gray-900"
-                                }`}
-                                onClick={() => setActiveTab("especificaciones")}
-                            >
-                                Detalles
-                            </button>
-                            <button
-                                className={`py-2 px-4 font-medium ${
                                     activeTab === "ubicacion"
                                         ? "text-gray-900 border-b-2 border-gray-900"
                                         : "text-gray-500 hover:text-gray-900"

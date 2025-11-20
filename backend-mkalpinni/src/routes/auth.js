@@ -2,17 +2,13 @@ const express = require('express');
 const User = require('../models/User');
 const { protect, generateToken } = require('../middleware/auth');
 const { validateRegister, validateLogin, handleValidationErrors } = require('../middleware/validation');
-const { upload } = require('../middleware/upload');
+const { upload, uploadProfilePicture } = require('../middleware/upload');
 const { body } = require('express-validator');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
-
 const router = express.Router();
-
-// Configure multer for profile picture upload
-const uploadProfilePicture = upload.single('fotoPerfil');
 const seedPath = path.join(__dirname, '..', '..', 'scripts', 'seedDatabase.js');
 
 async function syncSeedWithUserProfile(correo, updates) {
@@ -349,56 +345,66 @@ router.put('/CambiarContrasena', [
     });
   }
 });
+const cloudinary = require('cloudinary').v2;
 
 router.post('/ActualizarFoto', 
   protect,
-  uploadProfilePicture,
-  async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        status: false,
-        message: 'No se ha proporcionado ninguna imagen o el archivo no es válido.'
-      });
-    }
-
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({
-        status: false,
-        message: 'Usuario no encontrado'
-      });
-    }
-
-    // Eliminar la imagen anterior si existe
-    if (user.fotoRuta) {
-      try {
-        const publicId = user.fotoRuta.split('/').pop().split('.')[0];
-        await cloudinary.uploader.destroy(`mkalpin/usuarios/${user._id}/${publicId}`);
-      } catch (error) {
-        console.error('Error al eliminar la imagen anterior:', error);
+  (req, res, next) => {
+    uploadProfilePicture(req, res, function(err) {
+      if (err) {
+        return res.status(400).json({
+          status: false,
+          message: 'Error al subir la imagen: ' + (err.message || 'Error desconocido')
+        });
       }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          status: false,
+          message: 'No se ha proporcionado ninguna imagen o el archivo no es válido.'
+        });
+      }
+
+      const user = await User.findById(req.user._id);
+      if (!user) {
+        return res.status(404).json({
+          status: false,
+          message: 'Usuario no encontrado'
+        });
+      }
+
+      if (user.fotoRuta) {
+        try {
+          const publicId = user.fotoRuta.split('/').pop().split('.')[0];
+          await cloudinary.uploader.destroy(`mkalpin/usuarios/${user._id}/${publicId}`);
+        } catch (error) {
+          console.error('Error al eliminar la imagen anterior:', error);
+        }
+      }
+
+      user.fotoRuta = req.file.path;
+      await user.save();
+
+      return res.json({
+        status: true,
+        message: 'Foto de perfil actualizada correctamente',
+        fotoUrl: user.fotoRuta,
+        user: user.toPublicJSON()
+      });
+    } catch (error) {
+      console.error('Error al actualizar la foto de perfil:', error);
+      return res.status(500).json({ 
+        status: false, 
+        message: 'Error al actualizar la foto de perfil',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
-
-    // La imagen ya fue subida por el middleware, solo actualizamos la URL
-    user.fotoRuta = req.file.path;
-    await user.save();
-
-    return res.json({
-      status: true,
-      message: 'Foto de perfil actualizada correctamente',
-      fotoUrl: user.fotoRuta,
-      user: user.toPublicJSON()
-    });
-  } catch (error) {
-    console.error('Error al actualizar la foto de perfil:', error);
-    return res.status(500).json({ 
-      status: false, 
-      message: 'Error al actualizar la foto de perfil',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
   }
-});
+);
 
 // Obtener foto por correo
 router.get('/ObtenerFoto/:correo', async (req, res) => {
