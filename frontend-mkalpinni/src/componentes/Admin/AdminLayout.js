@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { 
   FaHome, 
   FaBuilding, 
@@ -8,12 +8,17 @@ import {
   FaBars,
   FaTimes,
   FaBell,
-  FaUser} from 'react-icons/fa';
+  FaUser
+} from 'react-icons/fa';
 import AdminHeader from './AdminHeader';
 import Notifications from './Notifications';
+import { useUser } from '../../Context/UserContext';
 
-const AdminLayout = ({ children, user = { name: 'Marcelo' } }) => {
+const AdminLayout = ({ children, user = { name: 'pepe' } }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const { logout } = useUser();
+  const navigate = useNavigate();
   const location = useLocation();
 
   const navigation = [
@@ -22,6 +27,17 @@ const AdminLayout = ({ children, user = { name: 'Marcelo' } }) => {
     { name: 'Alquiler Temporario', href: '/admin/temporarios', icon: FaCalendarAlt },
     { name: 'Configuración', href: '/admin/configuracion', icon: FaCog },
   ];
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('authToken');
+
+    if (logout) {
+      logout();
+    }
+
+    setShowLogoutModal(false);
+    navigate('/', { replace: true });
+  };
 
   const isCurrentPath = (href) => {
     if (href === '/admin') {
@@ -32,7 +48,7 @@ const AdminLayout = ({ children, user = { name: 'Marcelo' } }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <AdminHeader />
+      <AdminHeader onLogoutClick={() => setShowLogoutModal(true)} />
       
       <div className="flex flex-1 flex-col lg:flex-row">
         <div className={`${
@@ -48,7 +64,6 @@ const AdminLayout = ({ children, user = { name: 'Marcelo' } }) => {
               </div>
               <div className="ml-3">
                 <h2 className="text-sm font-medium text-white">Administrador</h2>
-                <p className="text-xs text-green-100">del panel</p>
               </div>
             </div>
             <button
@@ -129,6 +144,29 @@ const AdminLayout = ({ children, user = { name: 'Marcelo' } }) => {
           </main>
         </div>
       </div>
+
+      {showLogoutModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h3 className="text-lg font-semibold text-slate-800">¿Seguro que quieres cerrar sesión?</h3>
+            <div className="mt-4 flex justify-between gap-4">
+              <button
+                onClick={handleLogout}
+                className="px-6 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg"
+              >
+                Sí, cerrar sesión
+              </button>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="px-6 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Notifications />
     </div>
   );

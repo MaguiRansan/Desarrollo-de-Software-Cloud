@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from '../config/apiConfig';
 import axios from "axios";
@@ -69,44 +69,47 @@ export const UserProvider = ({ children }) => {
     if (isLoggingIn && user?.idrol) {
       switch (user.idrol) {
         case 1:
-          navigate("/cliente");
+          navigate("/cliente", { replace: true });
           break;
         case 2:
-          navigate("/cliente");
+          navigate("/cliente", { replace: true });
           break;
         case 3:
-          navigate("/admin");
+          navigate("/admin", { replace: true });
           break;
         case 4:
-          navigate("/cliente");
+          navigate("/cliente", { replace: true });
           break;
         default:
-          navigate("/iniciarsesion");
+          navigate("/iniciarsesion", { replace: true });
       }
       setIsLoggingIn(false);
     }
   }, [user, isLoggingIn, navigate]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
-    sessionStorage.removeItem("authToken");
-    sessionStorage.removeItem("userData");
+    sessionStorage.removeItem('authToken');
+    sessionStorage.removeItem('userData');
     setTimeout(() => {
-      navigate("/iniciarsesion");
+      navigate("/", { replace: true });
     }, 500);
-  };
+  }, [navigate]);
 
   const userRoleName = user?.idrol ? getUserRoleName(user.idrol) : '';
 
+  const value = {
+    user,
+    setUser,
+    login,
+    logout,
+    loading,
+    userRoleName,
+    getUserRoleName,
+  };
+
   return (
-    <UserContext.Provider value={{
-      user,
-      login,
-      logout,
-      loading,
-      userRoleName,
-      getUserRoleName,
-    }}>
+    <UserContext.Provider value={value}>
       {children}
     </UserContext.Provider>
   );

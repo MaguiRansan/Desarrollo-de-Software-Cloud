@@ -1,31 +1,23 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { FaUser, FaSignOutAlt } from 'react-icons/fa';
 import { useUser } from '../../Context/UserContext';
 import logo from "../../logo/logo.png";
 
-const AdminHeader = () => {
+const AdminHeader = ({ onLogoutClick }) => {
   const { user } = useUser();
-  const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
-
-  const handleLogout = () => {
-    sessionStorage.removeItem('authToken');
-    navigate('/iniciarsesion');
-  };
 
   return (
     <nav className="bg-white shadow-md py-4">
       <div className="max-w-full w-full px-8 mx-auto">
         <div className="flex items-center justify-between">
-          {/* Logo centrado */}
           <div className="flex-1 flex justify-center">
             <Link to="/admin">
               <img src={logo} alt="Logo" className="h-12 md:h-16 cursor-pointer" />
             </Link>
           </div>
 
-          {/* Botón de perfil circular */}
           <div className="flex-none relative">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
@@ -35,7 +27,6 @@ const AdminHeader = () => {
               <FaUser className="text-white" size={20} />
             </button>
 
-            {/* Dropdown */}
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-50">
                 <div className="p-4 border-b border-gray-200">
@@ -51,7 +42,10 @@ const AdminHeader = () => {
                   Mi Perfil
                 </Link>
                 <button
-                  onClick={handleLogout}
+                  onClick={() => {
+                    setShowDropdown(false);
+                    onLogoutClick();
+                  }}
                   className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200 border-t border-gray-200"
                 >
                   <FaSignOutAlt className="mr-2" size={16} />
