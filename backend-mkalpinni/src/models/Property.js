@@ -8,22 +8,22 @@ const imagenPropiedadSchema = new mongoose.Schema({
 });
 
 const availabilitySchema = new mongoose.Schema({
-  startDate: { 
-    type: Date, 
-    required: [true, 'La fecha de inicio es requerida'] 
+  startDate: {
+    type: Date,
+    required: [true, 'La fecha de inicio es requerida']
   },
-  endDate: { 
-    type: Date, 
+  endDate: {
+    type: Date,
     required: [true, 'La fecha de fin es requerida'],
     validate: {
-      validator: function(endDate) {
+      validator: function (endDate) {
         return endDate > this.startDate;
       },
       message: 'La fecha de fin debe ser posterior a la fecha de inicio'
     }
   },
-  status: { 
-    type: String, 
+  status: {
+    type: String,
     enum: {
       values: ['disponible', 'reservado_temp', 'ocupado_temp'],
       message: 'Estado de disponibilidad no válido'
@@ -31,31 +31,31 @@ const availabilitySchema = new mongoose.Schema({
     default: 'disponible',
     required: [true, 'El estado de disponibilidad es requerido']
   },
-  clientName: { 
-    type: String, 
+  clientName: {
+    type: String,
     trim: true,
-    default: '' 
+    default: ''
   },
-  deposit: { 
-    type: Number, 
+  deposit: {
+    type: Number,
     min: [0, 'El depósito no puede ser negativo'],
-    default: 0 
+    default: 0
   },
-  guests: { 
-    type: Number, 
+  guests: {
+    type: Number,
     min: [1, 'Debe haber al menos un huésped'],
-    default: 1 
+    default: 1
   },
-  notes: { 
-    type: String, 
+  notes: {
+    type: String,
     trim: true,
-    default: '' 
+    default: ''
   },
-  id: { 
-    type: String, 
+  id: {
+    type: String,
     required: [true, 'El ID es requerido']
   }
-}, { 
+}, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
@@ -109,7 +109,7 @@ const propertySchema = new mongoose.Schema({
   transaccionTipo: {
     type: String,
     required: [true, 'El tipo de transacción es requerido'],
-    enum: ['Venta', 'Alquiler'],
+    enum: ['Venta', 'Alquiler', 'Alquiler Temporario'],
     default: 'Venta',
     index: true
   },
@@ -162,10 +162,11 @@ const propertySchema = new mongoose.Schema({
   reglasPropiedad: { type: [String], default: [] },
   horarioCheckIn: { type: String, match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato de hora inválido (HH:MM)'] },
   horarioCheckOut: { type: String, match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato de hora inválido (HH:MM)'] },
-  politicaCancelacion: { 
-    type: String, 
-    enum: ['Flexible', 'Moderada', 'Estricta'], 
-    default: 'Moderada' 
+  estadiaMinima: { type: Number, min: [1, 'La estadía mínima debe ser al menos 1 noche'], default: 1 },
+  politicaCancelacion: {
+    type: String,
+    enum: ['Flexible', 'Moderada', 'Estricta'],
+    default: 'Moderada'
   },
   currency: {
     type: String,
@@ -174,10 +175,6 @@ const propertySchema = new mongoose.Schema({
     required: [true, 'La moneda es requerida']
   },
   disponibilidad: [availabilitySchema],
-  seasonalPrices: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'SeasonalPrice'
-  }],
   imagenes: [imagenPropiedadSchema],
   disponible: {
     type: Boolean,
@@ -220,25 +217,25 @@ propertySchema.index({
   localidad: 'text'
 });
 
-propertySchema.virtual('idPropiedad').get(function() {
+propertySchema.virtual('idPropiedad').get(function () {
   return this._id.toHexString();
 });
 
-propertySchema.virtual('coordenadas').get(function() {
+propertySchema.virtual('coordenadas').get(function () {
   if (this.latitud && this.longitud) {
     return { lat: this.latitud, lng: this.longitud };
   }
   return null;
 });
 
-propertySchema.methods.getImageUrls = function(baseUrl = '') {
+propertySchema.methods.getImageUrls = function (baseUrl = '') {
   return this.imagenes.map(img => ({
     ...img.toObject(),
     url: `${baseUrl}/uploads/${img.rutaArchivo}`
   }));
 };
 
-propertySchema.statics.searchProperties = function(filters = {}) {
+propertySchema.statics.searchProperties = function (filters = {}) {
   const query = { activo: true };
 
   if (filters.transaccionTipo) query.transaccionTipo = new RegExp(filters.transaccionTipo, 'i');
@@ -279,7 +276,7 @@ propertySchema.statics.searchProperties = function(filters = {}) {
 
 propertySchema.set('toJSON', {
   virtuals: true,
-  transform: function(doc, ret) {
+  transform: function (doc, ret) {
     ret.idPropiedad = ret._id;
     delete ret._id;
     delete ret.__v;

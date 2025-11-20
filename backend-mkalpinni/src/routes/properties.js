@@ -1,7 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const Property = require('../models/Property');
-const SeasonalPrice = require('../models/SeasonalPrice');
 const Favorite = require('../models/Favorite');
 const { protect, optionalAuth, authorize } = require('../middleware/auth');
 const { validateProperty, validateId, validateSearch } = require('../middleware/validation');
@@ -154,7 +153,7 @@ router.post('/Crear', [protect, validateProperty], async (req, res) => {
         propertyData.metodosPago = propertyData.metodosPago.split(',').map(m => m.trim());
       }
     }
-    propertyData.imagenes = []; 
+    propertyData.imagenes = [];
 
     const property = new Property(propertyData);
     await property.save();
@@ -238,7 +237,7 @@ const handleDisponibilidadUpdate = async (req, res) => {
   console.log('Body:', req.body);
   try {
     const { startDate, endDate, status, clientName, deposit, guests } = req.body;
-    
+
     if (!startDate || !endDate || !status) {
       return res.status(400).json({
         status: false,
@@ -299,7 +298,7 @@ const handleDisponibilidadUpdate = async (req, res) => {
 
     const finalAvailabilityRanges = [];
     let conflictError = null;
-    
+
     const bookingStart = newRange.startDate;
     const bookingEnd = newRange.endDate;
     const createSplitRange = (originalRange, startDate, endDate, suffix) => {
@@ -309,7 +308,7 @@ const handleDisponibilidadUpdate = async (req, res) => {
         endDate: endDate,
         id: `range-${Date.now()}-split-${suffix}-${Math.random().toString(36).substr(2, 9)}`
       };
-      delete newSplitRange._id; 
+      delete newSplitRange._id;
       return newSplitRange;
     };
 
@@ -323,7 +322,7 @@ const handleDisponibilidadUpdate = async (req, res) => {
         const overlaps = bookingStart <= rangeEnd && bookingEnd >= rangeStart;
         return overlaps && (rangeStatus === 'ocupado_temp' || rangeStatus === 'reservado_temp');
       });
-      
+
       if (hasConflict) {
         conflictError = {
           status: 400,
@@ -353,7 +352,7 @@ const handleDisponibilidadUpdate = async (req, res) => {
         if (rangeStatus === 'ocupado_temp' || rangeStatus === 'reservado_temp') {
           hasConflict = true;
           finalAvailabilityRanges.push(range);
-        } 
+        }
         else if (rangeStatus === 'disponible') {
           const originalRangeObject = range.toObject ? range.toObject() : { ...range };
           if (rangeStart < bookingStart) {
@@ -366,7 +365,7 @@ const handleDisponibilidadUpdate = async (req, res) => {
           finalAvailabilityRanges.push(range);
         }
       });
-      
+
       if (hasConflict) {
         conflictError = {
           status: 400,
@@ -375,7 +374,7 @@ const handleDisponibilidadUpdate = async (req, res) => {
       } else {
         finalAvailabilityRanges.push(newRange);
       }
-      
+
     } else if (normalizedStatus === 'ocupado_temp') {
       let hasConflict = false;
       disponibilidadArray.forEach(range => {
@@ -396,7 +395,7 @@ const handleDisponibilidadUpdate = async (req, res) => {
         if (rangeStatus === 'ocupado_temp') {
           hasConflict = true;
           finalAvailabilityRanges.push(range);
-        } 
+        }
         else if (rangeStatus === 'disponible' || rangeStatus === 'reservado_temp') {
           const originalRangeObject = range.toObject ? range.toObject() : { ...range };
           if (rangeStart < bookingStart) {
@@ -409,7 +408,7 @@ const handleDisponibilidadUpdate = async (req, res) => {
           finalAvailabilityRanges.push(range);
         }
       });
-      
+
       if (hasConflict) {
         conflictError = {
           status: 400,
@@ -419,33 +418,33 @@ const handleDisponibilidadUpdate = async (req, res) => {
         finalAvailabilityRanges.push(newRange);
       }
     }
-    
+
     if (conflictError) {
       return res.status(conflictError.status).json({
         status: false,
         message: conflictError.message
       });
     }
-    
+
     property.disponibilidad = finalAvailabilityRanges;
     console.log('Status recibido:', status);
     console.log('Status normalizado:', normalizedStatus);
-    
+
     if (normalizedStatus === 'ocupado_temp') {
       property.estado = 'Ocupado';
     } else if (normalizedStatus === 'reservado_temp') {
       property.estado = 'Reservado';
     } else if (normalizedStatus === 'disponible') {
-      const hasBookedRanges = property.disponibilidad.some(r => 
+      const hasBookedRanges = property.disponibilidad.some(r =>
         r && ['ocupado_temp', 'reservado_temp'].includes(String(r.status || '').toLowerCase())
       );
-      
+
       if (!hasBookedRanges) {
         property.estado = 'Disponible';
       }
       else {
-         const hasOcupado = property.disponibilidad.some(r => r && String(r.status || '').toLowerCase() === 'ocupado_temp');
-         property.estado = hasOcupado ? 'Ocupado' : 'Reservado';
+        const hasOcupado = property.disponibilidad.some(r => r && String(r.status || '').toLowerCase() === 'ocupado_temp');
+        property.estado = hasOcupado ? 'Ocupado' : 'Reservado';
       }
     }
 
@@ -459,25 +458,25 @@ const handleDisponibilidadUpdate = async (req, res) => {
       console.error('ERROR: Estado inválido detectado, forzando a Disponible');
       property.estado = 'Disponible';
     }
-    
+
     const updateData = {
       disponibilidad: property.disponibilidad,
       estado: property.estado
     };
-    
+
     const updatedProperty = await Property.findByIdAndUpdate(
       req.params.id,
       { $set: updateData },
       { new: true, runValidators: false }
     ).populate('idUsuarioCreador', 'nombre apellido correo');
-    
+
     if (!updatedProperty) {
       return res.status(404).json({
         status: false,
         message: 'Propiedad no encontrada después de actualizar'
       });
     }
-    
+
     if (!['Disponible', 'Reservado', 'Ocupado', 'Vendido'].includes(updatedProperty.estado)) {
       updatedProperty.estado = normalizeEstado(updatedProperty.estado);
       await Property.findByIdAndUpdate(
@@ -489,7 +488,7 @@ const handleDisponibilidadUpdate = async (req, res) => {
 
     const finalProperty = await Property.findById(req.params.id)
       .populate('idUsuarioCreador', 'nombre apellido correo');
-    
+
     const responseProperty = finalProperty.toObject();
     responseProperty.availability = responseProperty.disponibilidad || [];
 
@@ -555,15 +554,15 @@ router.delete('/Disponibilidad/:id/date/:date', [protect, validateId], async (re
     if (isNaN(targetDayStart.getTime())) {
       return res.status(400).json({ status: false, message: 'Formato de fecha inválido. Use YYYY-MM-DD' });
     }
-    
+
     const rangeIndex = property.disponibilidad.findIndex(range => {
       if (!range.startDate || !range.endDate) return false;
-      
-      const rangeStart = new Date(range.startDate); 
-      const rangeEnd = new Date(range.endDate);     
+
+      const rangeStart = new Date(range.startDate);
+      const rangeEnd = new Date(range.endDate);
 
       const overlaps = (rangeStart <= targetDayEnd) && (rangeEnd >= targetDayStart);
-      
+
       return overlaps;
     });
 
@@ -574,22 +573,22 @@ router.delete('/Disponibilidad/:id/date/:date', [protect, validateId], async (re
         message: 'No se encontró un rango que contenga la fecha especificada'
       });
     }
-    
+
     console.log('Rango encontrado para dividir:', property.disponibilidad[rangeIndex]);
 
     const originalRange = property.disponibilidad[rangeIndex].toObject();
     const originalStatus = String(originalRange.status || 'disponible').toLowerCase();
-    
+
     const rangeStart = new Date(originalRange.startDate);
     const rangeEnd = new Date(originalRange.endDate);
-    
+
     property.disponibilidad.splice(rangeIndex, 1);
 
     if (rangeStart < targetDayStart) {
       const beforeRange = {
         ...originalRange,
         _id: new mongoose.Types.ObjectId(),
-        endDate: new Date(targetDayStart.getTime() - 1), 
+        endDate: new Date(targetDayStart.getTime() - 1),
         id: `${originalRange.id || 'range'}-split-before`
       };
       console.log('Creando rango ANTES:', beforeRange.startDate, beforeRange.endDate);
@@ -600,7 +599,7 @@ router.delete('/Disponibilidad/:id/date/:date', [protect, validateId], async (re
       const afterRange = {
         ...originalRange,
         _id: new mongoose.Types.ObjectId(),
-        startDate: new Date(targetDayEnd.getTime() + 1), 
+        startDate: new Date(targetDayEnd.getTime() + 1),
         id: `${originalRange.id || 'range'}-split-after`
       };
       console.log('Creando rango DESPUÉS:', afterRange.startDate, afterRange.endDate);
@@ -609,8 +608,8 @@ router.delete('/Disponibilidad/:id/date/:date', [protect, validateId], async (re
 
     if (originalStatus === 'reservado_temp' || originalStatus === 'ocupado_temp') {
       const newAvailableRange = {
-        startDate: targetDayStart, 
-        endDate: targetDayEnd,     
+        startDate: targetDayStart,
+        endDate: targetDayEnd,
         status: 'disponible',
         clientName: '',
         deposit: 0,
@@ -622,7 +621,7 @@ router.delete('/Disponibilidad/:id/date/:date', [protect, validateId], async (re
     }
 
     await property.save();
-    
+
     const finalProperty = await Property.findById(id).populate('idUsuarioCreador', 'nombre apellido correo');
 
     const responseProperty = finalProperty.toObject();
@@ -653,7 +652,7 @@ router.delete('/Disponibilidad/:id/:rangeId', [protect, validateId], async (req,
         message: 'Propiedad no encontrada'
       });
     }
-    
+
     if (property.idUsuarioCreador.toString() !== req.user._id.toString() && req.user.idrol !== 3) {
       return res.status(403).json({
         status: false,
@@ -677,10 +676,10 @@ router.delete('/Disponibilidad/:id/:rangeId', [protect, validateId], async (req,
       });
     }
 
-    const hasBookedRanges = property.disponibilidad.some(range => 
+    const hasBookedRanges = property.disponibilidad.some(range =>
       ['ocupado_temp', 'reservado_temp'].includes(range.status)
     );
-    
+
     if (!hasBookedRanges) {
       property.estado = 'Disponible';
     }
@@ -741,7 +740,7 @@ router.get('/:id/availability', [validateId, optionalAuth], async (req, res) => 
     });
   }
 });
-router.put('/Propiedad/Actualizar/:id', [protect, validateId, validateProperty], async (req, res) => {
+router.put('/Actualizar/:id', [protect, validateId, validateProperty], async (req, res) => {
   try {
     const property = await Property.findOne({ _id: req.params.id, activo: true });
 
@@ -760,7 +759,7 @@ router.put('/Propiedad/Actualizar/:id', [protect, validateId, validateProperty],
     }
 
     const updates = { ...req.body };
-    
+
     if (updates.availability && Array.isArray(updates.availability)) {
       property.disponibilidad = updates.availability.map(range => {
         const startDate = range.startDate ? new Date(range.startDate) : null;
@@ -781,18 +780,13 @@ router.put('/Propiedad/Actualizar/:id', [protect, validateId, validateProperty],
           notes: range.notes || '',
           id: range.id || `range-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         };
-      }).filter(Boolean); 
-      
+      }).filter(Boolean);
+
       property.markModified('disponibilidad');
-      
+
       console.log('Processed disponibilidad data:', JSON.stringify(property.disponibilidad, null, 2));
-      
+
       delete updates.availability;
-    }
-    if (updates.seasonalPrices && Array.isArray(updates.seasonalPrices)) {
-      property.seasonalPrices = updates.seasonalPrices;
-      property.markModified('seasonalPrices');
-      delete updates.seasonalPrices;
     }
 
     if ((!updates.latitud || !updates.longitud) && (updates.direccion || updates.barrio || updates.localidad || updates.provincia)) {
@@ -829,7 +823,7 @@ router.put('/Propiedad/Actualizar/:id', [protect, validateId, validateProperty],
     try {
       await property.save();
       console.log('Property saved successfully:', JSON.stringify(property.disponibilidad, null, 2));
-      
+
       const updatedProperty = await Property.findById(req.params.id)
         .populate('idUsuarioCreador', 'nombre apellido correo');
 
@@ -852,7 +846,7 @@ router.put('/Propiedad/Actualizar/:id', [protect, validateId, validateProperty],
 
   } catch (error) {
     console.error('Error actualizando propiedad:', error);
-    
+
     if (error.name === 'ValidationError') {
       console.error('Validation Error Details:', JSON.stringify(error.errors, null, 2));
       return res.status(400).json({
@@ -865,7 +859,7 @@ router.put('/Propiedad/Actualizar/:id', [protect, validateId, validateProperty],
         }))
       });
     }
-    
+
     console.error('Complete Error Object:', JSON.stringify({
       name: error.name,
       message: error.message,
@@ -957,7 +951,7 @@ router.post('/ToggleFavorito/:id', [protect, validateId], async (req, res) => {
 router.get('/Favoritos', protect, async (req, res) => {
   try {
     const favorites = await Favorite.getUserFavorites(req.user._id);
-    
+
     const validFavorites = favorites
       .filter(fav => fav.idPropiedad)
       .map(fav => ({
@@ -983,12 +977,12 @@ router.get('/Favoritos', protect, async (req, res) => {
 
 router.get('/MisPropiedades', protect, async (req, res) => {
   try {
-    const properties = await Property.find({ 
-      idUsuarioCreador: req.user._id, 
-      activo: true 
+    const properties = await Property.find({
+      idUsuarioCreador: req.user._id,
+      activo: true
     })
-    .populate('idUsuarioCreador', 'nombre apellido correo')
-    .sort({ fechaCreacion: -1 });
+      .populate('idUsuarioCreador', 'nombre apellido correo')
+      .sort({ fechaCreacion: -1 });
 
     res.json({
       status: true,
@@ -1009,7 +1003,7 @@ router.get('/MisPropiedades', protect, async (req, res) => {
 router.post('/SubirImagenes/:id', [
   protect,
   validateId,
-  uploadPropertyImages, 
+  uploadPropertyImages,
   handleMulterError
 ], async (req, res) => {
   try {
@@ -1017,7 +1011,7 @@ router.post('/SubirImagenes/:id', [
     console.log('ID Propiedad:', req.params.id);
     console.log('User:', req.user._id);
     console.log('Archivos recibidos:', req.files ? req.files.length : 0);
-    
+
     if (!req.files) {
       console.log('req.files es undefined o null');
       return res.status(400).json({
@@ -1025,7 +1019,7 @@ router.post('/SubirImagenes/:id', [
         message: 'No se recibieron archivos'
       });
     }
-    
+
     const property = await Property.findOne({ _id: req.params.id, activo: true });
 
     if (!property) {
@@ -1064,7 +1058,7 @@ router.post('/SubirImagenes/:id', [
       });
 
       const imageObj = {
-        rutaArchivo: file.path || file.secure_url || file.url || '', 
+        rutaArchivo: file.path || file.secure_url || file.url || '',
         public_id: file.filename || file.public_id || '',
         nombreArchivo: file.originalname,
         orden: property.imagenes.length + index
@@ -1081,13 +1075,13 @@ router.post('/SubirImagenes/:id', [
     const saved = await property.save();
     console.log('Propiedad actualizada. Total imágenes:', saved.imagenes.length);
 
-    const imageUrls = uploadedImages.map(img => img.rutaArchivo);  
+    const imageUrls = uploadedImages.map(img => img.rutaArchivo);
 
     console.log('Subir Imagenes');
     res.json({
       status: true,
       message: `Se subieron ${uploadedImages.length} imágenes exitosamente`,
-      value: saved  
+      value: saved
     });
 
   } catch (error) {
@@ -1095,7 +1089,7 @@ router.post('/SubirImagenes/:id', [
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
     console.error('Full error:', error);
-    
+
     res.status(500).json({
       status: false,
       message: 'Error interno del servidor',
@@ -1110,7 +1104,7 @@ router.delete('/EliminarImagen/:propertyId/:imageId', protect, async (req, res) 
 
     const property = await Property.findOne({ _id: propertyId, activo: true });
 
-  if (!property) {
+    if (!property) {
       return res.status(404).json({
         status: false,
         message: 'Propiedad no encontrada'
@@ -1125,16 +1119,16 @@ router.delete('/EliminarImagen/:propertyId/:imageId', protect, async (req, res) 
     }
 
     const imageIndex = property.imagenes.findIndex(img => img._id.toString() === imageId);
-    
+
     if (imageIndex === -1) {
       return res.status(404).json({
         status: false,
         message: 'Imagen no encontrada'
-     });
+      });
     }
 
     const image = property.imagenes[imageIndex];
-    
+
     try {
       await deleteFile(image.public_id);
     } catch (error) {
@@ -1145,14 +1139,14 @@ router.delete('/EliminarImagen/:propertyId/:imageId', protect, async (req, res) 
     await property.save();
 
     res.json({
-    status: true,
+      status: true,
       message: 'Imagen eliminada exitosamente'
     });
 
   } catch (error) {
-   console.error('Error eliminando imagen:', error);
+    console.error('Error eliminando imagen:', error);
     res.status(500).json({
-     status: false,
+      status: false,
       message: 'Error interno del servidor',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno'
     });

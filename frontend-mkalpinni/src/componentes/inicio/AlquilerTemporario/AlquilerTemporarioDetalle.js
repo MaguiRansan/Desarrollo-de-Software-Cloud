@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from "react-router-dom";
-import { FaBuilding, FaTree, FaBed, FaBath, FaCar, FaWifi, FaCheck, FaTimes } from "react-icons/fa";
+import { FaBuilding, FaTree, FaBed, FaBath } from "react-icons/fa";
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
 import { API_BASE_URL } from '../../../config/apiConfig';
 import axios from 'axios';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css'; 
+import 'leaflet/dist/leaflet.css';
 import 'leaflet/dist/images/marker-icon-2x.png';
 import 'leaflet/dist/images/marker-icon.png';
 import 'leaflet/dist/images/marker-shadow.png';
@@ -19,8 +19,6 @@ const AlquilerTemporarioDetalle = () => {
 
   const [mainImage, setMainImage] = useState("");
   const [activeTab, setActiveTab] = useState("caracteristicas");
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
@@ -57,7 +55,7 @@ const AlquilerTemporarioDetalle = () => {
 
           setInmueble({
             ...fetchedInmueble,
-            coordenadas: { 
+            coordenadas: {
               lat: isNaN(lat) ? null : lat,
               lng: isNaN(lng) ? null : lng,
             },
@@ -69,17 +67,20 @@ const AlquilerTemporarioDetalle = () => {
               { icon: <FaBed />, texto: `${fetchedInmueble.habitaciones || 'N/A'} Habitaciones` },
               { icon: <FaBath />, texto: `${fetchedInmueble.banos || 'N/A'} Baños` }
             ],
-            disponibilidad: fetchedInmueble.disponibilidad || { minEstadia: 1, maxEstadia: 365, fechasOcupadas: [] },
+            disponibilidad: {
+              minEstadia: fetchedInmueble.estadiaMinima || 1,
+              maxEstadia: 365,
+              fechasOcupadas: Array.isArray(fetchedInmueble.disponibilidad) ? fetchedInmueble.disponibilidad : []
+            },
             precio: `$${fetchedInmueble.precio} / noche`
           });
-          
+
           setMainImage(imagenesUrls.length > 0 ? imagenesUrls[0] : "/api/placeholder/800/500");
         } else {
           setError(response.data.msg || "No se pudo cargar la propiedad.");
         }
       } catch (err) {
         setError("Error al conectar con el servidor o cargar la propiedad.");
-        console.error("Error fetching inmueble:", err);
       } finally {
         setLoading(false);
       }
@@ -116,48 +117,6 @@ const AlquilerTemporarioDetalle = () => {
     );
   }
 
-  const generarCalendario = (mes, año) => {
-    const primerDia = new Date(año, mes, 1);
-    const ultimoDia = new Date(año, mes + 1, 0);
-    const diasMes = ultimoDia.getDate();
-    const diaSemanaInicio = primerDia.getDay();
-    const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    let diasCalendario = [];
-    for (let i = 0; i < diaSemanaInicio; i++) {
-      diasCalendario.push(null);
-    }
-    for (let i = 1; i <= diasMes; i++) {
-      diasCalendario.push(i);
-    }
-    return { diasSemana, diasCalendario };
-  };
-
-  const esFechaOcupada = (dia) => {
-    if (!dia || !inmueble.disponibilidad || !inmueble.disponibilidad.fechasOcupadas) return false;
-    const fecha = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    return inmueble.disponibilidad.fechasOcupadas.includes(fecha);
-  };
-
-  const cambiarMes = (incremento) => {
-    let nuevoMes = selectedMonth + incremento;
-    let nuevoAño = selectedYear;
-    if (nuevoMes > 11) {
-      nuevoMes = 0;
-      nuevoAño++;
-    } else if (nuevoMes < 0) {
-      nuevoMes = 11;
-      nuevoAño--;
-    }
-    setSelectedMonth(nuevoMes);
-    setSelectedYear(nuevoAño);
-  };
-
-  const { diasSemana, diasCalendario } = generarCalendario(selectedMonth, selectedYear);
-  const nombresMeses = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-
   const cambiarImagenPrincipal = (img) => {
     setMainImage(img);
   };
@@ -169,8 +128,7 @@ const AlquilerTemporarioDetalle = () => {
 
   const handleSubmitForm = async (e) => {
     e.preventDefault();
-    
-    // Basic validation
+
     if (!formData.nombre || !formData.email || !formData.telefono || !formData.fechaEntrada || !formData.fechaSalida || !formData.cantidadPersonas) {
       alert('Por favor complete todos los campos obligatorios');
       return;
@@ -185,7 +143,6 @@ const AlquilerTemporarioDetalle = () => {
 
       if (response.data.status) {
         setShowSuccess(true);
-        // Reset form
         setFormData({
           nombre: '',
           email: '',
@@ -195,13 +152,11 @@ const AlquilerTemporarioDetalle = () => {
           cantidadPersonas: '',
           mensaje: ''
         });
-        // Hide success message after 5 seconds
         setTimeout(() => setShowSuccess(false), 5000);
       } else {
         alert('Hubo un error al enviar tu consulta. Por favor, inténtalo nuevamente.');
       }
     } catch (error) {
-      console.error('Error al enviar la consulta:', error);
       const errorMessage = error.response?.data?.message || 'Error al enviar la consulta. Por favor, inténtalo nuevamente.';
       alert(errorMessage);
     }
@@ -211,16 +166,16 @@ const AlquilerTemporarioDetalle = () => {
     useEffect(() => {
       if (activeTab !== "ubicacion") {
         if (mapRef.current) {
-            mapRef.current.remove();
-            mapRef.current = null;
+          mapRef.current.remove();
+          mapRef.current = null;
         }
         return;
       }
 
       if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng) || lat === null || lng === null) {
         if (mapRef.current) {
-            mapRef.current.remove();
-            mapRef.current = null;
+          mapRef.current.remove();
+          mapRef.current = null;
         }
         return;
       }
@@ -243,17 +198,17 @@ const AlquilerTemporarioDetalle = () => {
           mapRef.current = null;
         }
       };
-    }, [lat, lng, titulo, direccion]);
+    }, [lat, lng, titulo, direccion, activeTab]);
 
     if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng) || lat === null || lng === null) {
-        return <p className="text-gray-500 p-4 bg-gray-100 rounded-lg">Ubicación geográfica no disponible para esta propiedad.</p>;
+      return <p className="text-gray-500 p-4 bg-gray-100 rounded-lg">Ubicación geográfica no disponible para esta propiedad.</p>;
     }
 
     return (
-      <div 
-        ref={mapContainerRef} 
-        className="w-full h-96 bg-gray-200 rounded-lg overflow-hidden" 
-        style={{ zIndex: 1 }} 
+      <div
+        ref={mapContainerRef}
+        className="w-full h-96 bg-gray-200 rounded-lg overflow-hidden"
+        style={{ zIndex: 1 }}
       />
     );
   };
@@ -267,7 +222,8 @@ const AlquilerTemporarioDetalle = () => {
           <h1 className="text-3xl font-bold text-gray-900">{inmueble.titulo}</h1>
           <p className="mt-2 text-gray-600">{inmueble.direccion}</p>
           <p className="mt-4 text-2xl font-semibold text-gray-900">{inmueble.precio}</p>
-          <div className="mt-2 inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+
+          <div className="mt-4 inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
             Disponible para alquiler temporario
           </div>
         </div>
@@ -319,10 +275,10 @@ const AlquilerTemporarioDetalle = () => {
                 Ubicación
               </button>
               <button
-                className={`py-2 px-4 font-medium ${activeTab === "disponibilidad" ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-500 hover:text-gray-900"}`}
-                onClick={() => setActiveTab("disponibilidad")}
+                className={`py-2 px-4 font-medium ${activeTab === "informacionEstadia" ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-500 hover:text-gray-900"}`}
+                onClick={() => setActiveTab("informacionEstadia")}
               >
-                Disponibilidad
+                Estadía
               </button>
             </div>
 
@@ -346,7 +302,7 @@ const AlquilerTemporarioDetalle = () => {
                       <p className="text-gray-700 leading-relaxed">{inmueble.descripcion}</p>
                     </div>
                   )}
-                  
+
                   {(inmueble.horarioCheckIn || inmueble.horarioCheckOut) && (
                     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                       <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Horarios de estadía</h3>
@@ -397,31 +353,6 @@ const AlquilerTemporarioDetalle = () => {
                       </ul>
                     </div>
                   )}
-
-                  {inmueble.politicaCancelacion && (
-                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Política de cancelación</h3>
-                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                        <div className="flex">
-                          <div className="flex-shrink-0">
-                            <svg className="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm text-blue-700">
-                              {inmueble.politicaCancelacion === 'Flexible' 
-                                ? 'Cancelación Flexible: Reembolso total si cancelas hasta 24 horas antes del check-in.'
-                                : inmueble.politicaCancelacion === 'Moderada'
-                                ? 'Cancelación Moderada: Reembolso del 50% si cancelas hasta 7 días antes del check-in.'
-                                : 'Cancelación Estricta: Reembolso del 50% si cancelas hasta 30 días antes del check-in.'
-                              }
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -463,88 +394,33 @@ const AlquilerTemporarioDetalle = () => {
                   <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                     <h3 className="font-medium text-gray-900 mb-2">Ubicación de la propiedad</h3>
                     <p className="text-gray-700 mb-4">{inmueble.direccion}</p>
-                    <Mapa 
-                      lat={inmueble.coordenadas.lat} 
-                      lng={inmueble.coordenadas.lng} 
-                      titulo={inmueble.titulo} 
-                      direccion={inmueble.direccion} 
+                    <Mapa
+                      lat={inmueble.coordenadas.lat}
+                      lng={inmueble.coordenadas.lng}
+                      titulo={inmueble.titulo}
+                      direccion={inmueble.direccion}
                     />
                   </div>
                 </div>
               )}
 
-              {activeTab === "disponibilidad" && (
+              {activeTab === "informacionEstadia" && (
                 <div>
                   <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-                    <h3 className="font-medium text-gray-900 mb-4">Información de reserva</h3>
-                    <div className="space-y-3">
-                      <p className="flex justify-between"><span>Estadía mínima:</span> <span className="font-medium">{inmueble.disponibilidad.minEstadia} noches</span></p>
-                      <p className="flex justify-between"><span>Estadía máxima:</span> <span className="font-medium">{inmueble.disponibilidad.maxEstadia} noches</span></p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white p-4 rounded-lg shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-gray-900">Calendario de disponibilidad</h3>
-                      <div className="flex items-center space-x-2">
-                        <span className="flex items-center text-sm"><span className="w-3 h-3 inline-block bg-green-100 border border-green-400 rounded-sm mr-1"></span> Disponible</span>
-                        <span className="flex items-center text-sm"><span className="w-3 h-3 inline-block bg-red-100 border border-red-400 rounded-sm mr-1"></span> No disponible</span>
+                    <h3 className="text-xl font-medium text-gray-900 mb-4 pb-2 border-b border-gray-100">Información de estadía</h3>
+                    <div className="space-y-3 text-gray-700">
+
+                      <p className="flex justify-between">
+                        <span className="font-medium">Estadía mínima:</span>
+                        <span className="font-semibold text-gray-900">{inmueble.disponibilidad.minEstadia} noches</span>
+                      </p>
+
+                      <div className="bg-gray-50 p-3 rounded-md text-sm text-gray-600 mt-4">
+                        <p>Por favor, utilice el formulario de contacto para consultar la disponibilidad exacta para las fechas deseadas.</p>
+
+                        <p className="mt-2 font-medium text-yellow-800">El valor publicado puede variar según la temporada y la duración de la estadía</p>
                       </div>
                     </div>
-                    
-                    <div className="mb-4 flex items-center justify-between">
-                      <button 
-                        onClick={() => cambiarMes(-1)} 
-                        className="p-1 rounded-full hover:bg-gray-100"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                      <h4 className="text-gray-800 font-medium">
-                        {nombresMeses[selectedMonth]} {selectedYear}
-                      </h4>
-                      <button 
-                        onClick={() => cambiarMes(1)} 
-                        className="p-1 rounded-full hover:bg-gray-100"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
-                    
-                    <div className="grid grid-cols-7 gap-1">
-                      {diasSemana.map((dia, index) => (
-                        <div key={`dia-${index}`} className="text-center text-xs font-medium text-gray-500 py-1">
-                          {dia}
-                        </div>
-                      ))}
-                      
-                      {diasCalendario.map((dia, index) => (
-                        <div 
-                          key={`numero-${index}`} 
-                          className={`text-center py-2 text-sm ${!dia ? '' : esFechaOcupada(dia) 
-                            ? 'bg-red-100 text-red-800 rounded' 
-                            : 'bg-green-100 text-green-800 rounded'}`}
-                        >
-                          {dia ? (
-                            <span className="flex items-center justify-center">
-                              {dia}
-                              {esFechaOcupada(dia) ? (
-                                <FaTimes className="ml-1 text-xs text-red-600" />
-                              ) : (
-                                <FaCheck className="ml-1 text-xs text-green-600" />
-                              )}
-                            </span>
-                          ) : ''}
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <p className="mt-4 text-sm text-gray-600">
-                      Las fechas en rojo ya están reservadas. Para consultar disponibilidad específica, por favor complete el formulario de contacto.
-                    </p>
                   </div>
                 </div>
               )}
@@ -583,24 +459,19 @@ const AlquilerTemporarioDetalle = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-900"
                   placeholder="Teléfono"
+                  required
                 />
-                <input
-                  type="date"
-                  id="fechaEntrada"
-                  value={formData.fechaEntrada}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-900"
-                  placeholder="Fecha de entrada"
-                />
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="fechaIngreso" className="block text-sm text-gray-600 mb-1">Fecha de ingreso</label>
+                    <label htmlFor="fechaEntrada" className="block text-sm text-gray-600 mb-1">Fecha de ingreso</label>
                     <input
                       type="date"
-                      id="fechaIngreso"
-                      value={formData.fechaIngreso}
+                      id="fechaEntrada"
+                      value={formData.fechaEntrada}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-900"
+                      required
                     />
                   </div>
                   <div>
@@ -611,6 +482,7 @@ const AlquilerTemporarioDetalle = () => {
                       value={formData.fechaSalida}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-900"
+                      required
                     />
                   </div>
                 </div>
@@ -621,8 +493,9 @@ const AlquilerTemporarioDetalle = () => {
                     id="cantidadPersonas"
                     value={formData.cantidadPersonas}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-900"
                     min="1"
+                    required
                   />
                 </div>
                 <div>
@@ -634,14 +507,13 @@ const AlquilerTemporarioDetalle = () => {
                     rows="3"
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-900"
                     placeholder="Me interesa alquilar esta propiedad..."
-                    required
                   ></textarea>
                 </div>
                 <button
                   type="submit"
                   className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-md transition duration-200"
                 >
-                  Consultar disponibilidad
+                  Consultar disponibilidad y precio
                 </button>
               </form>
             </div>
