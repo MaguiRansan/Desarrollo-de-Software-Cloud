@@ -14,8 +14,6 @@ const initialAvailability = {
   availableGuests: '',
 };
 
-
-
 const initialPropertyState = {
   titulo: '',
   descripcion: '',
@@ -54,8 +52,24 @@ const initialPropertyState = {
 };
 
 const BASE_SERVICES = ['WiFi', 'Limpieza general', 'Estacionamiento', 'Kit de Bienvenida', 'Ropa de Cama', 'Servicio de conserjeria', 'Cocina Equipada', 'Seguridad 24hs', 'Smart TV', 'Aire acondicionado', 'Sin Piscina'];
+
 const availableReglas = ['No fumar', 'No mascotas', 'Respetar horarios de descanso', 'Solo Familias'];
 
+const getSavedCustomServices = () => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('customServices');
+    return saved ? JSON.parse(saved) : [];
+  }
+  return [];
+};
+
+const getSavedCustomRules = () => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('customRules');
+    return saved ? JSON.parse(saved) : [];
+  }
+  return [];
+};
 
 const ConfirmationModal = ({ show, onConfirm, onClose }) => {
   if (!show) return null;
@@ -90,14 +104,29 @@ const ConfirmationModal = ({ show, onConfirm, onClose }) => {
 };
 
 
-const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
+const AddPropertyForm = ({ onAddProperty, onCancel, isSubmitting = false }) => {
   const [property, setProperty] = useState(initialPropertyState);
   const [imageFiles, setImageFiles] = useState([]);
   const [availability, setAvailability] = useState(initialAvailability);
 
   const [newServiceInput, setNewServiceInput] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
+  
+  const [customServices, setCustomServices] = useState(getSavedCustomServices());
+  const [customRules, setCustomRules] = useState(getSavedCustomRules());
+  const [newRuleInput, setNewRuleInput] = useState('');
 
+  const saveCustomServices = (services) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('customServices', JSON.stringify(services));
+    }
+  };
+
+  const saveCustomRules = (rules) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('customRules', JSON.stringify(rules));
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -127,12 +156,26 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
     e.preventDefault();
     const newService = newServiceInput.trim();
 
-    if (newService && !property.servicios.includes(newService)) {
-      setProperty(prev => ({
-        ...prev,
-        servicios: [...prev.servicios, newService]
-      }));
-      setNewServiceInput('');
+    if (newService) {
+      const allServices = [...BASE_SERVICES, ...customServices];
+      const serviceExists = allServices.some(
+        s => s.toLowerCase() === newService.toLowerCase()
+      );
+      
+      if (!serviceExists) {
+        const updatedCustomServices = [...customServices, newService];
+        setCustomServices(updatedCustomServices);
+        saveCustomServices(updatedCustomServices);
+        
+        setProperty(prev => ({ 
+          ...prev, 
+          servicios: [...(prev.servicios || []), newService] 
+        }));
+        
+        setNewServiceInput('');
+      } else {
+        alert('Este servicio ya existe en la lista');
+      }
     }
   };
 
@@ -140,6 +183,40 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
     setProperty(prev => ({
       ...prev,
       servicios: prev.servicios.filter(s => s !== serviceToRemove)
+    }));
+  };
+
+  const handleAddNewRule = (e) => {
+    e.preventDefault();
+    const newRule = newRuleInput.trim();
+
+    if (newRule) {
+      const allRules = [...availableReglas, ...customRules];
+      const ruleExists = allRules.some(
+        r => r.toLowerCase() === newRule.toLowerCase()
+      );
+      
+      if (!ruleExists) {
+        const updatedCustomRules = [...customRules, newRule];
+        setCustomRules(updatedCustomRules);
+        saveCustomRules(updatedCustomRules);
+        
+        setProperty(prev => ({ 
+          ...prev, 
+          reglasPropiedad: [...(prev.reglasPropiedad || []), newRule] 
+        }));
+        
+        setNewRuleInput('');
+      } else {
+        alert('Esta regla ya existe en la lista');
+      }
+    }
+  };
+
+  const handleRemoveRule = (ruleToRemove) => {
+    setProperty(prev => ({
+      ...prev,
+      reglasPropiedad: prev.reglasPropiedad.filter(r => r !== ruleToRemove)
     }));
   };
 
@@ -176,43 +253,75 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
   };
 
 
-
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const finalProperty = {
-      ...property,
+    try {
+      const finalProperty = {
+        ...property,
 
-      precio: property.precio === '' ? null : parseFloat(property.precio),
-      precioPorNoche: property.precioPorNoche === '' ? null : parseFloat(property.precioPorNoche),
-      precioPorSemana: property.precioPorSemana === '' ? null : parseFloat(property.precioPorSemana),
-      precioPorMes: property.precioPorMes === '' ? null : parseFloat(property.precioPorMes),
-      capacidadPersonas: property.capacidadPersonas === '' ? 0 : parseInt(property.capacidadPersonas),
-      habitaciones: property.habitaciones === '' ? 0 : parseInt(property.habitaciones),
-      banos: property.banos === '' ? 0 : parseInt(property.banos),
-      superficieM2: property.superficieM2 === '' ? 0 : parseInt(property.superficieM2),
-      depositoSeguridad: property.depositoSeguridad === '' ? null : parseFloat(property.depositoSeguridad),
-      estadiaMinima: property.estadiaMinima === '' ? 1 : parseInt(property.estadiaMinima),
+        titulo: property.titulo || 'Sin título',
+        descripcion: property.descripcion || 'Sin descripción',
+        direccion: property.direccion || 'Sin dirección',
+        barrio: property.barrio || 'Sin barrio',
+        localidad: property.localidad || 'Sin localidad',
+        provincia: property.provincia || 'Sin provincia',
+        tipoPropiedad: property.tipoPropiedad || 'Casa',
+        transaccionTipo: 'Alquiler Temporario',
 
-      ubicacion: property.localidad,
-      esAlquilerTemporario: property.transaccionTipo === 'Alquiler Temporario',
+        habitaciones: property.habitaciones ? parseInt(property.habitaciones) : 0,
+        banos: property.banos ? parseInt(property.banos) : 0,
+        superficieM2: property.superficieM2 ? parseFloat(property.superficieM2) : 0,
+        capacidadPersonas: property.capacidadPersonas ? parseInt(property.capacidadPersonas) : 1,
+        
+        precioPorNoche: property.precioPorNoche ? parseFloat(property.precioPorNoche) : null,
+        precioPorSemana: property.precioPorSemana ? parseFloat(property.precioPorSemana) : null,
+        precioPorMes: property.precioPorMes ? parseFloat(property.precioPorMes) : null,
+        depositoSeguridad: property.depositoSeguridad ? parseFloat(property.depositoSeguridad) : null,
+        estadiaMinima: property.estadiaMinima ? parseInt(property.estadiaMinima) : 1,
+        
+        estado: property.estado || 'Disponible',
+        activo: property.activo,
+        esAlquilerTemporario: property.transaccionTipo === 'Alquiler Temporario',
+        horarioCheckIn: property.horarioCheckIn || '15:00',
+        horarioCheckOut: property.horarioCheckOut || '11:00',
+        
+        servicios: Array.isArray(property.servicios) ? property.servicios : [],
+        reglasPropiedad: Array.isArray(property.reglasPropiedad) ? property.reglasPropiedad : [],
+        
+        ubicacion: property.localidad,
+        latitud: property.latitud || 0,
+        longitud: property.longitud || 0,
+        
+        availability: availability.startDate && availability.endDate && availability.availableGuests ? [{
+          id: `temp-${Math.random().toString(36).substr(2, 9)}`,
+          startDate: availability.startDate,
+          endDate: availability.endDate,
+          availableGuests: parseInt(availability.availableGuests) || 1,
+          status: 'disponible', 
+          clientName: '', 
+          deposit: 0, 
+          guests: 1 
+        }] : [],
+        
+        imagenes: property.imagenes || [],
+      };
 
-      availability: availability.startDate && availability.endDate && availability.availableGuests ? [{
-        startDate: availability.startDate,
-        endDate: availability.endDate,
-        availableGuests: parseInt(availability.availableGuests),
-      }] : [],
-
-      imagenes: property.imagenes,
-    };
-
-    onAddProperty(finalProperty, imageFiles);
-
-    setProperty(initialPropertyState);
-    setImageFiles([]);
-    setAvailability(initialAvailability);
-    setNewServiceInput('');
+      console.log('Datos a enviar:', JSON.stringify(finalProperty, null, 2));
+      onAddProperty(finalProperty, imageFiles);
+      
+      setProperty(initialPropertyState);
+      setImageFiles([]);
+      setAvailability(initialAvailability);
+      setNewServiceInput('');
+      setNewRuleInput('');
+      
+    } catch (error) {
+      console.error('Error al procesar el formulario:', error);
+      alert('Ocurrió un error al procesar el formulario. Por favor, intente nuevamente.');
+    }
   };
+
 
   const handleShowCancelModal = () => {
     setShowCancelModal(true);
@@ -225,8 +334,10 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
     setImageFiles([]);
     setAvailability(initialAvailability);
     setNewServiceInput('');
+    setNewRuleInput('');
 
     setShowCancelModal(false);
+    onCancel && onCancel();
   };
 
   const handleCloseCancelModal = () => {
@@ -234,16 +345,22 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
   };
 
   const selectedCurrencySymbol = AVAILABLE_CURRENCIES.find(c => c.code === property.currency)?.symbol || '$';
-  const customServices = property.servicios.filter(s => !BASE_SERVICES.includes(s));
-
+  
+  const currentCustomServices = property.servicios.filter(s => 
+    !BASE_SERVICES.includes(s) && !customServices.includes(s)
+  );
+  
+  const currentCustomRules = property.reglasPropiedad.filter(r => 
+    !availableReglas.includes(r) && !customRules.includes(r)
+  );
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-8">
-
-      <ConfirmationModal
-        show={showCancelModal}
+        
+      <ConfirmationModal 
+        show={showCancelModal} 
         onConfirm={handleConfirmCancel}
-        onClose={handleCloseCancelModal}
+        onClose={handleCloseCancelModal} 
       />
 
       <h2 className="text-2xl font-semibold text-gray-900 mb-6 flex items-center space-x-2">
@@ -395,77 +512,145 @@ const AddPropertyForm = ({ onAddProperty, isSubmitting = false }) => {
             <input type="number" name="precioPorNoche" placeholder={`Noche (${selectedCurrencySymbol})`} value={property.precioPorNoche} onChange={handleInputChange} className="shadow border rounded-lg w-full py-3 px-4 text-gray-700" min="0" />
             <input type="number" name="precioPorSemana" placeholder={`Semana (${selectedCurrencySymbol})`} value={property.precioPorSemana} onChange={handleInputChange} className="shadow border rounded-lg w-full py-3 px-4 text-gray-700" min="0" />
             <input type="number" name="precioPorMes" placeholder={`Mes (${selectedCurrencySymbol})`} value={property.precioPorMes} onChange={handleInputChange} className="shadow border rounded-lg w-full py-3 px-4 text-gray-700" min="0" />
+            
+            <input type="number" name="depositoSeguridad" placeholder={`Depósito Seguridad (${selectedCurrencySymbol})`} value={property.depositoSeguridad} onChange={handleInputChange} className="shadow border rounded-lg w-full py-3 px-4 text-gray-700" min="0" />
           </div>
         </div>
 
 
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="p-4 border rounded-lg">
-            <label className="block text-gray-700 text-sm font-bold mb-3 flex items-center space-x-2"><FaTools /><span>Servicios y Especificaciones</span></label>
-
-            <div className="p-3 border rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
-              <p className="font-semibold text-xs mb-2 text-gray-700 border-b pb-1">Seleccionar Servicios:</p>
-              <div className="grid grid-cols-2 gap-2">
-                {BASE_SERVICES.map((service) => (
-                  <label key={service} className="flex items-center text-gray-700 text-sm">
-                    <input type="checkbox" name="servicios" value={service} checked={property.servicios.includes(service)} onChange={handleInputChange} className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" />
-                    {service}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <form onSubmit={handleAddNewService} className="mt-4 flex flex-col gap-2">
-              <label className='text-xs text-gray-600 block'>Agregar Servicio Personalizado:</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Ej: Sauna, Conserje 24/7"
-                  value={newServiceInput}
-                  onChange={(e) => setNewServiceInput(e.target.value)}
-                  className="shadow border rounded-lg w-full py-2 px-3 text-gray-700 text-sm"
-                />
-                <button type="submit" className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg text-sm transition duration-150 flex items-center justify-center space-x-1 w-20">
-                  <FaPlus className="w-3 h-3" />
-                  <span>Añadir</span>
-                </button>
-              </div>
-            </form>
-
-            {customServices.length > 0 && (
-              <div className="mt-3 p-3 border-t border-gray-200">
-                <p className="font-semibold text-xs mb-2 text-gray-700">Servicios Adicionales:</p>
-                <div className="flex flex-wrap gap-2">
-                  {customServices.map(service => (
-                    <div key={service} className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full flex items-center shadow-sm">
-                      {service}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveService(service)}
-                        className="ml-2 text-indigo-500 hover:text-indigo-700 transition duration-150"
-                        title="Quitar servicio"
-                      >
-                        <FaTimes className="w-3 h-3" />
-                      </button>
+            <div className="p-4 border rounded-lg">
+                <label className="block text-gray-700 text-sm font-bold mb-3 flex items-center space-x-2"><FaTools /><span>Servicios y Especificaciones</span></label>
+                
+                <div className="p-3 border rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
+                    <p className="font-semibold text-xs mb-2 text-gray-700 border-b pb-1">Seleccionar Servicios:</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        {[...BASE_SERVICES, ...customServices].map((service) => (
+                            <label key={service} className="flex items-center text-gray-700 text-sm">
+                                <input 
+                                    type="checkbox" 
+                                    name="servicios" 
+                                    value={service} 
+                                    checked={property.servicios.includes(service)} 
+                                    onChange={handleInputChange} 
+                                    className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" 
+                                />
+                                {service}
+                            </label>
+                        ))}
                     </div>
-                  ))}
                 </div>
-              </div>
-            )}
-          </div>
 
-          <div>
-            <label className="block text-gray-700 text-sm font-bold mb-3">Reglas de la Propiedad</label>
-            <div className="p-3 border rounded-lg bg-gray-50 max-h-60 overflow-y-auto">
-              {availableReglas.map((regla) => (
-                <label key={regla} className="flex items-center text-gray-700 text-sm">
-                  <input type="checkbox" name="reglasPropiedad" value={regla} checked={property.reglasPropiedad.includes(regla)} onChange={handleInputChange} className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" />
-                  {regla}
-                </label>
-              ))}
+                <form onSubmit={handleAddNewService} className="mt-4 flex flex-col gap-2">
+                    <label className='text-xs text-gray-600 block'>Agregar Servicio Personalizado:</label>
+                    <div className="flex gap-2">
+                        <input 
+                            type="text"
+                            placeholder="Ej: Sauna, Conserje 24/7"
+                            value={newServiceInput}
+                            onChange={(e) => setNewServiceInput(e.target.value)}
+                            className="shadow border rounded-lg w-full py-2 px-3 text-gray-700 text-sm"
+                            onKeyPress={(e) => e.key === 'Enter' && handleAddNewService(e)}
+                        />
+                        <button 
+                            type="button" 
+                            onClick={handleAddNewService}
+                            className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg text-sm transition duration-150 flex items-center justify-center space-x-1 w-20"
+                        >
+                            <FaPlus className="w-3 h-3"/>
+                            <span>Añadir</span>
+                        </button>
+                    </div>
+                </form>
+
+                {currentCustomServices.length > 0 && (
+                    <div className="mt-3 p-3 border-t border-gray-200">
+                        <p className="font-semibold text-xs mb-2 text-gray-700">Servicios Adicionales de esta propiedad:</p>
+                        <div className="flex flex-wrap gap-2">
+                            {currentCustomServices.map(service => (
+                                <div key={service} className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full flex items-center shadow-sm">
+                                    {service}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveService(service)}
+                                        className="ml-2 text-indigo-500 hover:text-indigo-700 transition duration-150"
+                                        title="Quitar servicio"
+                                    >
+                                        <FaTimes className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
-          </div>
+
+            
+            <div className="p-4 border rounded-lg">
+                <label className="block text-gray-700 text-sm font-bold mb-3 flex items-center space-x-2"><FaExclamationTriangle /><span>Reglas de la Propiedad</span></label>
+                
+                <div className="p-3 border rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
+                    <p className="font-semibold text-xs mb-2 text-gray-700 border-b pb-1">Seleccionar Reglas:</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        {[...availableReglas, ...customRules].map((regla) => (
+                            <label key={regla} className="flex items-center text-gray-700 text-sm">
+                                <input 
+                                    type="checkbox" 
+                                    name="reglasPropiedad" 
+                                    value={regla} 
+                                    checked={property.reglasPropiedad.includes(regla)} 
+                                    onChange={handleInputChange} 
+                                    className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" 
+                                />
+                                {regla}
+                            </label>
+                        ))}
+                    </div>
+                </div>
+
+                <form onSubmit={handleAddNewRule} className="mt-4 flex flex-col gap-2">
+                    <label className='text-xs text-gray-600 block'>Agregar Regla Personalizada:</label>
+                    <div className="flex gap-2">
+                        <input 
+                            type="text"
+                            placeholder="Ej: No se permiten fiestas"
+                            value={newRuleInput}
+                            onChange={(e) => setNewRuleInput(e.target.value)}
+                            className="shadow border rounded-lg w-full py-2 px-3 text-gray-700 text-sm"
+                            onKeyPress={(e) => e.key === 'Enter' && handleAddNewRule(e)}
+                        />
+                        <button 
+                            type="button" 
+                            onClick={handleAddNewRule}
+                            className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg text-sm transition duration-150 flex items-center justify-center space-x-1 w-20"
+                        >
+                            <FaPlus className="w-3 h-3"/>
+                            <span>Añadir</span>
+                        </button>
+                    </div>
+                </form>
+
+                {currentCustomRules.length > 0 && (
+                    <div className="mt-3 p-3 border-t border-gray-200">
+                        <p className="font-semibold text-xs mb-2 text-gray-700">Reglas Adicionales de esta propiedad:</p>
+                        <div className="flex flex-wrap gap-2">
+                            {currentCustomRules.map(rule => (
+                                <div key={rule} className="text-xs bg-amber-100 text-amber-700 px-3 py-1 rounded-full flex items-center shadow-sm">
+                                    {rule}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveRule(rule)}
+                                        className="ml-2 text-amber-500 hover:text-amber-700 transition duration-150"
+                                        title="Quitar regla"
+                                    >
+                                        <FaTimes className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
 
         <div className="col-span-full mb-6 p-4 border border-gray-200 rounded-lg">

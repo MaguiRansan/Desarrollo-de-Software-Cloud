@@ -152,9 +152,15 @@ const Temporarios = () => {
       setIsLoading(true);
 
       const propertyToSave = {
-        titulo: propertyData.titulo || '',
+        // Campos obligatorios según la validación del backend
+        titulo: propertyData.titulo || 'Sin título',
+        direccion: propertyData.direccion || 'Dirección no especificada',
+        precio: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
+        tipoPropiedad: propertyData.tipoPropiedad || 'Casa',
+        transaccionTipo: 'Alquiler', // Cambiado a 'Alquiler' que es uno de los valores permitidos
+        
+        // Resto de los campos
         descripcion: propertyData.descripcion || '',
-        direccion: propertyData.direccion || '',
         barrio: propertyData.barrio || '',
         localidad: propertyData.localidad || '',
         provincia: propertyData.provincia || '',
@@ -165,6 +171,8 @@ const Temporarios = () => {
         banos: propertyData.banos ? parseInt(propertyData.banos) : 0,
         superficieM2: propertyData.superficieM2 ? parseFloat(propertyData.superficieM2) : 0,
         capacidadPersonas: propertyData.capacidadPersonas ? parseInt(propertyData.capacidadPersonas) : 1,
+        
+   
 
         precio: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
         precioPorNoche: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
@@ -266,12 +274,35 @@ const Temporarios = () => {
         }
 
         if (isEditing) {
-          setProperties(prev => prev.map(p =>
-            (p.id === propertyId || p._id === propertyId) ? finalProperty : p
-          ));
+          setProperties(prev => prev.map(p => {
+            if (p.id === propertyId || p._id === propertyId) {
+              // Mantener los campos existentes y combinar con los actualizados
+              return {
+                ...p,  // Mantener los campos existentes
+                ...finalProperty,  // Aplicar los cambios
+                id: p.id || finalProperty.id,  // Asegurar que el ID no se pierda
+                _id: p._id || finalProperty._id,  // Asegurar que el _id no se pierda
+                title: finalProperty.title || finalProperty.titulo || p.title || 'Sin título',
+                description: finalProperty.description || finalProperty.descripcion || p.description || '',
+                price: finalProperty.price || finalProperty.precio || p.price || 0,
+                images: finalProperty.images || finalProperty.imagenes || p.images || []
+              };
+            }
+            return p;
+          }));
           toast.success('Propiedad actualizada exitosamente');
         } else {
-          setProperties(prev => [...prev, finalProperty]);
+          // Para nueva propiedad, asegurarse de que tenga los campos necesarios
+          const newProperty = {
+            ...finalProperty,
+            id: finalProperty.id || finalProperty._id,
+            _id: finalProperty._id || finalProperty.id,
+            title: finalProperty.title || finalProperty.titulo || 'Sin título',
+            description: finalProperty.description || finalProperty.descripcion || '',
+            price: finalProperty.price || finalProperty.precio || 0,
+            images: finalProperty.images || finalProperty.imagenes || []
+          };
+          setProperties(prev => [...prev, newProperty]);
           toast.success('Propiedad creada exitosamente');
         }
 
@@ -391,7 +422,6 @@ const Temporarios = () => {
   };
 
   const getFilteredAndSortedProperties = () => {
-
     if (!Array.isArray(properties) || properties.length === 0) {
       return [];
     }
@@ -400,10 +430,14 @@ const Temporarios = () => {
 
     currentProperties.sort((a, b) => {
       if (sortBy === 'name') {
-        return a.title.localeCompare(b.title);
+        const titleA = a?.title?.toString()?.toLowerCase() || '';
+        const titleB = b?.title?.toString()?.toLowerCase() || '';
+        return titleA.localeCompare(titleB);
       }
       if (sortBy === 'price') {
-        return a.price - b.price;
+        const priceA = parseFloat(a?.price) || 0;
+        const priceB = parseFloat(b?.price) || 0;
+        return priceA - priceB;
       }
       return 0;
     });

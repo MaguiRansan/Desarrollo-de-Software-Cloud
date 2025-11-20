@@ -19,9 +19,10 @@ const Perfil = () => {
     if (!d) return '-';
     try { return new Date(d).toLocaleString(); } catch { return String(d); }
   };
+
   const cargarFotoExistente = useCallback(async () => {
     if (!user?.fotoRuta) return;
-    
+
     try {
       if (user.fotoRuta.startsWith('http')) {
         setPhotoUrl(`${user.fotoRuta}?v=${Date.now()}`);
@@ -168,22 +169,12 @@ const Perfil = () => {
             <button
               onClick={() => setShowLogoutModal(true)}
               className="px-6 py-2.5 text-sm font-medium text-white hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded-lg transition-all duration-200 hover:shadow-md bg-red-600"
-              aria-label="Cerrar sesión"
             >
               Cerrar sesión
             </button>
           </div>
         </div>
       </div>
-
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-slate-700 hover:text-slate-900 transition-colors font-medium mt-5 ml-10"
-      >
-        <ArrowLeft className="w-6 h-6" />
-        <span>Volver</span>
-      </button>
-
 
       {showLogoutModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
@@ -206,10 +197,19 @@ const Perfil = () => {
           </div>
         </div>
       )}
+      <div className="mt-4 w-full flex justify-start mb-4 px-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm sm:text-base px-3 py-2 border border-blue-100 hover:border-blue-200 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1.5" />
+          <span>Volver</span>
+        </button>
+      </div>
 
       <div className="max-w-6xl mx-auto px-6 py-12">
-        <div className="flex flex-col lg:flex-row gap-8">
 
+        <div className="flex flex-col lg:flex-row gap-8">
           <div className="flex-1">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="relative h-48 bg-slate-200">
@@ -239,7 +239,9 @@ const Perfil = () => {
               </div>
 
               <div className="pt-20 p-8">
-                <h2 className="text-3xl font-bold text-slate-800 mb-2 text-center">{`${user.nombre || ''} ${user.apellido || ''}`.trim()}</h2>
+                <h2 className="text-3xl font-bold text-slate-800 mb-2 text-center">
+                  {`${user.nombre || ''} ${user.apellido || ''}`.trim()}
+                </h2>
                 <div className="flex items-center justify-center gap-3 mb-6">
                   <span className={`inline-flex px-4 py-1.5 rounded-lg text-sm font-medium text-white ${getRoleBadgeColor(user.idrol)}`}>
                     {getRoleText(user.idrol)}
@@ -250,6 +252,7 @@ const Perfil = () => {
                     </span>
                   )}
                 </div>
+
                 <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto text-sm">
                   <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
                     <div className="text-slate-500 mb-1">Correo</div>
@@ -261,17 +264,19 @@ const Perfil = () => {
                   </div>
                   <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
                     <div className="text-slate-500 mb-1">Rol</div>
-                    <div className="font-medium">{getRoleText(user.idrol)}{user.rol ? ` (${user.rol})` : ''}</div>
+                    <div className="font-medium">
+                      {getRoleText(user.idrol)}{user.rol ? ` (${user.rol})` : ''}
+                    </div>
                   </div>
                   <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
                     <div className="text-slate-500 mb-1">Último acceso</div>
                     <div className="font-medium">{formatDate(user.ultimoAcceso)}</div>
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center sm:col-span-1">
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
                     <div className="text-slate-500 mb-1">Creado</div>
                     <div className="font-medium">{formatDate(user.fechaCreacion)}</div>
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center sm:col-span-1">
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
                     <div className="text-slate-500 mb-1">Actualizado</div>
                     <div className="font-medium">{formatDate(user.fechaActualizacion)}</div>
                   </div>
@@ -279,15 +284,13 @@ const Perfil = () => {
               </div>
             </div>
           </div>
-
-
           <div className="flex flex-col gap-6 w-80">
-
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-
               <h3 className="text-xl font-semibold text-slate-800 mb-4">Foto de Perfil</h3>
+
               <div className="space-y-4">
                 <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" id="photo-upload" />
+
                 <button
                   onClick={() => document.getElementById('photo-upload').click()}
                   className="w-full px-6 py-3 bg-gray-700 hover:bg-gray-800 text-white font-medium rounded-xl transition-colors"
@@ -304,6 +307,7 @@ const Perfil = () => {
                     >
                       {isUpdating ? 'Actualizando...' : 'Guardar cambios'}
                     </button>
+
                     <button
                       onClick={handleDeletePhoto}
                       disabled={isUpdating}
@@ -317,10 +321,9 @@ const Perfil = () => {
                 {error && <p className="text-sm text-red-600">{error}</p>}
               </div>
             </div>
-
-
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-xl font-semibold text-slate-800 mb-4">Información de Perfil</h3>
+
               <button
                 onClick={() => navigate("/editarperfil")}
                 className="w-full px-6 py-3 bg-gray-700 hover:bg-gray-800 text-white font-medium rounded-xl transition-colors"
@@ -328,6 +331,7 @@ const Perfil = () => {
                 Editar Perfil
               </button>
             </div>
+
           </div>
         </div>
       </div>

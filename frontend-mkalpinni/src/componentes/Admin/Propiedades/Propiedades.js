@@ -46,11 +46,26 @@ const normalizeProperty = (prop = {}) => {
       ? prop.estado.toLowerCase()
       : 'disponible';
 
-  const normalizedImages = Array.isArray(prop.images) && prop.images.length > 0
-    ? prop.images
-    : Array.isArray(prop.imagenes) && prop.imagenes.length > 0
-      ? prop.imagenes
-      : [];
+  let normalizedImages = [];
+  if (Array.isArray(prop.images) && prop.images.length > 0) {
+    normalizedImages = prop.images
+      .filter(img => img !== null && img !== undefined)
+      .map(img => {
+        if (typeof img === 'string') {
+          return { url: img, isNew: false };
+        }
+        return { ...img, isNew: img.isNew || false };
+      });
+  } else if (Array.isArray(prop.imagenes) && prop.imagenes.length > 0) {
+    normalizedImages = prop.imagenes
+      .filter(img => img !== null && img !== undefined)
+      .map(img => {
+        if (typeof img === 'string') {
+          return { url: img, isNew: false };
+        }
+        return { ...img, isNew: img.isNew || false };
+      });
+  }
 
   return {
     _id: prop._id || id,
@@ -118,7 +133,6 @@ const PropertyManagement = () => {
 
   const filterProperties = (properties, filters, searchTerm) => {
     return properties.filter((property) => {
-      
       const propertyPrice = typeof property.price === 'string' 
         ? parseFloat(property.price.replace(/[^0-9.-]+/g,"")) 
         : Number(property.price) || 0;
@@ -367,6 +381,13 @@ const PropertyManagement = () => {
       setFormProperty(createEmptyProperty(selectedOperation));
       setEditingProperty(null);
       setView('list');
+      const path = selectedOperation === 'venta' ? '/admin/propiedades' : '/admin/propiedades/alquiler';
+      window.location.href = path;
+      
+      setTimeout(() => {
+        setEditingProperty(null);
+        setFormProperty(createEmptyProperty(selectedOperation));
+      }, 100);
     } catch (error) {
       console.error('Error in handleCancelForm:', error);
     }
