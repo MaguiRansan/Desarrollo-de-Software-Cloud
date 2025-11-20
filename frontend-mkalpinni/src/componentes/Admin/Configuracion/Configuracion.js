@@ -53,7 +53,7 @@ const Configuracion = () => {
     }
   });
 
-  const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'success' | 'error'
+  const [saveStatus, setSaveStatus] = useState(null);
   const [showForgot, setShowForgot] = useState(false);
 
   const handleInputChange = (section, field, value) => {
@@ -67,7 +67,6 @@ const Configuracion = () => {
   };
 
   useEffect(() => {
-    // Load persisted settings
     const sections = ['general', 'usuario', 'sistema'];
     sections.forEach(async (section) => {
       try {
@@ -115,7 +114,6 @@ const Configuracion = () => {
       </div>
 
       <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-        {/* Navegación de pestañas */}
         <div className="border-b border-gray-200 bg-gray-50">
           <nav className="flex flex-wrap gap-4 px-6 py-3">
             {tabs.map((tab) => {
@@ -136,8 +134,6 @@ const Configuracion = () => {
             })}
           </nav>
         </div>
-
-        {/* Contenido dinámico */}
         <div className="p-8">
           {activeTab === 'general' && (
             <section>
@@ -166,20 +162,14 @@ const Configuracion = () => {
           {activeTab === 'seguridad' && (
             <section>
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Seguridad</h3>
-              <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {renderInput('Contraseña Actual', 'password', '')}
-                  {renderInput('Nueva Contraseña', 'password', '')}
+              <div className="bg-gray-50 p-4 rounded-xl flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-gray-900">Recuperar contraseña</p>
+                  <p className="text-sm text-gray-600">Si no recuerdas tu contraseña, puedes solicitar un enlace de recuperación.</p>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-xl flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">Recuperar contraseña</p>
-                    <p className="text-sm text-gray-600">Si no recuerdas tu contraseña, puedes solicitar un enlace de recuperación.</p>
-                  </div>
-                  <button onClick={() => setShowForgot(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                    Enviar enlace de recuperación
-                  </button>
-                </div>
+                <button onClick={() => setShowForgot(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                  Enviar enlace de recuperación
+                </button>
               </div>
             </section>
           )}
@@ -206,22 +196,11 @@ const Configuracion = () => {
                 ])}
               </div>
 
-              <div className="mt-8 border-t pt-6">
-                <h4 className="font-medium text-gray-900 mb-4">Respaldo de Datos</h4>
-                <div className="flex flex-wrap gap-4">
-                  <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center">
-                    <FaDatabase className="mr-2" />
-                    Crear Respaldo
-                  </button>
-                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                    Restaurar Respaldo
-                  </button>
-                </div>
-              </div>
+
             </section>
           )}
 
-          {/* Botón Guardar */}
+          {activeTab !== 'seguridad' && (
           <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-between">
             <div>
               {saveStatus === 'saving' && <p className="text-gray-600 text-sm">Guardando cambios...</p>}
@@ -233,6 +212,7 @@ const Configuracion = () => {
               Guardar Cambios
             </button>
           </div>
+          )}
           {showForgot && <ForgotPassword onClose={() => setShowForgot(false)} />}
         </div>
       </div>
