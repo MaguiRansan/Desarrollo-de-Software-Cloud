@@ -5,10 +5,8 @@ import { useUser } from "../../Context/UserContext";
 import { API_BASE_URL } from '../../config/apiConfig';
 import axios from "axios";
 
-//
-
 export const EditarPerfil = ({ onUpdate }) => {
-    const { refreshUser } = useUser();
+    const { setUser } = useUser();
     const [email, setEmail] = useState("");
     const [nombre, setNombre] = useState("");
     const [apellido, setApellido] = useState("");
@@ -132,9 +130,11 @@ export const EditarPerfil = ({ onUpdate }) => {
             if (response.data.status) {
                 const updatedUser = response.data.value;
                 sessionStorage.setItem("userData", JSON.stringify(updatedUser));
-                refreshUser();
+                if (setUser) {
+                    setUser(updatedUser);
+                }
                 if (typeof onUpdate === 'function') {
-                    try { onUpdate(updatedUser); } catch {}
+                    try { onUpdate(updatedUser); } catch { }
                 }
                 setMensajeActualizado("Perfil actualizado con éxito.");
                 setTimeout(() => {
@@ -174,44 +174,44 @@ export const EditarPerfil = ({ onUpdate }) => {
                 {loading ? (
                     <p>Cargando datos...</p>
                 ) : (
-                    
-                <form onSubmit={handleActualizar} className="p-10 space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
-                            <input value={nombre} onChange={handleInputChange} name="nombre"
-                                type="text" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 ${errors.nombre ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-gray-400'}`} />
-                            {errors.nombre && <p className="text-red-500 text-sm mt-1">{errors.nombre}</p>}
+
+                    <form onSubmit={handleActualizar} className="p-10 space-y-6">
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
+                                <input value={nombre} onChange={handleInputChange} name="nombre"
+                                    type="text" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 ${errors.nombre ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-gray-400'}`} />
+                                {errors.nombre && <p className="text-red-500 text-sm mt-1">{errors.nombre}</p>}
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
+                                <input value={apellido} onChange={handleInputChange} name="apellido"
+                                    type="text" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 ${errors.apellido ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-gray-400'}`} />
+                                {errors.apellido && <p className="text-red-500 text-sm mt-1">{errors.apellido}</p>}
+                            </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
-                            <input value={apellido} onChange={handleInputChange} name="apellido"
-                                type="text" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 ${errors.apellido ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-gray-400'}`} />
-                            {errors.apellido && <p className="text-red-500 text-sm mt-1">{errors.apellido}</p>}
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Correo Electrónico</label>
+                            <input value={email} onChange={handleInputChange} name="email" disabled
+                                type="email" className={`w-full px-4 py-3 border rounded-lg bg-gray-100 cursor-not-allowed ${errors.email ? 'border-red-500' : 'border-gray-300'}`} />
+                            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                         </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Correo Electrónico</label>
-                        <input value={email} onChange={handleInputChange} name="email" disabled
-                            type="email" className={`w-full px-4 py-3 border rounded-lg bg-gray-100 cursor-not-allowed ${errors.email ? 'border-red-500' : 'border-gray-300'}`} />
-                        {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
-                        <input value={telefono} onChange={handleInputChange} name="telefono"
-                            type="text" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 ${errors.telefono ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-gray-400'}`} />
-                        {errors.telefono && <p className="text-red-500 text-sm mt-1">{errors.telefono}</p>}
-                    </div>
-                    <div className="flex space-x-4 pt-4">
-                        <button type="submit" className="w-full py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800">
-                            Actualizar Perfil
-                        </button>
-                        <button type="button" onClick={handleCancelar}
-                            className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-                            Cancelar
-                        </button>
-                    </div>
-                </form>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+                            <input value={telefono} onChange={handleInputChange} name="telefono"
+                                type="text" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 ${errors.telefono ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-gray-400'}`} />
+                            {errors.telefono && <p className="text-red-500 text-sm mt-1">{errors.telefono}</p>}
+                        </div>
+                        <div className="flex space-x-4 pt-4">
+                            <button type="submit" className="w-full py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800">
+                                Actualizar Perfil
+                            </button>
+                            <button type="button" onClick={handleCancelar}
+                                className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
                 )}
             </div>
         </div>

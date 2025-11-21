@@ -40,13 +40,13 @@ app.use(limiter);
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    
+
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
       process.env.FRONTEND_URL
     ].filter(Boolean);
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -57,8 +57,8 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
+    'Content-Type',
+    'Authorization',
     'X-Requested-With',
     'Accept',
     'Origin'
@@ -69,16 +69,14 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mkalpin_inmobiliaria';
 
 const mongooseOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   serverSelectionTimeoutMS: 10000,
 };
 
@@ -96,7 +94,7 @@ async function startServer() {
     app.use('/API/Config', configRoutes);
 
     app.get('/health', (req, res) => {
-      res.json({ 
+      res.json({
         status: true,
         message: 'API funcionando correctamente',
         timestamp: new Date().toISOString(),

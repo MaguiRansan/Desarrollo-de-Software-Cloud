@@ -26,14 +26,14 @@ const storage = new CloudinaryStorage({
       let folder = 'mkalpin/usuarios';
       let resource_type = 'image';
       const originalUrl = req.originalUrl || '';
-      
+
       console.log('\n--- Iniciando subida de archivo ---');
       console.log('URL de la solicitud:', originalUrl);
       console.log('Nombre del archivo:', file.originalname);
       console.log('Tipo MIME:', file.mimetype);
       console.log('ID de usuario:', req.user?._id || 'No autenticado');
 
-        if (originalUrl.includes('/Usuario/SubirFotoPerfil') || originalUrl.includes('/Usuario/ActualizarFoto')) {
+      if (originalUrl.includes('/Usuario/SubirFotoPerfil') || originalUrl.includes('/Usuario/ActualizarFoto')) {
         let userId = req.user?._id;
         if (!userId) {
           if (!req.usuarioUploadTempId) {
@@ -43,7 +43,7 @@ const storage = new CloudinaryStorage({
         }
         folder = `mkalpin/usuarios/${userId}`;
         console.log(`Subiendo imagen de perfil a la carpeta: ${folder}`);
-      } 
+      }
       else if (originalUrl.includes('/Propiedad/')) {
         folder = `mkalpin/propiedades/${req.params.id || 'temp'}`;
       } else if (originalUrl.includes('/Cliente/')) {
@@ -95,8 +95,8 @@ const fileFilter = (req, file, cb) => {
   const allowedDocumentTypes = /pdf|doc|docx|xls|xlsx/;
 
   const extname = allowedImageTypes.test(path.extname(file.originalname).toLowerCase()) ||
-                  allowedDocumentTypes.test(path.extname(file.originalname).toLowerCase());
-  
+    allowedDocumentTypes.test(path.extname(file.originalname).toLowerCase());
+
   if (extname) {
     return cb(null, true);
   } else {
@@ -108,7 +108,7 @@ const uploadProfilePicture = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, 
+    fileSize: 10 * 1024 * 1024, // 10MB
     files: 1
   }
 });
@@ -117,20 +117,20 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, 
+    fileSize: 25 * 1024 * 1024, // 25MB
     files: 10
   }
 });
 
-upload.any = function() {
-  return function(req, res, next) {
+upload.any = function () {
+  return function (req, res, next) {
     console.log('\n--- Multer Middleware ---');
     console.log('Método:', req.method);
     console.log('URL:', req.originalUrl);
     console.log('Headers:', JSON.stringify(req.headers, null, 2));
-    
+
     const originalEnd = res.end;
-    res.end = function(chunk, encoding) {
+    res.end = function (chunk, encoding) {
       console.log('\n--- Respuesta del servidor ---');
       console.log('Status Code:', res.statusCode);
       if (chunk) {
@@ -143,15 +143,15 @@ upload.any = function() {
       }
       originalEnd.apply(res, arguments);
     };
-    
+
     multer({
       storage: storage,
       fileFilter: fileFilter,
       limits: {
-        fileSize: 10 * 1024 * 1024, 
+        fileSize: 10 * 1024 * 1024,
         files: 10
       }
-    }).apply(this, arguments)(req, res, function(err) {
+    }).apply(this, arguments)(req, res, function (err) {
       if (err) {
         console.error('Error en multer:', err);
         return next(err);
@@ -163,7 +163,7 @@ upload.any = function() {
 
 const deleteFile = async (public_id) => {
   if (!public_id) return;
-  
+
   try {
     await cloudinary.uploader.destroy(public_id);
   } catch (error) {
@@ -183,7 +183,7 @@ const deleteDirectory = async (folderPath) => {
 const handleMulterError = (error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ status: false, message: 'El archivo es demasiado grande. Máximo: 10MB' });
+      return res.status(400).json({ status: false, message: 'El archivo es demasiado grande. Máximo: 25MB' });
     }
   }
   if (error.message.includes('Tipo de archivo no permitido')) {
@@ -194,11 +194,12 @@ const handleMulterError = (error, req, res, next) => {
 
 module.exports = {
   upload,
+  uploadProfilePicture,
   uploadPropertyImages: upload.array('imagenes', 10),
   uploadTasacionImages: upload.array('imagenes', 5),
 
   deleteFile,
   deleteDirectory,
-  
+
   handleMulterError
 };

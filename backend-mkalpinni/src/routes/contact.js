@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
   secure: process.env.EMAIL_SECURE === 'true',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
+    pass: process.env.EMAIL_PASS
   },
   tls: {
     rejectUnauthorized: false
@@ -23,7 +23,7 @@ const transporter = nodemailer.createTransport({
 });
 
 router.post('/Enviar', validateContact, async (req, res) => {
-  console.log('Datos recibidos:', req.body); 
+  console.log('Datos recibidos:', req.body);
   try {
     const contactData = {
       ...req.body,
@@ -35,7 +35,7 @@ router.post('/Enviar', validateContact, async (req, res) => {
 
     const mailOptions = {
       from: `"MKAlpini Inmobiliaria - Formulario de Contacto" <${process.env.EMAIL_FROM}>`,
-      to: process.env.TASACION_EMAIL_TO, 
+      to: process.env.TASACION_EMAIL_TO,
       subject: `Nuevo mensaje de contacto desde la web de ${contactData.nombre || 'No proporcionado'}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -260,10 +260,10 @@ router.put('/MarcarLeido/:id', [protect, validateId], async (req, res) => {
 });
 
 router.post('/EnviarConsultaPropiedad', validateContact, async (req, res) => {
-  console.log('Datos recibidos para consulta de propiedad:', req.body); 
+  console.log('Datos recibidos para consulta de propiedad:', req.body);
   try {
     const { idPropiedad, tituloPropiedad, ...contactData } = req.body;
-    
+
     const contact = new Contact({
       ...contactData,
       tipoConsulta: 'Propiedad',
@@ -271,12 +271,12 @@ router.post('/EnviarConsultaPropiedad', validateContact, async (req, res) => {
       ipAddress: req.ip || req.connection.remoteAddress,
       userAgent: req.get('user-agent')
     });
-    
+
     await contact.save();
 
     const mailOptions = {
       from: `"MKAlpini Inmobiliaria - Consulta por Propiedad" <${process.env.EMAIL_FROM}>`,
-      to: process.env.TASACION_EMAIL_TO, 
+      to: process.env.TASACION_EMAIL_TO,
       subject: `📌 Consulta por la propiedad: ${tituloPropiedad || 'Propiedad sin título'}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -351,10 +351,10 @@ router.post('/AlquilerTemporal', [
   handleValidationErrors
 ], async (req, res) => {
   console.log('Datos recibidos para alquiler temporal:', req.body);
-  
+
   try {
     const { fechaEntrada, fechaSalida, cantidadPersonas, ...contactData } = req.body;
-    
+
     // Validar que la fecha de entrada sea anterior a la de salida
     if (new Date(fechaEntrada) >= new Date(fechaSalida)) {
       return res.status(400).json({

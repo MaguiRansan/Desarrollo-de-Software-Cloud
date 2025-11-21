@@ -24,7 +24,7 @@ const normalizePropertyType = (type = '') => {
 
 let emailTransporter = null;
 
-if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
   try {
     emailTransporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.gmail.com',
@@ -32,7 +32,7 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
       secure: process.env.EMAIL_SECURE === 'true',
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
+        pass: process.env.EMAIL_PASS
       }
     });
   } catch (transportError) {
@@ -241,7 +241,7 @@ router.get('/Obtener', [
 ], async (req, res) => {
   try {
     const { estado } = req.query;
-    
+
     let query = {};
     if (estado) query.estado = estado;
 
@@ -357,7 +357,7 @@ router.put('/Actualizar/:id', [
     }
 
     const { valorMinimo, valorMaximo, valorEstimado } = req.body;
-    
+
     if (valorMinimo && valorMaximo && valorMaximo <= valorMinimo) {
       return res.status(400).json({
         status: false,
@@ -559,7 +559,7 @@ router.get('/Buscar', [
 ], async (req, res) => {
   try {
     const { termino, tipoPropiedad, valorMin, valorMax } = req.query;
-    
+
     let query = {};
 
     if (termino) {
@@ -655,8 +655,8 @@ router.put('/Cancelar/:id', [
     tasacion.estado = 'Cancelada';
     if (req.body.motivo) {
       const motivoTexto = `Cancelada: ${req.body.motivo}`;
-      tasacion.observaciones = tasacion.observaciones ? 
-        `${tasacion.observaciones}\n${motivoTexto}` : 
+      tasacion.observaciones = tasacion.observaciones ?
+        `${tasacion.observaciones}\n${motivoTexto}` :
         motivoTexto;
     }
 
