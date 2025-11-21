@@ -1,15 +1,20 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const path = require('path');
 require('dotenv').config();
-const User = require('../src/models/User');
-const Property = require('../src/models/Property');
+
+const User = require('./src/models/User');
+const Property = require('./src/models/Property');
 
 async function seedDatabase() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mkalpin_inmobiliaria', {
+    console.log('Connecting to MongoDB...');
+    await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
+    console.log('Connected to MongoDB');
+
     await User.deleteMany({});
     await Property.deleteMany({});
 
