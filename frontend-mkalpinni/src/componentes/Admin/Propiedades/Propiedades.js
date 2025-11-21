@@ -254,7 +254,23 @@ const PropertyManagement = () => {
         locador: propertyData.lessor || '',
         locatario: propertyData.lessee || '',
         permitenascotas: propertyData.allowsPets || false,
-        activo: true
+        activo: true,
+        imagenes: Array.isArray(propertyData.images)
+          ? propertyData.images.map((img, index) => {
+            if (typeof img === 'string') {
+              return {
+                rutaArchivo: img,
+                nombreArchivo: 'image.jpg',
+                orden: index
+              };
+            }
+            return {
+              rutaArchivo: img.url || img.rutaArchivo,
+              nombreArchivo: img.nombreArchivo || 'image.jpg',
+              orden: index
+            };
+          })
+          : []
       };
 
       let response;
@@ -543,8 +559,8 @@ const PropertyManagement = () => {
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showFilters
-                      ? 'bg-blue-600 text-white'
-                      : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
                   title={showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
                 >
@@ -629,8 +645,8 @@ const PropertyManagement = () => {
 
       {notification && (
         <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${notification.type === 'error'
-            ? 'bg-red-100 border border-red-400 text-red-700'
-            : 'bg-green-100 border border-green-400 text-green-700'
+          ? 'bg-red-100 border border-red-400 text-red-700'
+          : 'bg-green-100 border border-green-400 text-green-700'
           }`}>
           <div className="flex items-center justify-between">
             <span>{notification.message}</span>

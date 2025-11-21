@@ -54,6 +54,7 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
         ? prop.images.filter(img => img !== null).map((img, index) => ({
           _id: img._id || img.id || img.idImagen || (typeof img === 'string' ? img : null),
           url: img.url || img.rutaArchivo || (typeof img === 'string' ? img : null),
+          nombreArchivo: img.nombreArchivo || 'image.jpg',
           isNew: false,
           isMain: index === 0,
           file: null,
@@ -181,6 +182,7 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
     const existingImages = imagesState
       .filter(img => !img.isNew && img.url)
       .map(img => ({
+        ...img,
         id: img._id,
         url: img.url,
         isMain: img.isMain || false
@@ -202,7 +204,7 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
     const propertyDataToSave = {
       ...formData,
 
-      images: existingImages.map(img => img.url)
+      images: existingImages
     };
 
     if (typeof onSave === 'function') {
