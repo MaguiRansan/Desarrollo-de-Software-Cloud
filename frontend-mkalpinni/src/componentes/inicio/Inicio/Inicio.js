@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Home, MapPin, ChevronRight, ChevronLeft, User } from 'lucide-react';
 import Header from '../Componentes/Header';
 import Footer from '../Componentes/Footer';
@@ -10,7 +10,6 @@ import imagen2 from './pexels-sofia-falco-1148410914-32506369.jpg';
 import imagen3 from './pexels-vividcafe-681333.jpg';
 import HomeSearch from './HomeSearch';
 import { propertyService } from '../../../services/api';
-import { API_STATIC_URL } from '../../../config/apiConfig';
 import { API_BASE_URL } from '../../../config/apiConfig';
 
 const CookieBanner = () => {
@@ -48,13 +47,13 @@ const CookieBanner = () => {
   );
 };
 
+const officeCoordinates = [-34.603387, -58.375253];
+
 const InmobiliariaLanding = () => {
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const [propertyType, setPropertyType] = useState('');
-
-  const officeCoordinates = [-34.603387, -58.375253];
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -144,7 +143,7 @@ const InmobiliariaLanding = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/Contacto/Enviar`, {
         method: 'POST',
@@ -162,7 +161,7 @@ const InmobiliariaLanding = () => {
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         setShowSuccess(true);
         setFormData({
@@ -184,7 +183,7 @@ const InmobiliariaLanding = () => {
     } finally {
       setIsSubmitting(false);
     }
-    return false; 
+    return false;
   };
 
   const carouselImages = [
@@ -214,20 +213,20 @@ const InmobiliariaLanding = () => {
       try {
         setIsLoadingProperties(true);
         const response = await propertyService.getAll();
-        
+
         if (response.status && response.value) {
           const propiedades = response.value.slice(0, 4).map(prop => ({
             id: prop._id,
             titulo: prop.titulo,
             precio: prop.precio ? `$${prop.precio.toLocaleString('es-AR')}` : 'Precio a consultar',
-            imagen: prop.imagenes && prop.imagenes.length > 0 
+            imagen: prop.imagenes && prop.imagenes.length > 0
               ? (prop.imagenes[0].rutaArchivo || prop.imagenes[0].url)  // ← CAMBIAR AQUÍ
               : "https://cdn.prod.website-files.com/61e9b342b016364181c41f50/62a014dd84797690c528f25e_38.jpg",
             ubicacion: `${prop.ubicacion || ''}${prop.localidad ? `, ${prop.localidad}` : ''}${prop.provincia ? `, ${prop.provincia}` : ''}`,
-            caracteristicas: { 
-              dormitorios: prop.habitaciones || 0, 
-              banos: prop.banos || 0, 
-              superficie: `${prop.superficieM2 || 0}m²` 
+            caracteristicas: {
+              dormitorios: prop.habitaciones || 0,
+              banos: prop.banos || 0,
+              superficie: `${prop.superficieM2 || 0}m²`
             },
             transaccionTipo: prop.transaccionTipo,
             esAlquilerTemporario: Boolean(prop.esAlquilerTemporario),
@@ -394,11 +393,10 @@ const InmobiliariaLanding = () => {
             <button
               key={index}
               onClick={() => setCurrentSlide(index)}
-              className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                index === currentSlide
-                  ? 'bg-blue-600 w-8'
-                  : 'bg-white/60 hover:bg-white/80'
-              }`}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentSlide
+                ? 'bg-blue-600 w-8'
+                : 'bg-white/60 hover:bg-white/80'
+                }`}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}
@@ -442,12 +440,12 @@ const InmobiliariaLanding = () => {
               <p className="mt-4 text-gray-600">Cargando propiedades...</p>
             </div>
           )}
-          
+
           {/* Estado de error de propiedades */}
           {propertiesError && (
             <div className="text-center py-20">
               <p className="text-red-600 mb-4">{propertiesError}</p>
-              <button 
+              <button
                 type="submit"
                 disabled={isSubmitting}
                 className={`w-full ${isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} text-white font-medium py-4 px-6 rounded-lg transition-colors duration-300 text-lg flex items-center justify-center`}
@@ -462,7 +460,7 @@ const InmobiliariaLanding = () => {
                   </>
                 ) : 'Enviar Mensaje'}
               </button>
-              
+
               {showSuccess && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                   <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full mx-4">
@@ -486,7 +484,7 @@ const InmobiliariaLanding = () => {
               )}
             </div>
           )}
-          
+
           {/* Propiedades cargadas */}
           {!isLoadingProperties && !propertiesError && propiedadesDestacadas.length > 0 && (
             <div
@@ -500,53 +498,53 @@ const InmobiliariaLanding = () => {
                   style={{ transform: `translateX(-${currentProperty * 100}%)` }}
                 >
                   {propiedadesDestacadas.map((propiedad) => (
-                  <div key={propiedad.id} className="w-full flex-shrink-0">
-                    <div className="flex flex-col lg:flex-row">
-                      <div className="relative lg:w-1/2">
-                        <img
-                          src={propiedad.imagen}
-                          alt={propiedad.titulo}
-                          className="w-full h-96 lg:h-116 object-cover"
-                        />
-                        {}
-                        <div className="absolute bottom-4 left-4">
-                          <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium text-xl">
-                            {propiedad.precio}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="p-8 lg:w-1/2 flex flex-col justify-center">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-3">{propiedad.titulo}</h3>
-                        <p className="text-gray-600 mb-6 flex items-center">
-                          <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                          {propiedad.ubicacion}
-                        </p>
-
-                        <div className="grid grid-cols-3 gap-6 mb-8">
-                          <div className="text-center">
-                            <span className="block text-xl font-semibold text-gray-800">{propiedad.caracteristicas.dormitorios}</span>
-                            <span className="text-sm text-gray-500">Dorm.</span>
-                          </div>
-                          <div className="text-center">
-                            <span className="block text-xl font-semibold text-gray-800">{propiedad.caracteristicas.banos}</span>
-                            <span className="text-sm text-gray-500">Baños</span>
-                          </div>
-                          <div className="text-center">
-                            <span className="block text-xl font-semibold text-gray-800">{propiedad.caracteristicas.superficie}</span>
-                            <span className="text-sm text-gray-500">Área</span>
+                    <div key={propiedad.id} className="w-full flex-shrink-0">
+                      <div className="flex flex-col lg:flex-row">
+                        <div className="relative lg:w-1/2">
+                          <img
+                            src={propiedad.imagen}
+                            alt={propiedad.titulo}
+                            className="w-full h-96 lg:h-116 object-cover"
+                          />
+                          { }
+                          <div className="absolute bottom-4 left-4">
+                            <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium text-xl">
+                              {propiedad.precio}
+                            </span>
                           </div>
                         </div>
 
-                        <button className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duración-300"
-                          onClick={() => handleViewDetails(propiedad)}
-                        >
-                          Ver Detalles
-                        </button>
+                        <div className="p-8 lg:w-1/2 flex flex-col justify-center">
+                          <h3 className="text-2xl font-bold text-gray-900 mb-3">{propiedad.titulo}</h3>
+                          <p className="text-gray-600 mb-6 flex items-center">
+                            <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                            {propiedad.ubicacion}
+                          </p>
+
+                          <div className="grid grid-cols-3 gap-6 mb-8">
+                            <div className="text-center">
+                              <span className="block text-xl font-semibold text-gray-800">{propiedad.caracteristicas.dormitorios}</span>
+                              <span className="text-sm text-gray-500">Dorm.</span>
+                            </div>
+                            <div className="text-center">
+                              <span className="block text-xl font-semibold text-gray-800">{propiedad.caracteristicas.banos}</span>
+                              <span className="text-sm text-gray-500">Baños</span>
+                            </div>
+                            <div className="text-center">
+                              <span className="block text-xl font-semibold text-gray-800">{propiedad.caracteristicas.superficie}</span>
+                              <span className="text-sm text-gray-500">Área</span>
+                            </div>
+                          </div>
+
+                          <button className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duración-300"
+                            onClick={() => handleViewDetails(propiedad)}
+                          >
+                            Ver Detalles
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
                 </div>
               </div>
 
@@ -570,18 +568,17 @@ const InmobiliariaLanding = () => {
                   <button
                     key={index}
                     onClick={() => goToProperty(index)}
-                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                      index === currentProperty
-                        ? 'bg-blue-600 w-8'
-                        : 'bg-gray-300 hover:bg-gray-400'
-                    }`}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentProperty
+                      ? 'bg-blue-600 w-8'
+                      : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
                     aria-label={`Go to property ${index + 1}`}
                   />
                 ))}
               </div>
             </div>
           )}
-          
+
           {/* Mensaje cuando no hay propiedades */}
           {!isLoadingProperties && !propertiesError && propiedadesDestacadas.length === 0 && (
             <div className="text-center py-20">
@@ -675,7 +672,7 @@ const InmobiliariaLanding = () => {
                     <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                       <MapPin className="h-6 w-6 text-blue-600" />
                     </div>
-                    <div className="ml-4">
+                    <div className="ml-2 text-left">
                       <h4 className="text-lg font-semibold text-gray-900">Dirección</h4>
                       <p className="text-gray-600 mt-1">Florida 142, oficina: 8° i (Edificio Boston), Ciudad Autónoma de Buenos Aires</p>
                     </div>
@@ -686,7 +683,7 @@ const InmobiliariaLanding = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
                     </div>
-                    <div className="ml-4">
+                    <div className="ml-2 text-left">
                       <h4 className="text-lg font-semibold text-gray-900">Teléfono</h4>
                       <p className="text-gray-600 mt-1">(011) 5669-0002</p>
                     </div>
@@ -697,7 +694,7 @@ const InmobiliariaLanding = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
                     </div>
-                    <div className="ml-1">
+                    <div className="ml-2 text-left">
                       <h4 className="text-lg font-semibold text-gray-900">Email</h4>
                       <p className="text-gray-600 mt-1">mkalpinni@gmail.com</p>
                     </div>
@@ -783,7 +780,7 @@ const InmobiliariaLanding = () => {
                     ) : 'Enviar mensaje'}
                   </button>
                 </div>
-                
+
                 {showSuccess && (
                   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full mx-4">
