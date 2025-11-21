@@ -1,5 +1,3 @@
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
 import { API_BASE_URL } from '../config/apiConfig';
 
 class ApiService {
@@ -118,11 +116,21 @@ const mapPropertyData = (prop) => ({
   superficieM2: prop.superficieM2,
   superficie: prop.superficieM2,
   squareMeters: prop.superficieM2,
-  
+  terrenoM2: prop.terrenoM2,
+  landSquare: prop.terrenoM2,
+  landSquareMeters: prop.terrenoM2,
+
   estado: prop.estado,
   status: prop.estado?.toLowerCase(),
   disponible: prop.estado === 'Disponible',
   
+  locador: prop.locador,
+  lessor: prop.locador,
+  locatario: prop.locatario,
+  lessee: prop.locatario,
+  propietario: prop.propietario,
+  owner: prop.propietario,
+
   imagenes: prop.imagenes || [],
   images: prop.imagenes || [],
   
@@ -221,6 +229,13 @@ export const propertyService = {
     return await api.post(`/Propiedad/SubirImagenes/${id}`, formData);
   },
 
+  deleteImage: async (propertyId, imageId) => {
+    if (!propertyId || !imageId) {
+      throw new Error('Property id and image id are required to delete an image');
+    }
+    return await api.delete(`/Propiedad/EliminarImagen/${propertyId}/${imageId}`);
+  },
+
   createWithImages: async (propertyData, imageFiles = []) => {
     const createResp = await api.post('/Propiedad/Crear', propertyData);
     if (createResp.status && createResp.value && imageFiles.length > 0) {
@@ -235,40 +250,6 @@ export const propertyService = {
     }
     return createResp;
   }
-};
-
-export const clientService = {
-  getAll: () => api.get('/Cliente/Obtener'),
-  
-  getById: (id) => api.get(`/Cliente/Obtener/${id}`),
-  
-  search: (filters) => {
-    const queryParams = new URLSearchParams();
-    
-    if (filters.nombre) queryParams.append('nombre', filters.nombre);
-    if (filters.dni) queryParams.append('dni', filters.dni);
-    if (filters.email) queryParams.append('email', filters.email);
-    if (filters.rol) queryParams.append('rol', filters.rol);
-    if (filters.tipoAlquiler) queryParams.append('tipoAlquiler', filters.tipoAlquiler);
-    if (filters.tienePropiedad !== undefined) queryParams.append('tienePropiedad', filters.tienePropiedad);
-    
-    return api.get(`/Cliente/Buscar?${queryParams.toString()}`);
-  },
-  
-  create: (client) => api.post('/Cliente/Crear', client),
-  
-  update: (id, client) => api.put(`/Cliente/Actualizar/${id}`, client),
-  
-  delete: (id) => api.delete(`/Cliente/Eliminar/${id}`),
-  
-  getByRole: (role) => {
-    return clientService.search({ rol: role });
-  },
-  
-  getOwners: () => clientService.getByRole('Propietario'),
-  getTenants: () => clientService.getByRole('Locatario'),
-  getLandlords: () => clientService.getByRole('Locador'),
-  getBuyers: () => clientService.getByRole('Comprador')
 };
 
 export const reservationService = {
@@ -298,13 +279,9 @@ export const tasacionService = {
 export const statsService = {
   getDashboardStats: async () => {
     try {
-      const [propertiesResponse, clientsResponse] = await Promise.all([
-        propertyService.getAll(),
-        clientService.getAll()
-      ]);
+      const propertiesResponse = await propertyService.getAll();
 
       const properties = propertiesResponse.value || [];
-      const clients = clientsResponse.value || [];
 
       return {
         status: true,
@@ -316,17 +293,10 @@ export const statsService = {
           propiedadesPorAlquiler: properties.filter(p => p.transaccionTipo === 'Alquiler').length,
           propiedadesTemporario: properties.filter(p => p.esAlquilerTemporario).length,
           
-          totalClientes: clients.length,
-          propietarios: clients.filter(c => c.rol === 'Propietario').length,
-          inquilinos: clients.filter(c => c.rol === 'Locatario').length,
-          locadores: clients.filter(c => c.rol === 'Locador').length,
-          compradores: clients.filter(c => c.rol === 'Comprador').length,
-          
           tasaOcupacion: properties.length > 0 ? 
             Math.round((properties.filter(p => p.estado === 'Ocupado' || !p.disponible).length / properties.length) * 100) : 0,
           
           ingresosMensuales: 0,
-          
           contratosActivos: 0,
           pagosPendientes: 0
         }

@@ -31,6 +31,34 @@ const DetalleInmueble = () => {
         iconAnchor: [18, 36]
     });
 
+    const parseCoordinate = (value) => {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'number') {
+            return Number.isFinite(value) ? value : null;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().replace(',', '.');
+            if (normalized === '') return null;
+            const parsed = parseFloat(normalized);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+        return null;
+    };
+
+    const buildDisplayAddress = (propiedad) => {
+        if (!propiedad) return '';
+
+        const parts = [
+            propiedad.direccion,
+            propiedad.barrio,
+            propiedad.localidad,
+            propiedad.provincia
+        ].map(part => (typeof part === 'string' ? part.trim() : ''));
+
+        const uniqueParts = parts.filter((part, index, array) => part && array.indexOf(part) === index);
+        return uniqueParts.length > 0 ? uniqueParts.join(', ') : '';
+    };
+
     useEffect(() => {
         const fetchInmueble = async () => {
             try {
@@ -42,9 +70,15 @@ const DetalleInmueble = () => {
                 const data = await response.json();
 
                 if (data.status && data.value) {
-                    setInmueble(data.value);
+                    const inmuebleProcesado = {
+                        ...data.value,
+                        latitud: parseCoordinate(data.value.latitud),
+                        longitud: parseCoordinate(data.value.longitud)
+                    };
 
-                    const imagenes = data.value.imagenes || [];
+                    setInmueble(inmuebleProcesado);
+
+                    const imagenes = inmuebleProcesado.imagenes || [];
                     const imagenesUrls = imagenes.map(img => {
                         if (typeof img === 'string') return img;
                         if (img.rutaArchivo) return img.rutaArchivo;
@@ -283,16 +317,6 @@ const DetalleInmueble = () => {
                             </button>
                             <button
                                 className={`py-2 px-4 font-medium ${
-                                    activeTab === "especificaciones"
-                                        ? "text-gray-900 border-b-2 border-gray-900"
-                                        : "text-gray-500 hover:text-gray-900"
-                                }`}
-                                onClick={() => setActiveTab("especificaciones")}
-                            >
-                                Detalles
-                            </button>
-                            <button
-                                className={`py-2 px-4 font-medium ${
                                     activeTab === "ubicacion"
                                         ? "text-gray-900 border-b-2 border-gray-900"
                                         : "text-gray-500 hover:text-gray-900"
@@ -343,12 +367,12 @@ const DetalleInmueble = () => {
                                 <div>
                                     <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                                         <h3 className="font-medium text-gray-900 mb-2">Ubicación de la propiedad</h3>
-                                        <p className="text-gray-700 mb-4">{inmueble.ubicacion|| 'Dirección no disponible.'}</p>
+                                        <p className="text-gray-700 mb-4">{inmueble.ubicacion || buildDisplayAddress(inmueble) || 'Dirección no disponible.'}</p>
                                         <Mapa 
                                             lat={inmueble.latitud} 
                                             lng={inmueble.longitud} 
                                             titulo={inmueble.titulo}
-                                            ubicacion={inmueble.ubicacion}
+                                            ubicacion={inmueble.ubicacion || buildDisplayAddress(inmueble)}
                                         />
                                     </div>
                                 </div>

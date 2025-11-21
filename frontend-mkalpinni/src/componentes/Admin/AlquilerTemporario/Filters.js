@@ -1,100 +1,130 @@
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
 import React, { useState } from "react";
 
 const Filters = ({ filters = {}, onFilterChange }) => {
-  const defaultFilters = {
+  const [localFilters, setLocalFilters] = useState({
     city: "",
     capacity: "",
-    priceRange: { min: 0, max: 1000 },
+    priceRange: { min: 0, max: 10000000 },
     services: [],
-    startDate: "",
-    endDate: ""
-  };
-
-  const [localFilters, setLocalFilters] = useState({ ...defaultFilters, ...filters });
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setLocalFilters({ ...localFilters, [name]: value });
+    const updatedFilters = { ...localFilters, [name]: value };
+    setLocalFilters(updatedFilters);
+    onFilterChange(updatedFilters);
   };
 
   const handleServiceChange = (e) => {
     const { value, checked } = e.target;
-    setLocalFilters((prevFilters) => ({
-      ...prevFilters,
-      services: checked
-        ? [...prevFilters.services, value]
-        : prevFilters.services.filter((service) => service !== value),
-    }));
+    const updatedServices = checked
+      ? [...localFilters.services, value]
+      : localFilters.services.filter((service) => service !== value);
+
+    const updatedFilters = { ...localFilters, services: updatedServices };
+    setLocalFilters(updatedFilters);
+    onFilterChange(updatedFilters);
   };
 
-  const handlePriceRangeChange = (e) => {
-    const { name, value } = e.target;
-    setLocalFilters({
+  const handlePriceRangeChange = (field, value) => {
+    const updatedFilters = {
       ...localFilters,
-      priceRange: { ...localFilters.priceRange, [name]: parseInt(value) },
-    });
+      priceRange: {
+        ...localFilters.priceRange,
+        [field]: value === '' ? (field === 'min' ? 0 : 10000000) : parseInt(value)
+      },
+    };
+    setLocalFilters(updatedFilters);
+    onFilterChange(updatedFilters);
   };
 
-  const handleApplyFilters = () => {
-    onFilterChange(localFilters);
+  const clearFilters = () => {
+    const clearedFilters = {
+      city: "",
+      capacity: "",
+      priceRange: { min: 0, max: 10000000 },
+      services: [],
+    };
+    setLocalFilters(clearedFilters);
+    onFilterChange(clearedFilters);
   };
 
   return (
-    <div className="p-6 w-1/4 min-h-screen bg-gray-100 shadow-xl rounded-2xl fixed left-0 top-0 overflow-y-auto">
-      <h3 className="text-2xl font-semibold text-center mb-4">Filtros</h3>
-      <div className="space-y-4">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-900">Filtros de Búsqueda</h2>
+        <button
+          onClick={clearFilters}
+          className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+        >
+          Limpiar filtros
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
-          <label className="block font-medium">Ciudad</label>
-          <input className="w-full p-2 border rounded" type="text" name="city" value={localFilters.city} onChange={handleChange} />
-        </div>
-        
-        <div>
-          <label className="block font-medium">Capacidad mínima</label>
-          <input className="w-full p-2 border rounded" type="number" name="capacity" value={localFilters.capacity} onChange={handleChange} />
+          <label className="block text-sm font-medium text-gray-700 mb-2">Ciudad</label>
+          <input
+            type="text"
+            name="city"
+            value={localFilters.city}
+            onChange={handleChange}
+            placeholder="Ingresa la ciudad"
+            className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
         </div>
 
         <div>
-          <label className="block font-medium">Precio mínimo</label>
-          <input className="w-full p-2 border rounded" type="number" name="min" value={localFilters.priceRange.min} onChange={handlePriceRangeChange} />
+          <label className="block text-sm font-medium text-gray-700 mb-2">Capacidad mínima</label>
+          <input
+            type="number"
+            name="capacity"
+            value={localFilters.capacity}
+            onChange={handleChange}
+            placeholder="Número de personas"
+            className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
         </div>
 
         <div>
-          <label className="block font-medium">Precio máximo</label>
-          <input className="w-full p-2 border rounded" type="number" name="max" value={localFilters.priceRange.max} onChange={handlePriceRangeChange} />
+          <label className="block text-sm font-medium text-gray-700 mb-2">Precio mínimo</label>
+          <input
+            type="number"
+            value={localFilters.priceRange.min === 0 ? '' : localFilters.priceRange.min}
+            onChange={(e) => handlePriceRangeChange('min', e.target.value)}
+            placeholder="Precio mínimo"
+            className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
         </div>
 
         <div>
-          <label className="block font-medium">Fecha de inicio</label>
-          <input className="w-full p-2 border rounded" type="date" name="startDate" value={localFilters.startDate} onChange={handleChange} />
+          <label className="block text-sm font-medium text-gray-700 mb-2">Precio máximo</label>
+          <input
+            type="number"
+            value={localFilters.priceRange.max === 10000000 ? '' : localFilters.priceRange.max}
+            onChange={(e) => handlePriceRangeChange('max', e.target.value)}
+            placeholder="Precio máximo"
+            className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
         </div>
 
-        <div>
-          <label className="block font-medium">Fecha de fin</label>
-          <input className="w-full p-2 border rounded" type="date" name="endDate" value={localFilters.endDate} onChange={handleChange} />
-        </div>
-
-        <div>
-          <label className="block font-medium">Servicios</label>
-          <div className="flex flex-col space-y-2">
-            {["WiFi", "Aire acondicionado", "TV"].map((service) => (
+        <div className="md:col-span-2 lg:col-span-3">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Servicios</label>
+          <div className="flex flex-wrap gap-3">
+            {["WiFi", "Aire acondicionado", "TV", "Cocina equipada", "Piscina"].map((service) => (
               <label key={service} className="flex items-center space-x-2">
                 <input
                   type="checkbox"
                   value={service}
                   checked={localFilters.services.includes(service)}
                   onChange={handleServiceChange}
+                  className="rounded border-gray-300"
                 />
-                <span>{service}</span>
+                <span className="text-sm text-gray-700">{service}</span>
               </label>
             ))}
           </div>
         </div>
-
-        <button onClick={handleApplyFilters} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg shadow-md">
-          Aplicar Filtros
-        </button>
       </div>
     </div>
   );

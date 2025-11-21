@@ -3,7 +3,6 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config();
 const User = require('../src/models/User');
 const Property = require('../src/models/Property');
-const Client = require('../src/models/Client');
 
 async function seedDatabase() {
   try {
@@ -13,8 +12,7 @@ async function seedDatabase() {
     });
     await User.deleteMany({});
     await Property.deleteMany({});
-    await Client.deleteMany({});
-    
+
 
     const adminUser = new User({
       nombre: 'Administrador',
@@ -29,9 +27,9 @@ async function seedDatabase() {
     await adminUser.save();
 
     const propietarioUser = new User({
-      nombre: 'María',
-      apellido: 'García',
-      correo: 'maria.garcia@email.com',
+      nombre: 'Sofia',
+      apellido: 'Kalpin',
+      correo: 'sofikalpin@hotmail.com',
       contrasenaHash: 'password123',
       idrol: 1,
       telefono: '+5411234567891'
@@ -49,47 +47,6 @@ async function seedDatabase() {
     await propietarioUser.save();
     await inquilinoUser.save();
 
-    const clienteLocador = new Client({
-      nombreCompleto: 'Roberto Carlos Fernández',
-      dni: '25123456',
-      email: 'roberto.fernandez@email.com',
-      telefono: '+5411234567893',
-      domicilio: 'Av. Corrientes 1234, CABA',
-      rol: 'Locador',
-      tipoAlquiler: 'Alquiler Temporario',
-      fechaNacimiento: new Date('1980-05-15'),
-      nacionalidad: 'Argentina',
-      estadoCivil: 'Casado',
-      profesion: 'Ingeniero',
-      empresa: 'TechCorp SA',
-      ingresosMensuales: 250000,
-      cuitCuil: '20-25123456-7',
-      tienePropiedad: true,
-      idUsuarioCreador: adminUser._id
-    });
-
-    const clienteLocatario = new Client({
-      nombreCompleto: 'Ana María López',
-      dni: '30987654',
-      email: 'ana.lopez@email.com',
-      telefono: '+5411234567894',
-      domicilio: 'Calle Falsa 123, CABA',
-      rol: 'Locatario',
-      tipoAlquiler: 'Alquiler Temporario',
-      fechaNacimiento: new Date('1985-08-22'),
-      nacionalidad: 'Argentina',
-      estadoCivil: 'Soltero',
-      profesion: 'Diseñadora Gráfica',
-      empresa: 'Freelancer',
-      ingresosMensuales: 180000,
-      cuitCuil: '27-30987654-1',
-      tienePropiedad: false,
-      idUsuarioCreador: adminUser._id
-    });
-
-    await clienteLocador.save();
-    await clienteLocatario.save();
-
     const propiedades = [
       {
         titulo: 'Hermoso Apartamento en Playa del Carmen',
@@ -105,23 +62,20 @@ async function seedDatabase() {
         habitaciones: 3,
         banos: 2,
         superficieM2: 65,
-        terrenoM2: 190,
         estado: 'Disponible',
         latitud: 20.6273,
         longitud: -87.0746,
-        locador: clienteLocador.nombreCompleto,
-        idClienteLocador: clienteLocador._id,
+        locador: 'Roberto Carlos Fernández',
         esAlquilerTemporario: true,
         precioPorNoche: 8500,
         precioPorSemana: 50000,
         precioPorMes: 180000,
         capacidadPersonas: 4,
-        especificaciones: ['Cocina Totalmente Equipada', 'Seguridad 24hs', 'Smart TV', 'Aire acondicionado', 'Sin Piscina'],
+        especificaciones: ['Cocina Equipada', 'Seguridad 24hs', 'Smart TV', 'Aire acondicionado', 'Sin Piscina'],
         servicios: ['WiFi', 'Limpieza general', 'Estacionamiento', 'Kit de Bienvenida', 'Ropa de Cama', 'Servicio de conserjeria'],
-        reglasPropiedad: ['No fumar', 'No Mascotas', 'Respetar horarios de descanso'],
-        horarioCheckIn: '14:00',
-        horarioCheckOut: '10:00',
-        politicaCancelacion: 'Flexible',
+        reglasPropiedad: ['No fumar', 'No mascotas', 'Respetar horarios de descanso'],
+        horarioCheckIn: '15:00',
+        horarioCheckOut: '11:00',
         depositoSeguridad: 15000,
         metodosPago: ['Efectivo', 'Transferencia', 'MercadoPago'],
         idUsuarioCreador: adminUser._id,
@@ -177,7 +131,7 @@ async function seedDatabase() {
 
     const savedProperties = await Property.insertMany(propiedades);
 
-    
+
 
 
     mongoose.disconnect();

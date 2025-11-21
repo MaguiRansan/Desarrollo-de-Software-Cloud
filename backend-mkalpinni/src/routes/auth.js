@@ -2,12 +2,12 @@ const express = require('express');
 const User = require('../models/User');
 const { protect, generateToken } = require('../middleware/auth');
 const { validateRegister, validateLogin, handleValidationErrors } = require('../middleware/validation');
+const { upload, uploadProfilePicture } = require('../middleware/upload');
 const { body } = require('express-validator');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
-
 const router = express.Router();
 const seedPath = path.join(__dirname, '..', '..', 'scripts', 'seedDatabase.js');
 
@@ -50,7 +50,7 @@ async function syncSeedWithUserProfile(correo, updates) {
 
     content = content.slice(0, startUser) + block + content.slice(blockEnd);
     fs.writeFileSync(seedPath, content, 'utf8');
-  } catch (_) {}
+  } catch (_) { }
 }
 
 router.post('/Registrar', validateRegister, async (req, res) => {
@@ -145,6 +145,86 @@ router.get('/Perfil', protect, (req, res) => {
   });
 });
 
+// Upload profile picture
+router.post('/SubirFotoPerfil', [
+  protect,
+  (req, res, next) => {
+    console.log('Iniciando subida de foto de perfil');
+    uploadProfilePicture.single('fotoPerfil')(req, res, function (err) {
+      if (err) {
+        console.error('Error en la subida de la imagen:', err);
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({
+            status: false,
+            message: 'La imagen es demasiado grande. Tamaño máximo: 10MB'
+          });
+        }
+        if (err.message === 'Tipo de archivo no permitido.') {
+          return res.status(400).json({
+            status: false,
+            message: 'Tipo de archivo no permitido. Solo se permiten imágenes (JPEG, JPG, PNG, GIF, WEBP)'
+          });
+        }
+        return res.status(500).json({
+          status: false,
+          message: 'Error al subir la imagen',
+          error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      console.log('Archivo recibido:', req.file);
+
+      if (!req.file) {
+        return res.status(400).json({
+          status: false,
+          message: 'No se ha seleccionado ninguna imagen'
+        });
+      }
+
+      const user = await User.findById(req.user._id);
+      if (!user) {
+        return res.status(404).json({
+          status: false,
+          message: 'Usuario no encontrado'
+        });
+      }
+
+      // Delete old profile picture if exists
+      if (user.fotoRuta) {
+        try {
+          const publicId = user.fotoRuta.split('/').pop().split('.')[0];
+          await cloudinary.uploader.destroy(`mkalpin/usuarios/${user._id}/${publicId}`);
+        } catch (error) {
+          console.error('Error al eliminar la imagen anterior:', error);
+        }
+      }
+
+      // Save the new image URL
+      user.fotoRuta = req.file.path;
+      await user.save();
+
+      res.json({
+        status: true,
+        message: 'Foto de perfil actualizada exitosamente',
+        value: {
+          fotoRuta: user.fotoRuta
+        }
+      });
+    } catch (error) {
+      console.error('Error al actualizar la foto de perfil:', error);
+      res.status(500).json({
+        status: false,
+        message: 'Error al actualizar la foto de perfil',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+]);
+
 router.put('/Actualizar', [
   protect,
   body('nombre')
@@ -198,7 +278,7 @@ router.put('/Actualizar', [
       });
     }
 
- 
+
     if (updateFields.correo && updateFields.correo !== req.user.correo) {
       const exists = await User.findOne({ correo: updateFields.correo });
       if (exists) {
@@ -265,73 +345,103 @@ router.put('/CambiarContrasena', [
     });
   }
 });
+const cloudinary = require('cloudinary').v2;
 
-router.post('/ActualizarFoto', [
+router.post('/ActualizarFoto',
   protect,
-  body('foto').isString().withMessage('La foto es requerida en formato base64')
-], async (req, res) => {
-  try {
-    const { foto } = req.body;
-    const match = /^data:(image\/(png|jpeg|jpg));base64,(.+)$/.exec(foto || '');
-    if (!match) {
-      return res.status(400).json({ status: false, message: 'Formato de imagen inválido' });
-    }
-    const mime = match[1];
-    const ext = mime.includes('png') ? 'png' : 'jpg';
-    const base64Data = match[3];
-
-    const uploadsDir = path.join(__dirname, '..', '..', 'uploads', 'usuarios');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    const fileName = `${req.user._id}.${ext}`;
-    const filePath = path.join(uploadsDir, fileName);
-    fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
-
-    const relativePath = path.posix.join('usuarios', fileName);
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { fotoRuta: relativePath },
-      { new: true }
-    );
-
-    return res.json({
-      status: true,
-      message: 'Foto actualizada exitosamente',
-      value: user.toPublicJSON(),
-      ruta: `/uploads/${relativePath}`
+  (req, res, next) => {
+    uploadProfilePicture.single('fotoPerfil')(req, res, function (err) {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({
+            status: false,
+            message: 'La imagen es demasiado grande. Tamaño máximo: 10MB'
+          });
+        }
+        if (err.message === 'Tipo de archivo no permitido.') {
+          return res.status(400).json({
+            status: false,
+            message: 'Tipo de archivo no permitido. Solo se permiten imágenes (JPEG, JPG, PNG, GIF, WEBP)'
+          });
+        }
+        return res.status(400).json({
+          status: false,
+          message: 'Error al subir la imagen: ' + (err.message || 'Error desconocido')
+        });
+      }
+      next();
     });
-  } catch (error) {
-    console.error('Error actualizando foto de perfil:', error);
-    return res.status(500).json({ status: false, message: 'Error interno del servidor' });
+  },
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          status: false,
+          message: 'No se ha proporcionado ninguna imagen o el archivo no es válido.'
+        });
+      }
+
+      const user = await User.findById(req.user._id);
+      if (!user) {
+        return res.status(404).json({
+          status: false,
+          message: 'Usuario no encontrado'
+        });
+      }
+
+      if (user.fotoRuta) {
+        try {
+          const publicId = user.fotoRuta.split('/').pop().split('.')[0];
+          await cloudinary.uploader.destroy(`mkalpin/usuarios/${user._id}/${publicId}`);
+        } catch (error) {
+          console.error('Error al eliminar la imagen anterior:', error);
+        }
+      }
+
+      user.fotoRuta = req.file.path;
+      await user.save();
+
+      return res.json({
+        status: true,
+        message: 'Foto de perfil actualizada correctamente',
+        fotoUrl: user.fotoRuta,
+        user: user.toPublicJSON()
+      });
+    } catch (error) {
+      console.error('Error al actualizar la foto de perfil:', error);
+      return res.status(500).json({
+        status: false,
+        message: 'Error al actualizar la foto de perfil',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
   }
-});
+);
 
 // Obtener foto por correo
 router.get('/ObtenerFoto/:correo', async (req, res) => {
-try {
-  const user = await User.findOne({ correo: req.params.correo.toLowerCase() });
-  if (!user || !user.fotoRuta) {
-    return res.status(404).json({ status: false, message: 'Foto no encontrada' });
-  }
-  const filePath = path.join(__dirname, '..', '..', 'uploads', user.fotoRuta);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ status: false, message: 'Foto no encontrada' });
-  }
+  try {
+    const user = await User.findOne({ correo: req.params.correo.toLowerCase() });
+    if (!user || !user.fotoRuta) {
+      return res.status(404).json({ status: false, message: 'Foto no encontrada' });
+    }
+    const filePath = path.join(__dirname, '..', '..', 'uploads', user.fotoRuta);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ status: false, message: 'Foto no encontrada' });
+    }
 
-  // Prevent caching to ensure the latest image is always fetched
-  res.set({
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0',
-    'Surrogate-Control': 'no-store'
-  });
-  return res.sendFile(filePath);
-} catch (error) {
-  console.error('Error obteniendo foto de perfil:', error);
-  return res.status(500).json({ status: false, message: 'Error interno del servidor' });
-}
+    // Prevent caching to ensure the latest image is always fetched
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Surrogate-Control': 'no-store'
+    });
+    return res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error obteniendo foto de perfil:', error);
+    return res.status(500).json({ status: false, message: 'Error interno del servidor' });
+  }
 });
 
 router.post('/RecuperarContrasena', [
@@ -342,7 +452,7 @@ router.post('/RecuperarContrasena', [
     const { correo } = req.body;
     const user = await User.findByEmail(correo);
 
-   const responseMessage = 'Si el correo está registrado, recibirás instrucciones para recuperar tu contraseña.';
+    const responseMessage = 'Si el correo está registrado, recibirás instrucciones para recuperar tu contraseña.';
 
     if (!user) {
       return res.json({
@@ -362,14 +472,14 @@ router.post('/RecuperarContrasena', [
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS 
+        pass: process.env.EMAIL_PASS
       }
-        });
+    });
 
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/recuperarcontrasena?ref=${resetToken}`;
-    
+
     const mailOptions = {
-      from: process.env.EMAIL_USER || 'mkalpinni@gmail.com',
+      from: process.env.EMAIL_USER,
       to: user.correo,
       subject: 'Recuperación de Contraseña - Mkalpin Inmobiliaria',
       html: `
@@ -381,14 +491,12 @@ router.post('/RecuperarContrasena', [
           </p>
           <p>Este enlace expirará en 10 minutos por seguridad.</p>
           <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
-          <p>Saludos,<br>Equipo de Mkalpin Negocios Inmobiliairios</p>
+          <p>Saludos,<br>Equipo de Mkalpin Negocios Inmobiliarios</p>
         </div>
       `
     };
 
     try {
-      await transporter.sendMail(mailOptions);
-
       res.json({
         status: true,
         message: responseMessage
@@ -401,7 +509,6 @@ router.post('/RecuperarContrasena', [
     }
 
   } catch (error) {
-    console.error('Error en recuperación de contraseña:', error);
     res.status(500).json({
       status: false,
       message: 'Error interno del servidor',
@@ -413,7 +520,7 @@ router.post('/RecuperarContrasena', [
 router.post('/reestablecer-contrasena', async (req, res) => {
   try {
     const { ref: token, nuevaContraseña } = req.body;
-    
+
     if (!token || !nuevaContraseña) {
       return res.status(400).json({
         message: 'Token y nueva contraseña son requeridos'
