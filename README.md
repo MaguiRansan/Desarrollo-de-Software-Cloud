@@ -41,8 +41,8 @@ El sistema ofrece paneles personalizados con las siguientes funcionalidades:
 
 | Tipo de Usuario | Tareas y Funcionalidades Principales |
 | :--- | :--- |
-| **Administrador** | - Registro y gestión completa de clientes y propiedades.<br> - Acceso centralizado a archivos, contratos y documentación.<br> - Visualización de estadísticas operacionales clave. |
-| **Clientes** | - Panel Personal para propietarios, inquilinos o compradores.<br> - Visualización de las propiedades que les corresponden (contratos, estado de alquiler, etc.).<br> - Gestión y acceso a su documentación personal y de la propiedad. |
+| **Administrador** | - Registro y gestión completa de propiedades.<br> - Acceso centralizado a las propiedades.<br> |
+
 
 ---
 
