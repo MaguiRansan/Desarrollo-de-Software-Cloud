@@ -14,10 +14,10 @@ import AdminHeader from './AdminHeader';
 import Notifications from './Notifications';
 import { useUser } from '../../Context/UserContext';
 
-const AdminLayout = ({ children, user = { name: 'pepe' } }) => {
+const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const { logout } = useUser();
+  const { user, logout } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -81,7 +81,12 @@ const AdminLayout = ({ children, user = { name: 'pepe' } }) => {
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-900">Bienvenido</p>
-                <p className="text-xs text-green-600 font-semibold">{user.name}</p>
+                <p className="text-xs text-green-600 font-semibold">
+                  {user?.nombre && user?.apellido 
+                    ? `${user.nombre} ${user.apellido}` 
+                    : user?.name || 'Administrador'
+                  }
+                </p>
               </div>
             </div>
           </div>
