@@ -11,6 +11,7 @@ import imagen3 from './pexels-vividcafe-681333.jpg';
 import HomeSearch from './HomeSearch';
 import { propertyService } from '../../../services/api';
 import { API_BASE_URL } from '../../../config/apiConfig';
+import modern_minimalist_re from './modern_minimalist_re.jpg';
 
 const CookieBanner = () => {
   const [showBanner, setShowBanner] = useState(false);
@@ -593,7 +594,7 @@ const InmobiliariaLanding = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="relative rounded-xl overflow-hidden shadow-2xl transform transition-all duration-300 hover:scale-[1.02]">
               <img
-                src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+                src={modern_minimalist_re}
                 alt="Sobre Nosotros"
                 className="w-full h-full object-cover"
               />
