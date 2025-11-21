@@ -152,14 +152,12 @@ const Temporarios = () => {
       setIsLoading(true);
 
       const propertyToSave = {
-        // Campos obligatorios según la validación del backend
         titulo: propertyData.titulo || 'Sin título',
         direccion: propertyData.direccion || 'Dirección no especificada',
         precio: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
         tipoPropiedad: propertyData.tipoPropiedad || 'Casa',
-        transaccionTipo: 'Alquiler', // Cambiado a 'Alquiler' que es uno de los valores permitidos
+        transaccionTipo: 'Alquiler',
         
-        // Resto de los campos
         descripcion: propertyData.descripcion || '',
         barrio: propertyData.barrio || '',
         localidad: propertyData.localidad || '',
@@ -276,12 +274,11 @@ const Temporarios = () => {
         if (isEditing) {
           setProperties(prev => prev.map(p => {
             if (p.id === propertyId || p._id === propertyId) {
-              // Mantener los campos existentes y combinar con los actualizados
               return {
-                ...p,  // Mantener los campos existentes
-                ...finalProperty,  // Aplicar los cambios
-                id: p.id || finalProperty.id,  // Asegurar que el ID no se pierda
-                _id: p._id || finalProperty._id,  // Asegurar que el _id no se pierda
+                ...p,  
+                ...finalProperty, 
+                id: p.id || finalProperty.id,  
+                _id: p._id || finalProperty._id,  
                 title: finalProperty.title || finalProperty.titulo || p.title || 'Sin título',
                 description: finalProperty.description || finalProperty.descripcion || p.description || '',
                 price: finalProperty.price || finalProperty.precio || p.price || 0,
@@ -292,7 +289,6 @@ const Temporarios = () => {
           }));
           toast.success('Propiedad actualizada exitosamente');
         } else {
-          // Para nueva propiedad, asegurarse de que tenga los campos necesarios
           const newProperty = {
             ...finalProperty,
             id: finalProperty.id || finalProperty._id,
@@ -427,6 +423,33 @@ const Temporarios = () => {
     }
 
     let currentProperties = [...properties];
+
+    currentProperties = currentProperties.filter((property) => {
+      if (!property) return false;
+
+      const matchesSearch = !searchTerm ||
+        property.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        property.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        property.neighborhood?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesCity = !filters.city ||
+        property.locality?.toLowerCase().includes(filters.city.toLowerCase());
+
+      const matchesCapacity = !filters.capacity ||
+        (property.capacity || 0) >= parseInt(filters.capacity);
+
+      const propertyPrice = parseFloat(property.price) || 0;
+      const minPrice = filters.priceRange?.min || 0;
+      const maxPrice = filters.priceRange?.max || 10000000;
+      const matchesPrice = propertyPrice >= minPrice && propertyPrice <= maxPrice;
+
+      const matchesServices = !filters.services || filters.services.length === 0 ||
+        filters.services.every(service =>
+          (property.services || []).includes(service)
+        );
+
+      return matchesSearch && matchesCity && matchesCapacity && matchesPrice && matchesServices;
+    });
 
     currentProperties.sort((a, b) => {
       if (sortBy === 'name') {
@@ -638,10 +661,9 @@ const Temporarios = () => {
           <div className="flex flex-col lg:flex-row gap-8">
             <div className="flex-1">
               {showFilters && (
-                <div className="mb-8">
-                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <Filters filters={filters} onFilterChange={setFilters} />
-                  </div>
+                <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtros de Búsqueda</h3>
+                  <Filters filters={filters} onFilterChange={setFilters} />
                 </div>
               )}
 
