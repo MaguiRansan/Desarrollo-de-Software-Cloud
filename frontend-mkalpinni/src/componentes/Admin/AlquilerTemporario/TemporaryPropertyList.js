@@ -1,4 +1,4 @@
-import { FaUsers, FaCalendarAlt, FaPlus, FaSearch, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaCalendarCheck, FaClock, FaMoneyBill, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaUsers, FaCalendarAlt, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaCalendarCheck, FaClock, FaMoneyBill, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -19,7 +19,7 @@ const mapStatus = (statusFromForm) => {
 
 const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit, onDelete, onUpdateStatus }) => {
   console.log('Propiedades recibidas en TemporaryPropertyList:', properties);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm] = useState('');
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -32,7 +32,6 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
   const [reservationDeposit, setReservationDeposit] = useState('');
   const [reservationGuests, setReservationGuests] = useState('');
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDates, setSelectedDates] = useState({
     startDate: null,
     endDate: null,
@@ -722,14 +721,24 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
     );
   };
 
+  const getImageUrl = (image) => {
+    if (!image) return null;
+    const url = (typeof image === 'object' && image !== null)
+      ? (image.rutaArchivo || image.url)
+      : (typeof image === 'string' ? image : null);
+
+    if (!url) return null;
+
+    if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('http') || url.startsWith('https')) {
+      return url;
+    }
+    return `data:image/jpeg;base64,${url}`;
+  };
+
   const renderPropertyImage = (property) => {
     const images = property.images || [];
     if (images.length > 0) {
-      const firstImage = images[0];
-
-      const imageUrl = (typeof firstImage === 'object' && firstImage !== null)
-        ? (firstImage.rutaArchivo || firstImage.url)
-        : (typeof firstImage === 'string' ? firstImage : null);
+      const imageUrl = getImageUrl(images[0]);
 
       if (imageUrl) {
         return (
@@ -771,7 +780,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
             return (
               <div
                 key={propertyId}
-                className={`bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-lg ${currentStatus === 'ocupado_temp' ? 'opacity-80 border-l-4 border-red-500' : ''
+                className={`bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-lg ${currentStatus === 'ocupado_temp' || currentStatus === 'no disponible' ? 'opacity-80 border-l-4 border-red-500' : ''
                   } ${currentStatus === 'reservado_temp' ? 'border-l-4 border-yellow-400' : ''
                   }`}
               >
@@ -1023,9 +1032,7 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                   {(selectedProperty.images && selectedProperty.images.length > 0) ? (
                     <>
                       <img
-                        src={(typeof selectedProperty.images[currentImageIndex] === 'object' && selectedProperty.images[currentImageIndex] !== null)
-                          ? (selectedProperty.images[currentImageIndex].rutaArchivo || selectedProperty.images[currentImageIndex].url)
-                          : (typeof selectedProperty.images[currentImageIndex] === 'string' ? selectedProperty.images[currentImageIndex] : null)}
+                        src={getImageUrl(selectedProperty.images[currentImageIndex])}
                         alt={`Imagen ${currentImageIndex + 1}`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -1082,6 +1089,18 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                     )}
                 </div>
 
+                <h3 className="text-2xl font-bold text-gray-800 border-b pb-2 mt-6">Reglas de la Propiedad</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                  {(selectedProperty.rules || selectedProperty.reglasPropiedad)?.map((rule, index) => (
+                    <div key={index} className="flex items-center text-base text-gray-700">
+                      <FaCheck className="text-blue-500 mr-2 text-sm" />
+                      <span>{rule}</span>
+                    </div>
+                  )) || (
+                      <p className="text-gray-500 text-base">No se han especificado reglas.</p>
+                    )}
+                </div>
+
                 <div className="p-4 border rounded-lg bg-white shadow">
                   <h3 className="text-xl font-bold mb-3 flex items-center">
                     <FaCalendarAlt className="mr-2 text-blue-500" /> Calendario de Disponibilidad
@@ -1119,6 +1138,20 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                       <div className="flex items-center">
                         <div className="w-4 h-4 bg-gray-100 rounded-full mr-2"></div>
                         <span>No disponible</span>
+                      </div>
+                    </div>
+
+                    {/* Cartel informativo sobre funcionalidad de doble click */}
+                    <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                      <div className="flex items-start">
+                        <FaCalendarAlt className="text-blue-600 mt-1 mr-3 flex-shrink-0" />
+                        <div className="text-sm text-blue-900">
+                          <p className="font-semibold mb-1"> Tip: Funcionalidad de Doble Click</p>
+                          <ul className="list-disc list-inside space-y-1 text-blue-800">
+                            <li><strong>Fechas Disponibles (verde):</strong> Doble click para marcar como "No Disponible"</li>
+                            <li><strong>Fechas Reservadas (amarillo) u Ocupadas (rojo):</strong> Doble click para marcar como "Disponible"</li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1277,6 +1310,9 @@ const TemporaryPropertyList = ({ properties, viewMode = 'grid', onAddNew, onEdit
                       )}
                       {mapStatus(selectedProperty.estado) === 'ocupado_temp' && (
                         <span className="inline-flex items-center px-4 py-1.5 rounded-full text-lg font-medium bg-red-100 text-red-800">Ocupado</span>
+                      )}
+                      {mapStatus(selectedProperty.estado) === 'no disponible' && (
+                        <span className="inline-flex items-center px-4 py-1.5 rounded-full text-lg font-medium bg-gray-100 text-gray-800">No disponible</span>
                       )}
                     </div>
                   </div>

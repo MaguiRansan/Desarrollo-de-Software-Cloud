@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FaCog, FaUser, FaLock, FaDatabase, FaSave } from "react-icons/fa";
+import { FaCog, FaDatabase, FaSave } from "react-icons/fa";
 import AdminLayout from '../AdminLayout';
-import ForgotPassword from '../../Login/ForgotPassword';
 import { API_BASE_URL } from '../../../config/apiConfig';
 
 const Configuracion = () => {
@@ -9,12 +8,10 @@ const Configuracion = () => {
 
   const tabs = [
     { id: 'general', name: 'General', icon: FaCog },
-    { id: 'usuario', name: 'Usuario', icon: FaUser },
-    { id: 'seguridad', name: 'Seguridad', icon: FaLock },
     { id: 'sistema', name: 'Sistema', icon: FaDatabase },
   ];
 
-  const renderInput = (label, type = 'text', value = '', onChange = () => {}, options) => (
+  const renderInput = (label, type = 'text', value = '', onChange = () => { }, options) => (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
       {options ? (
@@ -39,12 +36,6 @@ const Configuracion = () => {
       emailPrincipal: 'info@mkalpin.com',
       direccion: 'Montevideo, Uruguay',
     },
-    usuario: {
-      nombreCompleto: 'Marcelo Kalpin',
-      email: 'marcelo@mkalpin.com',
-      rol: 'Administrador',
-      telefono: '+598 99 123 456',
-    },
     sistema: {
       zonaHoraria: 'UTC-3 (Montevideo)',
       moneda: 'USD - Dólar Americano',
@@ -54,7 +45,6 @@ const Configuracion = () => {
   });
 
   const [saveStatus, setSaveStatus] = useState(null);
-  const [showForgot, setShowForgot] = useState(false);
 
   const handleInputChange = (section, field, value) => {
     setFormData(prev => ({
@@ -67,7 +57,7 @@ const Configuracion = () => {
   };
 
   useEffect(() => {
-    const sections = ['general', 'usuario', 'sistema'];
+    const sections = ['general', 'sistema'];
     sections.forEach(async (section) => {
       try {
         const res = await fetch(`${API_BASE_URL}/Config/settings/${section}`);
@@ -139,37 +129,10 @@ const Configuracion = () => {
             <section>
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Información General</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {renderInput('Nombre de la Empresa', 'text', formData.general.nombreEmpresa, (v) => handleInputChange('general','nombreEmpresa',v))}
-                {renderInput('Teléfono Principal', 'tel', formData.general.telefonoPrincipal, (v) => handleInputChange('general','telefonoPrincipal',v))}
-                {renderInput('Email Principal', 'email', formData.general.emailPrincipal, (v) => handleInputChange('general','emailPrincipal',v))}
-                {renderInput('Dirección', 'text', formData.general.direccion, (v) => handleInputChange('general','direccion',v))}
-              </div>
-            </section>
-          )}
-
-          {activeTab === 'usuario' && (
-            <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Información del Usuario</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {renderInput('Nombre Completo', 'text', formData.usuario.nombreCompleto, (v) => handleInputChange('usuario','nombreCompleto',v))}
-                {renderInput('Email', 'email', formData.usuario.email, (v) => handleInputChange('usuario','email',v))}
-                {renderInput('Rol', 'select', formData.usuario.rol, (v) => handleInputChange('usuario','rol',v), ['Administrador', 'Manager', 'Usuario'])}
-                {renderInput('Teléfono', 'tel', formData.usuario.telefono, (v) => handleInputChange('usuario','telefono',v))}
-              </div>
-            </section>
-          )}
-
-          {activeTab === 'seguridad' && (
-            <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Seguridad</h3>
-              <div className="bg-gray-50 p-4 rounded-xl flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Recuperar contraseña</p>
-                  <p className="text-sm text-gray-600">Si no recuerdas tu contraseña, puedes solicitar un enlace de recuperación.</p>
-                </div>
-                <button onClick={() => setShowForgot(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                  Enviar enlace de recuperación
-                </button>
+                {renderInput('Nombre de la Empresa', 'text', formData.general.nombreEmpresa, (v) => handleInputChange('general', 'nombreEmpresa', v))}
+                {renderInput('Teléfono Principal', 'tel', formData.general.telefonoPrincipal, (v) => handleInputChange('general', 'telefonoPrincipal', v))}
+                {renderInput('Email Principal', 'email', formData.general.emailPrincipal, (v) => handleInputChange('general', 'emailPrincipal', v))}
+                {renderInput('Dirección', 'text', formData.general.direccion, (v) => handleInputChange('general', 'direccion', v))}
               </div>
             </section>
           )}
@@ -178,18 +141,18 @@ const Configuracion = () => {
             <section>
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Ajustes del Sistema</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {renderInput('Zona Horaria', 'select', formData.sistema.zonaHoraria, (v) => handleInputChange('sistema','zonaHoraria',v), [
+                {renderInput('Zona Horaria', 'select', formData.sistema.zonaHoraria, (v) => handleInputChange('sistema', 'zonaHoraria', v), [
                   'UTC-3 (Montevideo)',
                   'UTC-3 (Buenos Aires)',
                   'UTC-5 (Lima)',
                 ])}
-                {renderInput('Moneda por Defecto', 'select', formData.sistema.moneda, (v) => handleInputChange('sistema','moneda',v), [
+                {renderInput('Moneda por Defecto', 'select', formData.sistema.moneda, (v) => handleInputChange('sistema', 'moneda', v), [
                   'USD - Dólar Americano',
                   'UYU - Peso Uruguayo',
                   'ARS - Peso Argentino',
                 ])}
-                {renderInput('Idioma', 'select', formData.sistema.idioma, (v) => handleInputChange('sistema','idioma',v), ['Español', 'English', 'Português'])}
-                {renderInput('Formato de Fecha', 'select', formData.sistema.formatoFecha, (v) => handleInputChange('sistema','formatoFecha',v), [
+                {renderInput('Idioma', 'select', formData.sistema.idioma, (v) => handleInputChange('sistema', 'idioma', v), ['Español', 'English', 'Português'])}
+                {renderInput('Formato de Fecha', 'select', formData.sistema.formatoFecha, (v) => handleInputChange('sistema', 'formatoFecha', v), [
                   'DD/MM/YYYY',
                   'MM/DD/YYYY',
                   'YYYY-MM-DD',
@@ -200,7 +163,6 @@ const Configuracion = () => {
             </section>
           )}
 
-          {activeTab !== 'seguridad' && (
           <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-between">
             <div>
               {saveStatus === 'saving' && <p className="text-gray-600 text-sm">Guardando cambios...</p>}
@@ -212,8 +174,6 @@ const Configuracion = () => {
               Guardar Cambios
             </button>
           </div>
-          )}
-          {showForgot && <ForgotPassword onClose={() => setShowForgot(false)} />}
         </div>
       </div>
     </AdminLayout>

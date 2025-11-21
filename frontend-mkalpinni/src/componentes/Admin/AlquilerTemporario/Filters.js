@@ -1,6 +1,4 @@
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 const Filters = ({ filters = {}, onFilterChange }) => {
   const [localFilters, setLocalFilters] = useState({
@@ -22,7 +20,7 @@ const Filters = ({ filters = {}, onFilterChange }) => {
     const updatedServices = checked
       ? [...localFilters.services, value]
       : localFilters.services.filter((service) => service !== value);
-    
+
     const updatedFilters = { ...localFilters, services: updatedServices };
     setLocalFilters(updatedFilters);
     onFilterChange(updatedFilters);
@@ -31,9 +29,9 @@ const Filters = ({ filters = {}, onFilterChange }) => {
   const handlePriceRangeChange = (field, value) => {
     const updatedFilters = {
       ...localFilters,
-      priceRange: { 
-        ...localFilters.priceRange, 
-        [field]: value === '' ? (field === 'min' ? 0 : 10000000) : parseInt(value) 
+      priceRange: {
+        ...localFilters.priceRange,
+        [field]: value === '' ? (field === 'min' ? 0 : 10000000) : parseInt(value)
       },
     };
     setLocalFilters(updatedFilters);

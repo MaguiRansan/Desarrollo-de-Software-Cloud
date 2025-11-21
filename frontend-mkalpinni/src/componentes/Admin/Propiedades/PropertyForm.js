@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaTimes, FaSave, FaExclamationTriangle, FaStar, FaPlus, FaTrash } from "react-icons/fa";
+import { FaTimes, FaSave, FaExclamationTriangle, FaStar } from "react-icons/fa";
 
 const initialFormData = {
   title: '',
@@ -9,7 +9,7 @@ const initialFormData = {
   neighborhood: '',
   locality: '',
   province: '',
-  type: 'Casa', 
+  type: 'Casa',
   operationType: 'venta',
   status: 'disponible',
   bedrooms: '',
@@ -22,7 +22,7 @@ const initialFormData = {
 };
 
 const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isSubmitting = false }) => {
-  const [showCancelModal, setShowCancelModal] = useState(false);  
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
   const [imagesState, setImagesState] = useState([]);
   const [removedImageIds, setRemovedImageIds] = useState([]);
@@ -50,17 +50,17 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
         allowsPets: prop.allowsPets || prop.aceptaMascotas || false,
       });
 
-      const initialImages = Array.isArray(prop.images) && prop.images.length > 0 
+      const initialImages = Array.isArray(prop.images) && prop.images.length > 0
         ? prop.images.filter(img => img !== null).map((img, index) => ({
-            _id: img._id || img.id || img.idImagen || (typeof img === 'string' ? img : null),
-            url: img.url || img.rutaArchivo || (typeof img === 'string' ? img : null),
-            isNew: false,
-            isMain: index === 0, 
-            file: null,
-            preview: null,
-          })) 
+          _id: img._id || img.id || img.idImagen || (typeof img === 'string' ? img : null),
+          url: img.url || img.rutaArchivo || (typeof img === 'string' ? img : null),
+          isNew: false,
+          isMain: index === 0,
+          file: null,
+          preview: null,
+        }))
         : [];
-      
+
       setImagesState(initialImages);
       setRemovedImageIds(prop.removedImages || []);
 
@@ -69,7 +69,7 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
       setImagesState([]);
       setRemovedImageIds([]);
     }
-  }, [prop]);  
+  }, [prop]);
   useEffect(() => {
     return () => {
       imagesState.forEach(image => {
@@ -83,29 +83,29 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
-    const newValue = type === 'checkbox' 
-      ? checked 
-      : (name === 'price' || name === 'bedrooms' || name === 'bathrooms' || name === 'squareMeters' || name === 'landSquareMeters') 
-        ? (value === '' ? '' : Number(value)) 
+
+    const newValue = type === 'checkbox'
+      ? checked
+      : (name === 'price' || name === 'bedrooms' || name === 'bathrooms' || name === 'squareMeters' || name === 'landSquareMeters')
+        ? (value === '' ? '' : Number(value))
         : value;
-    
+
     const updatedFormData = {
       ...formData,
       [name]: newValue
     };
-    
+
     setFormData(updatedFormData);
-    
+
     if (onChange) {
       onChange(updatedFormData);
     }
   };
   const handleImageFileChange = (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    
+
     const newFiles = Array.from(e.target.files);
-    
+
     const newImagePreviews = newFiles
       .filter(file => file instanceof File)
       .map(file => ({
@@ -114,45 +114,45 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
         isNew: true,
         isMain: false
       }));
-    
+
     if (newImagePreviews.length === 0) return;
-    
+
     let updatedImages = [...imagesState, ...newImagePreviews];
-    
+
     const hasExistingMain = updatedImages.some(img => img.isMain);
     if (!hasExistingMain && updatedImages.length > 0) {
       updatedImages[0].isMain = true;
     }
-    
+
     setImagesState(updatedImages);
-    
+
     e.target.value = null;
   };
-  
+
   const handleRemoveImage = (indexToRemove) => {
     if (indexToRemove < 0 || indexToRemove >= imagesState.length) return;
-    
+
     const imageToRemove = imagesState[indexToRemove];
-    
+
     if (imageToRemove && imageToRemove.preview) {
       URL.revokeObjectURL(imageToRemove.preview);
     }
 
     const newImages = imagesState.filter((_, index) => index !== indexToRemove);
-    
+
     const newRemovedIds = [...removedImageIds];
-    
+
     if (imageToRemove && !imageToRemove.isNew) {
       const imageId = imageToRemove._id || imageToRemove.id || imageToRemove.idImagen || imageToRemove.url;
       if (imageId && !newRemovedIds.includes(imageId)) {
         newRemovedIds.push(imageId);
       }
     }
-    
+
     if (imageToRemove.isMain && newImages.length > 0) {
       newImages[0].isMain = true;
     }
-    
+
     setImagesState(newImages);
     setRemovedImageIds(newRemovedIds);
   };
@@ -162,26 +162,26 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
 
     const newImages = [...imagesState];
     const [promotedImage] = newImages.splice(indexToPromote, 1);
-    
+
     newImages.forEach(img => img.isMain = false);
     promotedImage.isMain = true;
-    
+
     newImages.unshift(promotedImage);
-    
+
     setImagesState(newImages);
   };
-  
+
 
   const handleSave = () => {
     if (!formData.title || !formData.address || !formData.price) {
       alert('Por favor complete los campos requeridos: Título, Dirección y Precio.');
       return;
     }
-    
+
     const existingImages = imagesState
       .filter(img => !img.isNew && img.url)
       .map(img => ({
-        id: img._id, 
+        id: img._id,
         url: img.url,
         isMain: img.isMain || false
       }));
@@ -199,17 +199,17 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
       return;
     }
 
-    const propertyDataToSave = { 
+    const propertyDataToSave = {
       ...formData,
 
       images: existingImages.map(img => img.url)
     };
-    
+
     if (typeof onSave === 'function') {
       onSave(
         propertyDataToSave,
         newImageFiles,
-        removedIds 
+        removedIds
       );
     }
   };
@@ -450,22 +450,22 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
           <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="image-upload">
             Imágenes de la propiedad
           </label>
-          <input 
-            type="file" 
-            id="image-upload" 
-            multiple 
-            onChange={handleImageFileChange} 
-            className="shadow border rounded-lg w-full py-3 px-4 text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
-            required={imagesState.length === 0} 
+          <input
+            type="file"
+            id="image-upload"
+            multiple
+            onChange={handleImageFileChange}
+            className="shadow border rounded-lg w-full py-3 px-4 text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            required={imagesState.length === 0}
           />
-          
+
           {(imagesState && imagesState.length > 0) && (
             <div className="mt-4 flex flex-wrap gap-3">
               {imagesState
                 .filter(img => img !== null && img !== undefined)
                 .map((img, index) => {
-                  const imageUrl = img.preview || img.url; 
-                  
+                  const imageUrl = img.preview || img.url;
+
                   if (!imageUrl) return null;
 
                   return (
@@ -481,21 +481,21 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
                           alt={`Imagen de la propiedad ${index + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            e.target.src = '/placeholder-property.jpg'; 
+                            e.target.src = '/placeholder-property.jpg';
                           }}
                         />
-                         
-                         {(img.isMain || index === 0) && (
-                            <div className="absolute top-0 left-0 bg-yellow-500 text-xs text-white px-2 py-0.5 rounded-br-lg font-semibold">
-                                PRINCIPAL
-                            </div>
-                         )}
+
+                        {(img.isMain || index === 0) && (
+                          <div className="absolute top-0 left-0 bg-yellow-500 text-xs text-white px-2 py-0.5 rounded-br-lg font-semibold">
+                            PRINCIPAL
+                          </div>
+                        )}
                       </div>
-                      
+
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
                         <div className="opacity-0 group-hover:opacity-100 flex space-x-1">
-                          
-                          
+
+
                           {!img.isMain && (
                             <button
                               type="button"
@@ -509,7 +509,7 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
                               <FaStar size={14} />
                             </button>
                           )}
-                          
+
                           <button
                             type="button"
                             onClick={(e) => {
@@ -535,11 +535,10 @@ const PropertyForm = ({ property: prop, editing, onSave, onCancel, onChange, isS
         <button
           onClick={handleSave}
           disabled={isSubmitting}
-          className={`${
-            isSubmitting
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-blue-600 hover:bg-blue-700'
-          } text-white font-bold py-3 px-6 rounded-lg flex items-center space-x-2 transition duration-300`}
+          className={`${isSubmitting
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-blue-600 hover:bg-blue-700'
+            } text-white font-bold py-3 px-6 rounded-lg flex items-center space-x-2 transition duration-300`}
         >
           {isSubmitting ? (
             <>

@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import TemporaryPropertyList from './TemporaryPropertyList';
-import { FaHome, FaBuilding, FaUsers, FaCalendarAlt, FaChartBar, FaCog, FaSignOutAlt, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaBed, FaBath, FaRulerCombined, FaTag, FaEdit, FaTrash, FaEye, FaCheck, FaMoneyBillWave, FaTimes, FaDownload, FaSave, FaUser, FaRuler, FaSun, FaCalendarAlt as FaCalendar } from "react-icons/fa";
+import { FaHome, FaUsers, FaPlus, FaSearch, FaTh, FaList, FaFilter, FaMapMarkerAlt, FaEdit, FaMoneyBillWave } from "react-icons/fa";
 import AddPropertyForm from './AddPropertyForm';
 import Filters from './Filters';
 import ReservationCalendar from './ReservationCalendar';
@@ -17,7 +16,6 @@ const Temporarios = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [editingProperty, setEditingProperty] = useState(null);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [filters, setFilters] = useState({
     city: '',
@@ -33,7 +31,7 @@ const Temporarios = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [users, setUsers] = useState([]);
-  const [payments, setPayments] = useState([]);
+
   const [sortBy, setSortBy] = useState('name');
 
   useEffect(() => {
@@ -41,7 +39,7 @@ const Temporarios = () => {
       try {
         setIsLoading(true);
 
-        const token = localStorage.getItem('token');
+
 
         const response = await propertyService.getForTemporaryRent();
 
@@ -154,10 +152,6 @@ const Temporarios = () => {
       const propertyToSave = {
         titulo: propertyData.titulo || 'Sin título',
         direccion: propertyData.direccion || 'Dirección no especificada',
-        precio: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
-        tipoPropiedad: propertyData.tipoPropiedad || 'Casa',
-        transaccionTipo: 'Alquiler',
-        
         descripcion: propertyData.descripcion || '',
         barrio: propertyData.barrio || '',
         localidad: propertyData.localidad || '',
@@ -169,8 +163,6 @@ const Temporarios = () => {
         banos: propertyData.banos ? parseInt(propertyData.banos) : 0,
         superficieM2: propertyData.superficieM2 ? parseFloat(propertyData.superficieM2) : 0,
         capacidadPersonas: propertyData.capacidadPersonas ? parseInt(propertyData.capacidadPersonas) : 1,
-        
-   
 
         precio: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
         precioPorNoche: propertyData.precioPorNoche ? parseFloat(propertyData.precioPorNoche) : 0,
@@ -275,14 +267,16 @@ const Temporarios = () => {
           setProperties(prev => prev.map(p => {
             if (p.id === propertyId || p._id === propertyId) {
               return {
-                ...p,  
-                ...finalProperty, 
-                id: p.id || finalProperty.id,  
-                _id: p._id || finalProperty._id,  
+                ...p,
+                ...finalProperty,
+                id: p.id || finalProperty.id,
+                _id: p._id || finalProperty._id,
                 title: finalProperty.title || finalProperty.titulo || p.title || 'Sin título',
                 description: finalProperty.description || finalProperty.descripcion || p.description || '',
                 price: finalProperty.price || finalProperty.precio || p.price || 0,
-                images: finalProperty.images || finalProperty.imagenes || p.images || []
+                images: finalProperty.images || finalProperty.imagenes || p.images || [],
+                services: finalProperty.servicios || finalProperty.services || p.services || [],
+                rules: finalProperty.reglasPropiedad || finalProperty.rules || p.rules || []
               };
             }
             return p;
@@ -635,7 +629,7 @@ const Temporarios = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
               <div className="text-center p-3 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">{currentFilteredProperties.length}</div>
                 <div className="text-sm font-medium text-blue-800">Total Propiedades</div>
@@ -647,6 +641,13 @@ const Temporarios = () => {
                 </div>
                 <div className="text-sm font-medium text-green-800">Disponibles</div>
                 <div className="text-xs text-gray-500 mt-1">Actualmente</div>
+              </div>
+              <div className="text-center p-3 bg-red-50 rounded-lg">
+                <div className="text-2xl font-bold text-red-600">
+                  {currentFilteredProperties.filter(p => p.status !== 'disponible').length}
+                </div>
+                <div className="text-sm font-medium text-red-800">No Disponibles</div>
+                <div className="text-xs text-gray-500 mt-1">Ocupadas/Reservadas</div>
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">

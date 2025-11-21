@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaSave, FaTimes, FaPlus, FaTrash, FaUpload, FaStar } from "react-icons/fa";
+import { FaSave, FaTimes, FaPlus, FaStar, FaTrash } from "react-icons/fa";
 
 const AVAILABLE_CURRENCIES = [
   { code: 'USD', symbol: '$', name: 'Dólar Americano' },
@@ -8,8 +8,18 @@ const AVAILABLE_CURRENCIES = [
   { code: 'BRL', symbol: 'R$', name: 'Real Brasileño' },
 ];
 
-const BASE_SERVICES = ['WiFi', 'Limpieza general', 'Estacionamiento', 'Kit de Bienvenida', 'Ropa de Cama', 'Servicio de conserjeria', 'Cocina Equipada', 'Seguridad 24hs', 'Smart TV', 'Aire acondicionado', 'Sin Piscina'];
-const availableReglas = ['No fumar', 'No mascotas', 'Respetar horarios de descanso', 'Solo Familias'];
+const loadFromLocalStorage = (key, defaultValue) => {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : [...defaultValue];
+  } catch (error) {
+    console.error('Error al cargar desde localStorage:', error);
+    return [...defaultValue];
+  }
+};
+
+const BASE_SERVICES = loadFromLocalStorage('globalServices', ['WiFi', 'Limpieza general', 'Estacionamiento', 'Kit de Bienvenida', 'Ropa de Cama', 'Servicio de conserjeria', 'Cocina Equipada', 'Seguridad 24hs', 'Smart TV', 'Aire acondicionado', 'Sin Piscina']);
+const availableReglas = loadFromLocalStorage('globalRules', ['No fumar', 'No mascotas', 'Respetar horarios de descanso', 'Solo Familias']);
 
 const EditPropertyForm = ({ property, onSave, onClose }) => {
   const [formData, setFormData] = useState({
@@ -39,6 +49,18 @@ const EditPropertyForm = ({ property, onSave, onClose }) => {
 
   const [imageFiles, setImageFiles] = useState([]);
   const [newServiceInput, setNewServiceInput] = useState('');
+  const [newRuleInput, setNewRuleInput] = useState('');
+
+  const [editingService, setEditingService] = useState(null);
+  const [editingRule, setEditingRule] = useState(null);
+  const [editServiceValue, setEditServiceValue] = useState('');
+  const [editRuleValue, setEditRuleValue] = useState('');
+
+  const [globalServices, setGlobalServices] = useState(BASE_SERVICES);
+  const [globalRules, setGlobalRules] = useState(availableReglas);
+
+  const allServices = [...new Set([...globalServices, ...formData.servicios])];
+  const allRules = [...new Set([...globalRules, ...formData.reglasPropiedad])];
 
   useEffect(() => {
     if (property) {
@@ -89,11 +111,25 @@ const EditPropertyForm = ({ property, onSave, onClose }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const saveToLocalStorage = (key, data) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (error) {
+      console.error('Error al guardar en localStorage:', error);
+    }
+  };
+
   const handleAddNewService = (e) => {
     e.preventDefault();
     const newService = newServiceInput.trim();
 
     if (newService && !formData.servicios.includes(newService)) {
+      if (!globalServices.includes(newService)) {
+        const updatedServices = [...globalServices, newService];
+        setGlobalServices(updatedServices);
+        saveToLocalStorage('globalServices', updatedServices);
+      }
+
       setFormData(prev => ({
         ...prev,
         servicios: [...prev.servicios, newService]
@@ -102,10 +138,93 @@ const EditPropertyForm = ({ property, onSave, onClose }) => {
     }
   };
 
-  const handleRemoveService = (serviceToRemove) => {
+  const handleEditService = (service, index) => {
+    setEditingService(index);
+    setEditServiceValue(service);
+  };
+
+  const handleSaveService = (e, index) => {
+    e.preventDefault();
+    const updatedService = editServiceValue.trim();
+
+    if (updatedService && updatedService !== globalServices[index]) {
+      const updatedServices = [...globalServices];
+      updatedServices[index] = updatedService;
+      setGlobalServices(updatedServices);
+      saveToLocalStorage('globalServices', updatedServices);
+
+      if (formData.servicios.includes(globalServices[index])) {
+        const updatedPropServices = formData.servicios.map(s =>
+          s === globalServices[index] ? updatedService : s
+        );
+        setFormData(prev => ({
+          ...prev,
+          servicios: updatedPropServices
+        }));
+      }
+
+      setEditingService(null);
+    }
+  };
+
+
+
+  const handleAddNewRule = (e) => {
+    e.preventDefault();
+    const newRule = newRuleInput.trim();
+
+    if (newRule && !formData.reglasPropiedad.includes(newRule)) {
+      if (!globalRules.includes(newRule)) {
+        const updatedRules = [...globalRules, newRule];
+        setGlobalRules(updatedRules);
+        saveToLocalStorage('globalRules', updatedRules);
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        reglasPropiedad: [...prev.reglasPropiedad, newRule]
+      }));
+      setNewRuleInput('');
+    }
+  };
+
+  const handleEditRule = (rule, index) => {
+    setEditingRule(index);
+    setEditRuleValue(rule);
+  };
+
+  const handleSaveRule = (e, index) => {
+    e.preventDefault();
+    const updatedRule = editRuleValue.trim();
+
+    if (updatedRule && updatedRule !== globalRules[index]) {
+      const updatedRules = [...globalRules];
+      updatedRules[index] = updatedRule;
+      setGlobalRules(updatedRules);
+      saveToLocalStorage('globalRules', updatedRules);
+
+      if (formData.reglasPropiedad.includes(globalRules[index])) {
+        const updatedPropRules = formData.reglasPropiedad.map(r =>
+          r === globalRules[index] ? updatedRule : r
+        );
+        setFormData(prev => ({
+          ...prev,
+          reglasPropiedad: updatedPropRules
+        }));
+      }
+
+      setEditingRule(null);
+    }
+  };
+
+  const handleRemoveRule = (ruleToRemove) => {
+    const updatedRules = globalRules.filter(r => r !== ruleToRemove);
+    setGlobalRules(updatedRules);
+    saveToLocalStorage('globalRules', updatedRules);
+
     setFormData(prev => ({
       ...prev,
-      servicios: prev.servicios.filter(s => s !== serviceToRemove)
+      reglasPropiedad: prev.reglasPropiedad.filter(r => r !== ruleToRemove)
     }));
   };
 
@@ -182,7 +301,6 @@ const EditPropertyForm = ({ property, onSave, onClose }) => {
   };
 
   const selectedCurrencySymbol = AVAILABLE_CURRENCIES.find(c => c.code === formData.currency)?.symbol || '$';
-  const customServices = formData.servicios.filter(s => !BASE_SERVICES.includes(s));
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-8">
@@ -325,19 +443,61 @@ const EditPropertyForm = ({ property, onSave, onClose }) => {
           <div className="p-4 border rounded-lg">
             <label className="block text-gray-700 text-sm font-bold mb-3">Servicios y Especificaciones</label>
 
-            <div className="p-3 border rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
+            <div className="p-3 border rounded-lg bg-gray-50 max-h-48 overflow-y-auto mb-4">
               <p className="font-semibold text-xs mb-2 text-gray-700 border-b pb-1">Seleccionar Servicios:</p>
               <div className="grid grid-cols-2 gap-2">
-                {BASE_SERVICES.map((service) => (
-                  <label key={service} className="flex items-center text-gray-700 text-sm">
-                    <input type="checkbox" name="servicios" value={service} checked={formData.servicios.includes(service)} onChange={handleInputChange} className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" />
-                    {service}
-                  </label>
+                {allServices.map((service, index) => (
+                  <div key={service} className="flex items-center justify-between group">
+                    <label className="flex-1 flex items-center text-gray-700 text-sm">
+                      <input
+                        type="checkbox"
+                        name="servicios"
+                        value={service}
+                        checked={formData.servicios.includes(service)}
+                        onChange={handleInputChange}
+                        className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2"
+                      />
+                      {editingService === index ? (
+                        <input
+                          type="text"
+                          value={editServiceValue}
+                          onChange={(e) => setEditServiceValue(e.target.value)}
+                          className="border-b border-gray-400 px-1 py-0.5 text-sm w-full"
+                          autoFocus
+                        />
+                      ) : (
+                        <span>{service}</span>
+                      )}
+                    </label>
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {editingService === index ? (
+                        <button
+                          type="button"
+                          onClick={(e) => handleSaveService(e, index)}
+                          className="text-green-500 hover:text-green-700"
+                          title="Guardar"
+                        >
+                          <FaSave className="w-3 h-3" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleEditService(service, index)}
+                          className="text-blue-500 hover:text-blue-700"
+                          title="Editar"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
 
-            <form onSubmit={handleAddNewService} className="mt-4 flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               <label className='text-xs text-gray-600 block'>Agregar Servicio Personalizado:</label>
               <div className="flex gap-2">
                 <input
@@ -345,46 +505,107 @@ const EditPropertyForm = ({ property, onSave, onClose }) => {
                   placeholder="Ej: Sauna, Conserje 24/7"
                   value={newServiceInput}
                   onChange={(e) => setNewServiceInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddNewService(e)}
                   className="shadow border rounded-lg w-full py-2 px-3 text-gray-700 text-sm"
                 />
-                <button type="submit" className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg text-sm transition duration-150 flex items-center justify-center space-x-1 w-20">
-                  <FaPlus className="w-3 h-3" />
+                <button
+                  type="button"
+                  onClick={handleAddNewService}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition duration-150 flex items-center justify-center whitespace-nowrap min-w-[100px]"
+                >
+                  <FaPlus className="w-3 h-3 mr-1" />
                   <span>Añadir</span>
                 </button>
               </div>
-            </form>
+            </div>
 
-            {customServices.length > 0 && (
-              <div className="mt-3 p-3 border-t border-gray-200">
-                <p className="font-semibold text-xs mb-2 text-gray-700">Servicios Adicionales:</p>
-                <div className="flex flex-wrap gap-2">
-                  {customServices.map(service => (
-                    <div key={service} className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full flex items-center shadow-sm">
-                      {service}
+          </div>
+
+          <div className="p-4 border rounded-lg">
+            <label className="block text-gray-700 text-sm font-bold mb-3">Reglas de la Propiedad</label>
+
+            <div className="p-3 border rounded-lg bg-gray-50 max-h-48 overflow-y-auto mb-4">
+              <p className="font-semibold text-xs mb-2 text-gray-700 border-b pb-1">Seleccionar Reglas:</p>
+              <div className="grid grid-cols-1 gap-2">
+                {allRules.map((regla, index) => (
+                  <div key={regla} className="flex items-center justify-between group">
+                    <label className="flex-1 flex items-center text-gray-700 text-sm">
+                      <input
+                        type="checkbox"
+                        name="reglasPropiedad"
+                        value={regla}
+                        checked={formData.reglasPropiedad.includes(regla)}
+                        onChange={handleInputChange}
+                        className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2"
+                      />
+                      {editingRule === index ? (
+                        <input
+                          type="text"
+                          value={editRuleValue}
+                          onChange={(e) => setEditRuleValue(e.target.value)}
+                          className="border-b border-gray-400 px-1 py-0.5 text-sm w-full"
+                          autoFocus
+                        />
+                      ) : (
+                        <span>{regla}</span>
+                      )}
+                    </label>
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {editingRule === index ? (
+                        <button
+                          type="button"
+                          onClick={(e) => handleSaveRule(e, index)}
+                          className="text-green-500 hover:text-green-700"
+                          title="Guardar"
+                        >
+                          <FaSave className="w-3 h-3" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleEditRule(regla, index)}
+                          className="text-blue-500 hover:text-blue-700"
+                          title="Editar"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => handleRemoveService(service)}
-                        className="ml-2 text-indigo-500 hover:text-indigo-700 transition duration-150"
-                        title="Quitar servicio"
+                        onClick={() => handleRemoveRule(regla)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Eliminar"
                       >
                         <FaTimes className="w-3 h-3" />
                       </button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
+            </div>
 
-          <div>
-            <label className="block text-gray-700 text-sm font-bold mb-3">Reglas de la Propiedad</label>
-            <div className="p-3 border rounded-lg bg-gray-50 max-h-60 overflow-y-auto">
-              {availableReglas.map((regla) => (
-                <label key={regla} className="flex items-center text-gray-700 text-sm">
-                  <input type="checkbox" name="reglasPropiedad" value={regla} checked={formData.reglasPropiedad.includes(regla)} onChange={handleInputChange} className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" />
-                  {regla}
-                </label>
-              ))}
+            <div className="flex flex-col gap-2">
+              <label className='text-xs text-gray-600 block'>Agregar Regla Personalizada:</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Ej: No se permiten fiestas"
+                  value={newRuleInput}
+                  onChange={(e) => setNewRuleInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddNewRule(e)}
+                  className="shadow border rounded-lg w-full py-2 px-3 text-gray-700 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddNewRule}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition duration-150 flex items-center justify-center whitespace-nowrap min-w-[100px]"
+                >
+                  <FaPlus className="w-3 h-3 mr-1" />
+                  <span>Agregar</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

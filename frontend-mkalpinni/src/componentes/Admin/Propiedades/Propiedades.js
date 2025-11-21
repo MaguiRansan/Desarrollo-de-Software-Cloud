@@ -90,15 +90,17 @@ const normalizeProperty = (prop = {}) => {
     lessee: prop.lessee || prop.locatario || '',
     allowsPets: prop.allowsPets ?? prop.permitenascotas ?? false,
     activo: prop.activo ?? true,
+    rules: prop.rules || prop.reglasPropiedad || [],
+    amenities: prop.amenities || prop.caracteristicas || [],
     removedImages: []
   };
 };
 
 const PropertyManagement = () => {
   const { properties: apiProperties, isLoading, error } = useAdminData('properties');
-  
+
   const [properties, setProperties] = useState([]);
-  const [view, setView] = useState('selection'); 
+  const [view, setView] = useState('selection');
   const [selectedOperation, setSelectedOperation] = useState('venta');
   const [editingProperty, setEditingProperty] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -133,13 +135,13 @@ const PropertyManagement = () => {
 
   const filterProperties = (properties, filters, searchTerm) => {
     return properties.filter((property) => {
-      const propertyPrice = typeof property.price === 'string' 
-        ? parseFloat(property.price.replace(/[^0-9.-]+/g,"")) 
+      const propertyPrice = typeof property.price === 'string'
+        ? parseFloat(property.price.replace(/[^0-9.-]+/g, ""))
         : Number(property.price) || 0;
-      
+
       const minPrice = Number(filters.priceRange.min) || 0;
       const maxPrice = Number(filters.priceRange.max) === Infinity ? Infinity : Number(filters.priceRange.max);
-      
+
       const matchesOperation = !filters.operationType || property.operationType === filters.operationType;
       const matchesType = !filters.type || property.type === filters.type;
       const matchesBedrooms = !filters.bedrooms || (property.bedrooms || 0) >= parseInt(filters.bedrooms || '0', 10);
@@ -147,7 +149,7 @@ const PropertyManagement = () => {
       const matchesPriceRange = propertyPrice >= minPrice && propertyPrice <= maxPrice;
       const matchesStatus = !filters.status || property.status === filters.status;
       const matchesPets = filters.allowsPets === null || property.allowsPets === (filters.allowsPets === 'true');
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         (property.title && property.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (property.address && property.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (property.neighborhood && property.neighborhood.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -194,12 +196,12 @@ const PropertyManagement = () => {
       setEditingProperty(normalized);
       setFormProperty({
         ...normalized,
-        images: Array.isArray(normalized.images) && normalized.images.length > 0 
-          ? normalized.images 
+        images: Array.isArray(normalized.images) && normalized.images.length > 0
+          ? normalized.images
           : [null],
         removedImages: []
       });
-      
+
       setView('form');
     } catch (error) {
       console.error('Error in handleEditProperty:', error);
@@ -215,7 +217,7 @@ const PropertyManagement = () => {
     try {
       const response = await propertyService.delete(propertyId);
       if (response.status) {
-        setProperties(prevProperties => 
+        setProperties(prevProperties =>
           prevProperties.filter(prop => prop.id !== propertyId)
         );
         showNotification('Propiedad eliminada exitosamente');
@@ -230,7 +232,7 @@ const PropertyManagement = () => {
 
   const handleSaveProperty = async (propertyData, imageFiles = [], removedImageIds = []) => {
     setIsSubmitting(true);
-    
+
     try {
       const isEdit = !!editingProperty;
       const backendData = {
@@ -247,8 +249,8 @@ const PropertyManagement = () => {
         banos: Number(propertyData.bathrooms) || 0,
         superficieM2: Number(propertyData.squareMeters) || 0,
         terrenoM2: Number(propertyData.landSquareMeters) || 0,
-        estado: propertyData.status === 'disponible' ? 'Disponible' : 
-                propertyData.status === 'ocupado' ? 'Ocupado' : 'Reservado',
+        estado: propertyData.status === 'disponible' ? 'Disponible' :
+          propertyData.status === 'ocupado' ? 'Ocupado' : 'Reservado',
         locador: propertyData.lessor || '',
         locatario: propertyData.lessee || '',
         permitenascotas: propertyData.allowsPets || false,
@@ -300,15 +302,15 @@ const PropertyManagement = () => {
           const uploadResp = await propertyService.uploadImages(targetPropertyId, imageFiles);
           if (uploadResp && uploadResp.status) {
             console.log('Images uploaded successfully');
-  
+
             if (uploadResp.value) {
               setProperties(prevProperties =>
                 prevProperties.map(prop =>
-                  prop.id === targetPropertyId 
-                    ? { 
-                        ...prop, 
-                        images: uploadResp.value.imagenes || uploadResp.value.images || [] 
-                      } 
+                  prop.id === targetPropertyId
+                    ? {
+                      ...prop,
+                      images: uploadResp.value.imagenes || uploadResp.value.images || []
+                    }
                     : prop
                 )
               );
@@ -347,8 +349,8 @@ const PropertyManagement = () => {
       const propertyToStore = refreshedProperty || fallbackNormalized;
 
       if (editingProperty && editingProperty.id) {
-        setProperties(prevProperties => 
-          prevProperties.map(prop => 
+        setProperties(prevProperties =>
+          prevProperties.map(prop =>
             prop.id === editingProperty.id ? propertyToStore : prop
           )
         );
@@ -383,7 +385,7 @@ const PropertyManagement = () => {
       setView('list');
       const path = selectedOperation === 'venta' ? '/admin/propiedades' : '/admin/propiedades/alquiler';
       window.location.href = path;
-      
+
       setTimeout(() => {
         setEditingProperty(null);
         setFormProperty(createEmptyProperty(selectedOperation));
@@ -399,13 +401,13 @@ const PropertyManagement = () => {
       lessor,
       lessee
     };
-    
-    setProperties(prevProperties => 
-      prevProperties.map(prop => 
+
+    setProperties(prevProperties =>
+      prevProperties.map(prop =>
         prop.id === propertyId ? { ...prop, ...updatedProperty } : prop
       )
     );
-    
+
     showNotification(`Estado de propiedad actualizado a ${newStatus}`);
   };
 
@@ -432,8 +434,8 @@ const PropertyManagement = () => {
             </div>
             <h3 className="text-lg font-medium text-red-900 mb-2">Error al cargar propiedades</h3>
             <p className="text-red-700 mb-4">{error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-300"
             >
               Reintentar
@@ -459,13 +461,13 @@ const PropertyManagement = () => {
           />
         </div>
       )}
-      
+
       {view === 'selection' && (
         <div className="py-10">
           <OperationSelection onSelect={handleOperationSelection} />
         </div>
       )}
-      
+
       {view === 'list' && (
         <div>
           <div className="mb-6">
@@ -510,9 +512,9 @@ const PropertyManagement = () => {
                     onChange={(e) => setSortBy(e.target.value)}
                     className="appearance-none pl-3 pr-8 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
                   >
-                  <option value="title">Ordenar por Título</option>
-                  <option value="price">Ordenar por Precio</option>
-                  <option value="date">Ordenar por Fecha</option>
+                    <option value="title">Ordenar por Título</option>
+                    <option value="price">Ordenar por Precio</option>
+                    <option value="date">Ordenar por Fecha</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
                     <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -540,18 +542,17 @@ const PropertyManagement = () => {
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    showFilters 
-                      ? 'bg-blue-600 text-white' 
+                  className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showFilters
+                      ? 'bg-blue-600 text-white'
                       : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
+                    }`}
                   title={showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
                 >
                   <FaFilter className="mr-1.5" />
                   <span className="hidden sm:inline">Filtros</span>
                 </button>
 
-                <button 
+                <button
                   onClick={handleAddProperty}
                   className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
                   title="Agregar nueva propiedad"
@@ -578,8 +579,8 @@ const PropertyManagement = () => {
                 </div>
                 <div className="text-sm font-medium text-green-800">Disponibles</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {properties.filter(p => p.operationType === selectedOperation).length > 0 
-                    ? `${Math.round((properties.filter(p => p.operationType === selectedOperation && p.status === 'disponible').length / properties.filter(p => p.operationType === selectedOperation).length) * 100)}%` 
+                  {properties.filter(p => p.operationType === selectedOperation).length > 0
+                    ? `${Math.round((properties.filter(p => p.operationType === selectedOperation && p.status === 'disponible').length / properties.filter(p => p.operationType === selectedOperation).length) * 100)}%`
                     : '0%'}
                 </div>
               </div>
@@ -589,8 +590,8 @@ const PropertyManagement = () => {
                 </div>
                 <div className="text-sm font-medium text-yellow-800">Reservadas</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {properties.filter(p => p.operationType === selectedOperation).length > 0 
-                    ? `${Math.round((properties.filter(p => p.operationType === selectedOperation && p.status === 'reservado').length / properties.filter(p => p.operationType === selectedOperation).length) * 100)}%` 
+                  {properties.filter(p => p.operationType === selectedOperation).length > 0
+                    ? `${Math.round((properties.filter(p => p.operationType === selectedOperation && p.status === 'reservado').length / properties.filter(p => p.operationType === selectedOperation).length) * 100)}%`
                     : '0%'}
                 </div>
               </div>
@@ -600,8 +601,8 @@ const PropertyManagement = () => {
                 </div>
                 <div className="text-sm font-medium text-red-800">Ocupadas</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {filteredAndSortedProperties.length > 0 
-                    ? `${Math.round((filteredAndSortedProperties.filter(p => p.status === 'ocupado').length / filteredAndSortedProperties.length) * 100)}%` 
+                  {filteredAndSortedProperties.length > 0
+                    ? `${Math.round((filteredAndSortedProperties.filter(p => p.status === 'ocupado').length / filteredAndSortedProperties.length) * 100)}%`
                     : '0%'}
                 </div>
               </div>
@@ -614,8 +615,8 @@ const PropertyManagement = () => {
             </div>
           )}
 
-          <PropertyList 
-            properties={filteredAndSortedProperties} 
+          <PropertyList
+            properties={filteredAndSortedProperties}
             selectedOperation={selectedOperation}
             viewMode={viewMode}
             onAddNew={handleAddProperty}
@@ -625,16 +626,15 @@ const PropertyManagement = () => {
           />
         </div>
       )}
-      
+
       {notification && (
-        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
-          notification.type === 'error' 
-            ? 'bg-red-100 border border-red-400 text-red-700' 
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${notification.type === 'error'
+            ? 'bg-red-100 border border-red-400 text-red-700'
             : 'bg-green-100 border border-green-400 text-green-700'
-        }`}>
+          }`}>
           <div className="flex items-center justify-between">
             <span>{notification.message}</span>
-            <button 
+            <button
               onClick={() => setNotification(null)}
               className="ml-4 text-lg font-semibold"
             >
