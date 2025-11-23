@@ -1,0 +1,53 @@
+services:
+  # Backend API Service
+  - type: web
+    name: mkalpin-backend
+    runtime: node
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd backend-mkalpinni && npm install
+    startCommand: cd backend-mkalpinni && npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false  # Set manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false  # Set manually in Render dashboard
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false  # Set manually in Render dashboard
+      - key: CLOUDINARY_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: CLOUDINARY_API_SECRET
+        sync: false  # Set manually in Render dashboard
+      - key: GOOGLE_CLIENT_ID
+        sync: false  # Set manually in Render dashboard
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false  # Set manually in Render dashboard
+      - key: GOOGLE_CALLBACK_URL
+        value: https://mkalpin-backend.onrender.com/API/Usuario/google/callback
+      - key: FRONTEND_URL
+        value: https://mkalpin-frontend.onrender.com
+
+  # Frontend React Service
+  - type: web
+    name: mkalpin-frontend
+    runtime: node
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd frontend-mkalpinni && npm install && npm run build
+    startCommand: cd frontend-mkalpinni && npx serve -s build -l 10000
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REACT_APP_API_URL
+        value: https://mkalpin-backend.onrender.com
+      - key: REACT_APP_GOOGLE_CLIENT_ID
+        sync: false  # Set manually in Render dashboard
